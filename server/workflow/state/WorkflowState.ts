@@ -1,0 +1,241 @@
+import { BrandContext, VideoConfig } from '../../agent/types';
+import { AgentThought } from '../../agent/orchestrator';
+
+/**
+ * Workflow Phases - The discrete states in the video generation pipeline.
+ * Follows the distributed agent architecture for modular scene generation.
+ */
+export enum WorkflowPhase {
+  INITIALIZATION = 'initialization',
+  QUERY_ENHANCEMENT = 'query_enhancement',
+  PLANNING = 'planning',
+  IMPLEMENTATION = 'implementation',
+  CHECKPOINT = 'checkpoint',
+  EVALUATION = 'evaluation',
+  ITERATION_DECISION = 'iteration_decision',
+  AWAITING_FEEDBACK = 'awaiting_feedback', // Critical for User Loop
+  RENDERING = 'rendering',
+  COMPLETE = 'complete',
+  ERROR = 'error'
+}
+
+/**
+ * Validation result from code validation
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Scene description for the modular scene architecture.
+ * Each scene is generated as a separate file for live preview and incremental fixes.
+ */
+export interface SceneDescription {
+  id: string; // Unique ID for drag-drop handling in UI
+  sceneNumber: number;
+  description: string;
+  frameRange: { start: number; end: number };
+  keyElements: string[];
+}
+
+/**
+ * Implementation plan created during the planning phase.
+ * The scene breakdown is reorderable in the Script Builder UI.
+ */
+export interface ImplementationPlan {
+  approach: string;
+  sceneBreakdown: SceneDescription[]; // Reorderable in UI
+  estimatedComplexity: 'low' | 'medium' | 'high';
+  createdAt: Date;
+}
+
+/**
+ * Generated file - supports multi-file scene generation
+ */
+export interface GeneratedFile {
+  filePath: string;
+  content: string;
+  sceneId?: string; // Links to SceneDescription.id
+}
+
+/**
+ * A single implementation round (attempt) with its results
+ */
+export interface ImplementationRound {
+  roundNumber: number;
+  files: GeneratedFile[];
+  validationResult: ValidationResult;
+  issues: string[];
+  thoughts: AgentThought[];
+  startedAt: Date;
+  completedAt?: Date;
+}
+
+/**
+ * Checkpoint for saving/restoring workflow state
+ */
+export interface Checkpoint {
+  id: string;
+  roundNumber: number;
+  files: GeneratedFile[];
+  description: string;
+  timestamp: Date;
+}
+
+/**
+ * Error record for tracking and preventing repeated mistakes
+ */
+export interface ErrorRecord {
+  id: string;
+  roundNumber: number;
+  errorType: 'validation' | 'runtime' | 'generation' | 'render';
+  errorMessage: string;
+  context?: string;
+  resolved: boolean;
+  resolvedAt?: Date;
+}
+
+/**
+ * Progress tracking for UI updates
+ */
+export interface WorkflowProgress {
+  currentPhase: WorkflowPhase;
+  phaseProgress: number; // 0-100
+  currentMessage: string;
+  subStep?: string;
+}
+
+/**
+ * Core workflow state that tracks the entire video generation process
+ */
+export interface WorkflowState {
+  jobId: string;
+  currentPhase: WorkflowPhase;
+  brand: BrandContext;
+  config: VideoConfig;
+
+  // Script / Planning
+  plan?: ImplementationPlan;
+
+  // Execution State
+  currentRound: number;
+  maxRounds: number;
+  rounds: ImplementationRound[];
+
+  // History & Checkpoints
+  checkpoints: Checkpoint[];
+  activeCheckpointId?: string;
+  errorHistory: ErrorRecord[];
+
+  // Agent Stream
+  thoughts: AgentThought[];
+
+  // Progress
+  progress: WorkflowProgress;
+
+  // Output
+  outputVideoPath?: string;
+
+  // Timestamps
+  updatedAt: Date;
+  createdAt: Date;
+}
+
+/**
+ * Creates initial workflow state with sensible defaults
+ */
+export function createInitialState(
+  jobId: string,
+  brand: BrandContext,
+  config: VideoConfig
+): WorkflowState {
+  const now = new Date();
+
+  return {
+    jobId,
+    currentPhase: WorkflowPhase.INITIALIZATION,
+    brand,
+    config,
+
+    // Execution defaults
+    currentRound: 0,
+    maxRounds: 3,
+    rounds: [],
+
+    // Empty collections
+    checkpoints: [],
+    errorHistory: [],
+    thoughts: [],
+
+    // Initial progress
+    progress: {
+      currentPhase: WorkflowPhase.INITIALIZATION,
+      phaseProgress: 0,
+      currentMessage: 'Initializing workflow...'
+    },
+
+    // Timestamps
+    updatedAt: now,
+    createdAt: now
+  };
+}
+
+/**
+ * Updates the workflow state immutably
+ */
+export function updateState(
+  state: WorkflowState,
+  updates: Partial<WorkflowState>
+): WorkflowState {
+  return {
+    ...state,
+    ...updates,
+    updatedAt: new Date()
+  };
+}
+
+/**
+ * Transitions the workflow to a new phase
+ */
+export function transitionPhase(
+  state: WorkflowState,
+  newPhase: WorkflowPhase,
+  message?: string
+): WorkflowState {
+  return updateState(state, {
+    currentPhase: newPhase,
+    progress: {
+      currentPhase: newPhase,
+      phaseProgress: 0,
+      currentMessage: message || `Entering ${newPhase} phase...`
+    }
+  });
+}
+
+/**
+ * Adds a thought to the workflow state
+ */
+export function addThought(
+  state: WorkflowState,
+  thought: AgentThought
+): WorkflowState {
+  return updateState(state, {
+    thoughts: [...state.thoughts, thought]
+  });
+}
+
+/**
+ * Gets the current round or undefined if none started
+ */
+export function getCurrentRound(state: WorkflowState): ImplementationRound | undefined {
+  return state.rounds[state.currentRound - 1];
+}
+
+/**
+ * Checks if the workflow can continue iterating
+ */
+export function canIterate(state: WorkflowState): boolean {
+  return state.currentRound < state.maxRounds;
+}
