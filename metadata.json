@@ -1,0 +1,9 @@
+
+{
+  "name": "Agent Design Studio",
+  "description": "A high-end motion design agent that transforms business context into premium motion graphics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
