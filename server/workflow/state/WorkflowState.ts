@@ -1,6 +1,29 @@
 import { BrandContext, VideoConfig } from '../../agent/types';
 import { AgentThought } from '../../agent/orchestrator';
 
+// Forward declaration to avoid circular imports
+// Full type is defined in iteration/SelfEvaluator.ts
+export interface SceneScoreRef {
+  sceneId: string;
+  sceneNumber: number;
+  score: number;
+  issues: string[];
+  suggestions: string[];
+}
+
+export interface EvaluationResultRef {
+  score: number;
+  compilability: number;
+  visualFidelity: number;
+  animationSmoothness: number;
+  brandConsistency: number;
+  sceneScores: SceneScoreRef[];
+  feedback: string;
+  globalSuggestions: string[];
+  passesThreshold: boolean;
+  needsUserFeedback: boolean;
+}
+
 /**
  * Workflow Phases - The discrete states in the video generation pipeline.
  * Follows the distributed agent architecture for modular scene generation.
@@ -124,6 +147,10 @@ export interface WorkflowState {
   maxRounds: number;
   rounds: ImplementationRound[];
 
+  // Iteration Control
+  lastEvaluation?: EvaluationResultRef; // Latest evaluation for iteration decisions
+  nextRoundTargets?: string[]; // Scene IDs to target in next implementation round
+
   // History & Checkpoints
   checkpoints: Checkpoint[];
   activeCheckpointId?: string;
@@ -238,4 +265,45 @@ export function getCurrentRound(state: WorkflowState): ImplementationRound | und
  */
 export function canIterate(state: WorkflowState): boolean {
   return state.currentRound < state.maxRounds;
+}
+
+/**
+ * Stores an evaluation result in the workflow state
+ */
+export function storeEvaluation(
+  state: WorkflowState,
+  evaluation: EvaluationResultRef
+): WorkflowState {
+  return updateState(state, {
+    lastEvaluation: evaluation
+  });
+}
+
+/**
+ * Sets target scenes for the next implementation round
+ */
+export function setTargetScenes(
+  state: WorkflowState,
+  sceneIds: string[]
+): WorkflowState {
+  return updateState(state, {
+    nextRoundTargets: sceneIds
+  });
+}
+
+/**
+ * Clears target scenes after they've been processed
+ */
+export function clearTargetScenes(state: WorkflowState): WorkflowState {
+  return updateState(state, {
+    nextRoundTargets: undefined
+  });
+}
+
+/**
+ * Gets the scenes that need to be regenerated in the next round.
+ * Returns undefined if all scenes should be regenerated.
+ */
+export function getTargetScenes(state: WorkflowState): string[] | undefined {
+  return state.nextRoundTargets;
 }

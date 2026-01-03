@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { BrandWizard } from './components/BrandWizard';
 import { MotionPreview } from './components/MotionPreview';
+import { WorkflowDashboard } from './components/workflow/WorkflowDashboard';
 import { BrandContext, VideoConfig, GenerationState } from './types';
-import { generateMotionVideo, AgentProgress, AgentThought } from './services/geminiService';
+import { generateMotionVideo, startWorkflow, AgentProgress, AgentThought } from './services/geminiService';
 import { AlertCircle, Brain, Zap, Eye, Wrench, Film } from 'lucide-react';
 
 // ReAct stage icons mapping
@@ -36,6 +37,7 @@ interface ExtendedGenerationState extends GenerationState {
 const App: React.FC = () => {
   const [brand, setBrand] = useState<BrandContext | null>(null);
   const [config, setConfig] = useState<VideoConfig | null>(null);
+  const [workflowJobId, setWorkflowJobId] = useState<string | null>(null);
   const [generation, setGeneration] = useState<ExtendedGenerationState>({
     isGenerating: false,
     progressMessage: '',
@@ -51,14 +53,9 @@ const App: React.FC = () => {
     });
 
     try {
-      const url = await generateMotionVideo(brandData, configData, (msg, agentProgress) => {
-        setGeneration(prev => ({
-          ...prev,
-          progressMessage: msg,
-          agentProgress: agentProgress || prev.agentProgress
-        }));
-      });
-      setGeneration({ isGenerating: false, progressMessage: '', videoUrl: url });
+      // Use the new Workflow Streaming API
+      const jobId = await startWorkflow(brandData, configData);
+      setWorkflowJobId(jobId);
     } catch (error: any) {
       console.error(error);
       let errorMessage = 'Motion synthesis failed. Check your creative brief and try again.';
@@ -80,8 +77,13 @@ const App: React.FC = () => {
   const reset = () => {
     setBrand(null);
     setConfig(null);
+    setWorkflowJobId(null);
     setGeneration({ isGenerating: false, progressMessage: '', error: undefined });
   };
+
+  if (workflowJobId) {
+    return <WorkflowDashboard jobId={workflowJobId} />;
+  }
 
   const currentStage = generation.agentProgress?.stage || 'reasoning';
   const thoughts = generation.agentProgress?.thoughts || [];
@@ -107,104 +109,10 @@ const App: React.FC = () => {
 
       {generation.isGenerating ? (
         <div className="max-w-3xl mx-auto flex flex-col items-center justify-center py-8 space-y-6 text-center animate-in fade-in duration-500">
-
-          {/* Agent Brain Animation */}
-          <div className="relative">
-            <div className={`absolute inset-0 w-28 h-28 rounded-full bg-gradient-to-r ${stageColors[currentStage]} opacity-20 blur-xl animate-pulse`}></div>
-            <div className="relative w-28 h-28 rounded-full border-2 border-zinc-800 flex items-center justify-center bg-black">
-              <div className="absolute inset-0 w-28 h-28 rounded-full border-t-2 border-white animate-spin" style={{ animationDuration: '3s' }}></div>
-              <div className={`text-white bg-gradient-to-r ${stageColors[currentStage]} p-4 rounded-full`}>
-                {stageIcons[currentStage]}
-              </div>
-            </div>
-          </div>
-
-          {/* Current Stage Label */}
-          <div className="space-y-2">
-            <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-gradient-to-r ${stageColors[currentStage]} text-black`}>
-              {currentStage}
-            </div>
-            <h2 className="heading-font text-xl font-bold uppercase tracking-widest text-white">
-              {generation.agentProgress?.message || 'Processing'}
-            </h2>
-            <p className="text-zinc-400 text-sm max-w-md">
-              {generation.progressMessage}
-            </p>
-          </div>
-
-          {/* ReAct Thought Trace */}
-          {latestThoughts.length > 0 && (
-            <div className="w-full max-w-2xl bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 text-left overflow-hidden">
-              <div className="flex items-center gap-2 mb-3">
-                <Brain size={14} className="text-purple-400" />
-                <span className="text-zinc-500 text-xs uppercase tracking-wider font-bold">Agent Cognitive Trace</span>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {latestThoughts.map((thought, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-2 text-xs font-mono animate-in slide-in-from-left-2 ${i === latestThoughts.length - 1 ? 'opacity-100' : 'opacity-60'}`}
-                    style={{ animationDelay: `${i * 50}ms` }}
-                  >
-                    <span className={`font-bold min-w-[70px] ${thoughtTypeLabels[thought.type]?.color || 'text-zinc-400'}`}>
-                      [{thoughtTypeLabels[thought.type]?.label || thought.type.toUpperCase()}]
-                    </span>
-                    <span className="text-zinc-300">{thought.content}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Current Thought Display */}
-          {generation.agentProgress?.thought && (
-            <div className={`w-full max-w-2xl p-3 rounded-lg border ${generation.agentProgress.thought.type === 'reason' ? 'border-purple-500/30 bg-purple-500/10' :
-                generation.agentProgress.thought.type === 'act' ? 'border-blue-500/30 bg-blue-500/10' :
-                  'border-green-500/30 bg-green-500/10'
-              }`}>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold uppercase ${thoughtTypeLabels[generation.agentProgress.thought.type]?.color}`}>
-                  {thoughtTypeLabels[generation.agentProgress.thought.type]?.label}
-                </span>
-                <span className="text-zinc-300 text-sm">{generation.agentProgress.thought.content}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Code Preview (if available) */}
-          {generation.agentProgress?.codePreview && (
-            <div className="w-full max-w-2xl bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 text-left overflow-hidden animate-in slide-in-from-bottom-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <span className="text-zinc-600 text-xs ml-2">Generated Remotion Code</span>
-              </div>
-              <pre className="text-xs text-zinc-400 font-mono overflow-hidden">
-                <code>{generation.agentProgress.codePreview}</code>
-              </pre>
-            </div>
-          )}
-
-          {/* Attempt Counter (if correcting) */}
-          {generation.agentProgress?.attempt && generation.agentProgress.maxAttempts && (
-            <div className="text-zinc-500 text-xs">
-              Attempt {generation.agentProgress.attempt} of {generation.agentProgress.maxAttempts}
-            </div>
-          )}
-
-          {/* Progress Bar */}
-          <div className="w-64 bg-zinc-900 h-1 rounded-full overflow-hidden">
-            <div
-              className={`h-full bg-gradient-to-r ${stageColors[currentStage]} transition-all duration-500`}
-              style={{
-                width: currentStage === 'reasoning' ? '20%'
-                  : currentStage === 'acting' ? '50%'
-                    : currentStage === 'observing' ? '70%'
-                      : currentStage === 'correcting' ? '60%'
-                        : '90%'
-              }}
-            />
+          {/* Legacy loader here just in case, though workflowJobId should take over immediately */}
+          <div className="animate-pulse flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-2 border-purple-500 border-t-white rounded-full animate-spin"></div>
+            <p className="text-zinc-400 text-sm">Transferring to Workflow Engine...</p>
           </div>
         </div>
       ) : generation.videoUrl ? (

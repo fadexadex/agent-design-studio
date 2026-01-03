@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer base {
+    body {
+        @apply bg-black text-white font-sans;
+    }
+}
+
+@utility heading-font {
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+@utility no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 10px;
+}
+
+.react-flow__node {
+    border-radius: 12px;
+}
+
+.writing-vertical-rl {
+    writing-mode: vertical-rl;
+}

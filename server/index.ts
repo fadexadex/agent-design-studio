@@ -6,6 +6,7 @@ config({ path: '.env.local' });
 import express from 'express';
 import cors from 'cors';
 import { AgentOrchestrator, AgentProgress, AgentThought } from './agent/orchestrator';
+import workflowRoutes from './routes/workflowRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +37,7 @@ const jobs = new Map<string, JobData>();
 const generateJobId = () => `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 // API Routes
+app.use('/api/workflow', workflowRoutes);
 
 /**
  * POST /api/generate

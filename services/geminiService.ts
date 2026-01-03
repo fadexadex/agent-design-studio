@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { BrandContext, VideoConfig } from "../types";
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -28,7 +29,33 @@ interface JobStatus {
 }
 
 /**
+ * Start a workflow generation job
+ */
+export const startWorkflow = async (
+  brand: BrandContext,
+  config: VideoConfig
+): Promise<string> => {
+  const jobId = uuidv4();
+  const response = await fetch(`${API_BASE_URL}/workflow/start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ jobId, brand, config }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to start generation');
+  }
+
+  const data = await response.json();
+  return data.jobId;
+};
+
+/**
  * Generate a motion video using the AI agent backend
+ * @deprecated Use startWorkflow + WorkflowDashboard instead
  */
 export const generateMotionVideo = async (
   brand: BrandContext,
@@ -43,20 +70,7 @@ export const generateMotionVideo = async (
       thought: { type: 'reason', content: 'Starting agent orchestration...', timestamp: new Date().toISOString() }
     });
 
-    const startResponse = await fetch(`${API_BASE_URL}/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ brand, config }),
-    });
-
-    if (!startResponse.ok) {
-      const error = await startResponse.json();
-      throw new Error(error.error || 'Failed to start generation');
-    }
-
-    const { jobId } = await startResponse.json();
+    const jobId = await startWorkflow(brand, config);
 
     // Step 2: Poll for status updates
     let lastProgress = '';

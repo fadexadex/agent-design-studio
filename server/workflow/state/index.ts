@@ -15,6 +15,8 @@ export {
   type WorkflowProgress,
   type ValidationResult,
   type GeneratedFile,
+  type EvaluationResultRef,
+  type SceneScoreRef,
 
   // Functions
   createInitialState,
@@ -22,7 +24,11 @@ export {
   transitionPhase,
   addThought,
   getCurrentRound,
-  canIterate
+  canIterate,
+  storeEvaluation,
+  setTargetScenes,
+  clearTargetScenes,
+  getTargetScenes
 } from './WorkflowState';
 
 export {

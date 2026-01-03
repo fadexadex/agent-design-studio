@@ -82,7 +82,7 @@ export default function BrandVideo() {
     ],
     {
       extrapolateLeft: 'clamp',
-      extrapulateRight: 'clamp',
+      extrapolateRight: 'clamp',
       easing: Easing.linear, // Geometric style, linear movement
     }
   );
@@ -108,7 +108,7 @@ export default function BrandVideo() {
     ],
     {
       extrapolateLeft: 'clamp',
-      extrapulateRight: 'clamp',
+      extrapolateRight: 'clamp',
       easing: Easing.linear, // Geometric style, linear movement
     }
   );
@@ -119,7 +119,7 @@ export default function BrandVideo() {
     fps,
     config: { damping: 10, stiffness: 100 },
   });
-  const cursorClick1 = interpolate(cursorClickProgress1, [0, 1], [false, true], {
+  const cursorClick1 = interpolate(cursorClickProgress1, [0, 1], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -129,7 +129,7 @@ export default function BrandVideo() {
     fps,
     config: { damping: 10, stiffness: 100 },
   });
-  const cursorClick2 = interpolate(cursorClickProgress2, [0, 1], [false, true], {
+  const cursorClick2 = interpolate(cursorClickProgress2, [0, 1], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -139,7 +139,7 @@ export default function BrandVideo() {
     fps,
     config: { damping: 10, stiffness: 100 },
   });
-  const cursorClick3 = interpolate(cursorClickProgress3, [0, 1], [false, true], {
+  const cursorClick3 = interpolate(cursorClickProgress3, [0, 1], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
