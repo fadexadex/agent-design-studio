@@ -35,6 +35,16 @@ export interface AgentThought {
   type: 'reason' | 'act' | 'observe';
   content: string;
   timestamp: string | Date;
+  /**
+   * The model's actual thinking summary from Gemini (when includeThoughts is enabled).
+   * This is the human-readable summary of the model's internal reasoning process.
+   */
+  modelThinking?: string;
+  /**
+   * Opaque thought signature from Gemini for maintaining reasoning context across turns.
+   * This should be passed back to the API but not displayed to users.
+   */
+  thoughtSignature?: string;
 }
 
 export enum WorkflowPhase {

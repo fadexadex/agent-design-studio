@@ -1,40 +1,80 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, interpolate, spring } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, interpolate, Easing, useVideoConfig } from 'remotion';
 
-// Helper component for a single square in the geometric grid
-interface GridSquareProps {
-  x: number;
-  y: number;
-  size: number;
-  frame: number;
-  delay: number;
-}
+export const Scene3: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { height } = useVideoConfig();
 
-const GridSquare: React.FC<GridSquareProps> = ({ x, y, size, frame, delay }) => {
-  const animationStart = 0; // Grid dissolution starts at frame 0
-  const animationDuration = 20; // Grid dissolution lasts 20 frames
+  // Aggressive ease-in-out curve for a snappy transition
+  const snappyEasing = Easing.bezier(0.9, 0, 0.1, 1);
 
-  const progress = spring({
-    frame: frame - animationStart - delay,
-    fps: 30,
-    config: {
-      damping: 200,
-      stiffness: 100,
-      mass: 0.5,
-    },
-    durationInFrames: animationDuration,
-  });
+  // The composition starts fully visible and slides up out of view
+  // Animation starts at frame 10 and finishes by frame 38 to ensure a clean black hold
+  const translateY = interpolate(
+    frame,
+    [10, 38],
+    [0, -height],
+    {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: snappyEasing,
+    }
+  );
 
-  const scale = interpolate(progress, [0, 1], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const opacity = interpolate(progress, [0, 1], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  // Subtle opacity fade on the text to enhance the exit feel
+  const contentOpacity = interpolate(
+    frame,
+    [10, 25],
+    [1, 0],
+    {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    }
+  );
 
-  // Calculate movement outwards from the center
-  const centerX = 1920 / 2;
-
-export const Scene3 = GridSquare;
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#000000' }}>
+      <AbsoluteFill
+        style={{
+          backgroundColor: '#FFFFFF',
+          transform: `translateY(${translateY}px)`,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            opacity: contentOpacity,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: 'Helvetica, Arial, sans-serif',
+              fontSize: 64,
+              fontWeight: 200,
+              letterSpacing: '0.25em',
+              color: '#000000',
+              textTransform: 'uppercase',
+              marginBottom: 20,
+            }}
+          >
+            Campor
+          </div>
+          <div
+            style={{
+              width: 40,
+              height: 1,
+              backgroundColor: '#000000',
+              opacity: 0.6,
+            }}
+          />
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};

@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { BrandContext, VideoConfig } from './types';
 import { buildPrompt, buildCorrectionPrompt } from './promptBuilder';
 import { RemotionRenderer } from '../renderer/remotionRenderer';
+import { rateLimitedCall } from './rateLimiter';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -19,6 +20,16 @@ export interface AgentThought {
     type: 'reason' | 'act' | 'observe';
     content: string;
     timestamp: Date;
+    /**
+     * The model's actual thinking summary from Gemini (when includeThoughts is enabled).
+     * This is the human-readable summary of the model's internal reasoning process.
+     */
+    modelThinking?: string;
+    /**
+     * Opaque thought signature from Gemini for maintaining reasoning context across turns.
+     * This should be passed back to the API but not displayed to users.
+     */
+    thoughtSignature?: string;
 }
 
 export interface AgentProgress {
@@ -178,14 +189,17 @@ export class AgentOrchestrator {
                     ? prompt
                     : buildCorrectionPrompt(generatedCode || '', lastError || '', brand, config);
 
-                const response = await this.ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: [{ role: 'user', parts: [{ text: currentPrompt }] }],
-                    config: {
-                        temperature: attempt === 1 ? 0.7 : 0.3,
-                        maxOutputTokens: 16384,
-                    }
-                });
+                // Use rate-limited call to respect API quotas
+                const response = await rateLimitedCall(() =>
+                    this.ai.models.generateContent({
+                        model: 'gemini-3-flash',
+                        contents: [{ role: 'user', parts: [{ text: currentPrompt }] }],
+                        config: {
+                            temperature: attempt === 1 ? 0.7 : 0.3,
+                            maxOutputTokens: 16384,
+                        }
+                    })
+                );
 
                 const responseText = response.text || '';
                 generatedCode = this.extractCode(responseText);

@@ -9,6 +9,7 @@ import {
 } from '../state';
 import { BasePhase, PhaseContext, PhaseResult } from './BasePhase';
 import { AI_MODELS } from '../../agent/models';
+import { extractGeminiThoughts, getThinkingConfig } from '../../agent/geminiThoughts';
 
 /**
  * PlanningPhase (The "Script Builder") converts the user's request into
@@ -65,7 +66,18 @@ export class PlanningPhase extends BasePhase {
     currentState = this.updateProgress(currentState, 40, 'Generating plan', 'Creating scenes');
 
     try {
-      const plan = await this.generatePlan(currentState);
+      const { plan, thoughtSummary } = await this.generatePlan(currentState);
+
+      // Emit the model's thinking if available
+      if (thoughtSummary) {
+        currentState = this.thinkWithModelThinking(
+          currentState,
+          'observe',
+          'Planning reasoning complete',
+          thoughtSummary,
+          context
+        );
+      }
 
       // OBSERVE: Validate the generated plan
       currentState = this.think(
@@ -109,7 +121,7 @@ export class PlanningPhase extends BasePhase {
   /**
    * Generate the implementation plan using Gemini.
    */
-  private async generatePlan(state: WorkflowState): Promise<ImplementationPlan> {
+  private async generatePlan(state: WorkflowState): Promise<{ plan: ImplementationPlan; thoughtSummary?: string }> {
     const ai = this.getAI();
 
     const systemPrompt = `You are a motion design director creating a video storyboard.
@@ -152,22 +164,33 @@ IMPORTANT:
 - Include at least 3 keyElements per scene
 - Return ONLY the JSON, no markdown code blocks or explanations`;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.SMART,
-      contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
-      config: {
-        temperature: 0.5,
-        maxOutputTokens: 2048
-      }
-    });
+    // Enable thinking to capture the model's reasoning process
+    const thinkingConfig = getThinkingConfig({ includeThoughts: true });
 
-    const responseText = response.text?.trim() || '';
+    // Use rate-limited call to respect API quotas
+    const response = await this.rateLimitedCall(() =>
+      ai.models.generateContent({
+        model: AI_MODELS.SMART,
+        contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+        config: {
+          temperature: 0.5,
+          maxOutputTokens: 2048,
+          ...thinkingConfig
+        }
+      })
+    );
+
+    // Extract thoughts and text from the response
+    const { text: responseText, thoughtSummary } = extractGeminiThoughts(response);
 
     // Parse the JSON response
-    const plan = this.parseJsonResponse(responseText);
+    const plan = this.parseJsonResponse(responseText.trim());
 
     // Validate and normalize the plan
-    return this.normalizePlan(plan);
+    return {
+      plan: this.normalizePlan(plan),
+      thoughtSummary
+    };
   }
 
   /**

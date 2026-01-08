@@ -51,8 +51,8 @@ Create a React component that renders an animated brand video using Remotion.
 
 ## VIDEO SPECIFICATIONS
 - Width: ${finalWidth}px
-- Height: ${finalHeight}px  
-- Duration: 150 frames (5 seconds at 30fps)
+- Height: ${finalHeight}px
+- Duration: 1350 frames (45 seconds at 30fps)
 - Style: ${config.style.toUpperCase()} - ${STYLE_DESCRIPTIONS[config.style]}
 
 ## CREATIVE DIRECTION
@@ -88,19 +88,24 @@ export default function BrandVideo() {
 
 ## DESIGN REQUIREMENTS
 
-1. **Opening Scene (frames 0-45)**: Animated intro with brand colors. Can include shapes, patterns, or abstract elements that match the ${config.style} style.
+1. **Opening Scene (frames 0-270)**: Animated intro with brand colors. Can include shapes, patterns, or abstract elements that match the ${config.style} style. Logo fade-in and atmosphere.
 
-2. **Brand Name Reveal (frames 30-90)**: Display "${brand.name}" prominently using:
+2. **Brand Name Reveal (frames 180-540)**: Display "${brand.name}" prominently using:
    - Large, bold typography (fontSize: 60-100px depending on name length)
    - Animated entrance matching the ${config.style} style
    - Use color: '${brand.colors[1] || '#ffffff'}' for text on ${brand.colors[0] || '#000000'} background
 
-3. **Tagline (frames 60-120)**: Show "${brand.tagline}" with:
-   - Smaller text (fontSize: 20-32px)
+3. **Industry Context (frames 360-720)**: Transition into the industry context with visual elements representing ${brand.industry}. Text overlay introduces the core value proposition.
+
+4. **Feature Showcase (frames 540-900)**: Key benefits animate onto screen with ${config.style} motion design. Each element builds upon the previous with smooth choreography.
+
+5. **Tagline / Emotional Peak (frames 720-1080)**: Show "${brand.tagline}" prominently with:
+   - Powerful visual statement combining brand colors
+   - Smaller text (fontSize: 24-40px)
    - Staggered entrance after brand name
    - letterSpacing for elegance
 
-4. **Closing (frames 100-150)**: Graceful outro that completes the animation loop.
+6. **Closing (frames 900-1350)**: All elements converge back to the logo with a memorable outro animation. Call-to-action text fades in as the video concludes.
 
 ## STYLE RULES
 - Use inline styles only (style={{ }})
@@ -166,7 +171,7 @@ export default function BrandVideo() {
 
 3. Display the brand name "${brand.name}" and tagline "${brand.tagline}"
 4. Use brand colors: ${brand.colors.join(', ')}
-5. Have 150 frames of animation (5 seconds at 30fps)
+5. Have 1350 frames of animation (45 seconds at 30fps)
 
 ## OUTPUT
 Return ONLY the corrected TSX code in a single code block. No explanations.`;

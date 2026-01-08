@@ -14,6 +14,7 @@ import {
 import { errorTracker } from '../state';
 import { BasePhase, PhaseContext, PhaseResult } from './BasePhase';
 import { AI_MODELS } from '../../agent/models';
+import { extractGeminiThoughts, getThinkingConfig } from '../../agent/geminiThoughts';
 
 /**
  * ImplementationPhase (The "Code Generator") generates Remotion code
@@ -116,8 +117,19 @@ export class ImplementationPhase extends BasePhase {
           `Scene ${scene.sceneNumber}`
         );
 
-        const sceneFile = await this.generateSceneFile(currentState, scene, context);
+        const { file: sceneFile, thoughtSummary } = await this.generateSceneFile(currentState, scene, context);
         generatedFiles.push(sceneFile);
+
+        // Emit the model's thinking if available
+        if (thoughtSummary) {
+          currentState = this.thinkWithModelThinking(
+            currentState,
+            'observe',
+            `Scene ${scene.sceneNumber} reasoning complete`,
+            thoughtSummary,
+            context
+          );
+        }
 
         // Validate the scene file
         const validation = this.validateSceneCode(sceneFile.content, scene.sceneNumber);
@@ -254,22 +266,30 @@ export class ImplementationPhase extends BasePhase {
     state: WorkflowState,
     scene: SceneDescription,
     context: PhaseContext
-  ): Promise<GeneratedFile> {
+  ): Promise<{ file: GeneratedFile; thoughtSummary?: string; thoughtSignature?: string }> {
     const ai = this.getAI();
     const errorContext = errorTracker.getErrorContext(state);
 
     const prompt = this.buildScenePrompt(state, scene, errorContext);
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.SMART,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.6,
-        maxOutputTokens: 8192
-      }
-    });
+    // Enable thinking to capture the model's reasoning process
+    const thinkingConfig = getThinkingConfig({ includeThoughts: true });
 
-    const responseText = response.text || '';
+    // Use rate-limited call to respect API quotas
+    const response = await this.rateLimitedCall(() =>
+      ai.models.generateContent({
+        model: AI_MODELS.SMART,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          temperature: 0.6,
+          maxOutputTokens: 8192,
+          ...thinkingConfig
+        }
+      })
+    );
+
+    // Extract thoughts and text from the response
+    const { text: responseText, thoughtSummary, thoughtSignature } = extractGeminiThoughts(response);
     let code = this.extractCode(responseText);
 
     if (!code) {
@@ -283,9 +303,13 @@ export class ImplementationPhase extends BasePhase {
     const filePath = path.join(this.outputDir, fileName);
 
     return {
-      filePath,
-      content: code,
-      sceneId: scene.id
+      file: {
+        filePath,
+        content: code,
+        sceneId: scene.id
+      },
+      thoughtSummary,
+      thoughtSignature
     };
   }
 

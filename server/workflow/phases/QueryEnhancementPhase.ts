@@ -127,14 +127,17 @@ INSTRUCTIONS:
 
 Return ONLY the enhanced prompt, no explanations.`;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.FAST,
-      contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
-      config: {
-        temperature: 0.7,
-        maxOutputTokens: 1024
-      }
-    });
+    // Use rate-limited call to respect API quotas
+    const response = await this.rateLimitedCall(() =>
+      ai.models.generateContent({
+        model: AI_MODELS.FAST,
+        contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 1024
+        }
+      })
+    );
 
     const enhancedPrompt = response.text?.trim();
 

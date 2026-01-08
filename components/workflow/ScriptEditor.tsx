@@ -27,8 +27,8 @@ const nodeTypes = {
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-const nodeWidth = 320;
-const nodeHeight = 150;
+const nodeWidth = 400;
+const nodeHeight = 200;
 
 const getLayoutedElements = (nodes: Node<SceneNodeData>[], edges: Edge[], direction = 'TB') => {
     const isHorizontal = direction === 'LR';
@@ -65,10 +65,33 @@ const getLayoutedElements = (nodes: Node<SceneNodeData>[], edges: Edge[], direct
 interface ScriptEditorProps {
     scenes: SceneNodeData[];
     onScenesChange?: (scenes: SceneNodeData[]) => void;
+    onAddScene?: () => void;
 }
 
-const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesChange }) => {
+const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesChange, onAddScene }) => {
     const { fitView } = useReactFlow();
+
+    // Add new scene handler
+    const handleAddScene = () => {
+        if (!onScenesChange) return;
+
+        const newSceneIndex = scenes.length;
+        const newScene: SceneNodeData = {
+            id: `scene-${Date.now()}`,
+            title: `Scene ${newSceneIndex + 1}`,
+            description: 'New scene description. Click to edit.',
+            duration: 9, // ~9 seconds per scene for 45s total
+            index: newSceneIndex,
+        };
+
+        const updatedScenes = [...scenes, newScene];
+        onScenesChange(updatedScenes);
+
+        // Trigger re-layout after adding
+        window.requestAnimationFrame(() => {
+            fitView();
+        });
+    };
 
     // Handler for node updates
     const onNodeDataChange = useCallback((id: string, data: Partial<SceneNodeData>) => {
@@ -188,6 +211,7 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
                     </button>
 
                     <button
+                        onClick={handleAddScene}
                         className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-md transition-colors shadow-lg shadow-blue-900/20"
                     >
                         <Plus size={14} />

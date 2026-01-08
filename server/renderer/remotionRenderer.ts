@@ -57,7 +57,7 @@ export class RemotionRenderer {
                     ...composition,
                     width: Math.round(width * scale),
                     height: Math.round(height * scale),
-                    durationInFrames: 150, // 5 seconds at 30fps
+                    durationInFrames: 1350, // 45 seconds at 30fps
                     fps: 30,
                 },
                 serveUrl: bundled,

@@ -8,19 +8,19 @@ import { Scene3 } from './Scene3';
  * MainComposition sequences all generated scenes.
  * Total duration: 150 frames (5 seconds at 30fps)
  * Brand: Campor
- * Style: geometric
+ * Style: minimalist
  */
 export const MainComposition: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: '#000000' }}>
       <Series>
-      <Series.Sequence durationInFrames={50}>
+      <Series.Sequence durationInFrames={45}>
         <Scene1 />
       </Series.Sequence>
-      <Series.Sequence durationInFrames={50}>
+      <Series.Sequence durationInFrames={60}>
         <Scene2 />
       </Series.Sequence>
-      <Series.Sequence durationInFrames={50}>
+      <Series.Sequence durationInFrames={45}>
         <Scene3 />
       </Series.Sequence>
       </Series>

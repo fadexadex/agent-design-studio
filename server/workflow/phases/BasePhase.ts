@@ -1,5 +1,6 @@
 import { WorkflowState, WorkflowPhase, updateState, addThought } from '../state';
 import { AgentThought } from '../../agent/orchestrator';
+import { rateLimitedCall } from '../../agent/rateLimiter';
 
 /**
  * PhaseResult represents the outcome of executing a phase.
@@ -69,6 +70,30 @@ export abstract class BasePhase {
   }
 
   /**
+   * Helper to create a thought that includes the model's actual thinking summary.
+   * Use this when you have extracted thought summaries from Gemini API responses.
+   */
+  protected thinkWithModelThinking(
+    state: WorkflowState,
+    type: 'reason' | 'act' | 'observe',
+    content: string,
+    modelThinking: string,
+    context: PhaseContext,
+    thoughtSignature?: string
+  ): WorkflowState {
+    const thought: AgentThought = {
+      type,
+      content,
+      timestamp: new Date(),
+      modelThinking,
+      thoughtSignature
+    };
+
+    context.onThought(thought);
+    return addThought(state, thought);
+  }
+
+  /**
    * Helper to emit progress updates.
    */
   protected emitProgress(
@@ -124,5 +149,13 @@ export abstract class BasePhase {
    */
   protected delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Execute a rate-limited API call with automatic retry on rate limit errors.
+   * All phases should use this for Gemini API calls.
+   */
+  protected rateLimitedCall<T>(fn: () => Promise<T>): Promise<T> {
+    return rateLimitedCall(fn);
   }
 }

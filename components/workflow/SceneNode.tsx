@@ -19,7 +19,7 @@ export const SceneNode: React.FC<NodeProps<Node<SceneNodeData>>> = ({ data, sele
     return (
         <div
             className={`
-        relative group w-80 bg-zinc-900/90 backdrop-blur-md rounded-xl border transition-all duration-300
+        relative group w-96 bg-zinc-900/90 backdrop-blur-md rounded-xl border transition-all duration-300
         ${selected
                     ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
                     : 'border-zinc-700 hover:border-zinc-500'
@@ -67,11 +67,11 @@ export const SceneNode: React.FC<NodeProps<Node<SceneNodeData>>> = ({ data, sele
 
             {/* Body */}
             {isExpanded && (
-                <div className="p-3 text-xs text-zinc-400 leading-relaxed font-mono">
+                <div className="p-4 text-sm text-zinc-400 leading-relaxed">
                     <textarea
-                        className="w-full bg-transparent text-xs text-zinc-400 leading-relaxed font-mono resize-none focus:outline-none focus:text-zinc-300 focus:bg-white/5 rounded p-1 -m-1"
+                        className="w-full bg-transparent text-sm text-zinc-400 leading-relaxed resize-none focus:outline-none focus:text-zinc-300 focus:bg-white/5 rounded p-1 -m-1"
                         defaultValue={data.description}
-                        rows={3}
+                        rows={5}
                         onBlur={(e) => data.onChange?.(data.id, { description: e.target.value })}
                         onKeyDown={(e) => {
                             // Allow line breaks, so don't blur on Enter

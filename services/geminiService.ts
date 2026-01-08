@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { BrandContext, VideoConfig } from "../types";
+import { BrandContext, VideoConfig, SceneDescription } from "../types";
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -7,6 +7,16 @@ export interface AgentThought {
   type: 'reason' | 'act' | 'observe';
   content: string;
   timestamp: string;
+  /**
+   * The model's actual thinking summary from Gemini (when includeThoughts is enabled).
+   * This is the human-readable summary of the model's internal reasoning process.
+   */
+  modelThinking?: string;
+  /**
+   * Opaque thought signature from Gemini for maintaining reasoning context across turns.
+   * This should be passed back to the API but not displayed to users.
+   */
+  thoughtSignature?: string;
 }
 
 export interface AgentProgress {
@@ -33,7 +43,8 @@ interface JobStatus {
  */
 export const startWorkflow = async (
   brand: BrandContext,
-  config: VideoConfig
+  config: VideoConfig,
+  scriptScenes?: SceneDescription[]
 ): Promise<string> => {
   const jobId = uuidv4();
   const response = await fetch(`${API_BASE_URL}/workflow/start`, {
@@ -41,7 +52,7 @@ export const startWorkflow = async (
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ jobId, brand, config }),
+    body: JSON.stringify({ jobId, brand, config, scriptScenes }),
   });
 
   if (!response.ok) {

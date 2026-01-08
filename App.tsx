@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { BrandWizard } from './components/BrandWizard';
 import { MotionPreview } from './components/MotionPreview';
 import { WorkflowDashboard } from './components/workflow/WorkflowDashboard';
-import { BrandContext, VideoConfig, GenerationState } from './types';
+import { BrandContext, VideoConfig, GenerationState, SceneDescription } from './types';
 import { generateMotionVideo, startWorkflow, AgentProgress, AgentThought } from './services/geminiService';
 import { AlertCircle, Brain, Zap, Eye, Wrench, Film } from 'lucide-react';
+
+const WORKFLOW_JOB_ID_KEY = 'agent_design_studio_workflow_job_id';
 
 // ReAct stage icons mapping
 const stageIcons: Record<string, React.ReactNode> = {
@@ -37,13 +39,33 @@ interface ExtendedGenerationState extends GenerationState {
 const App: React.FC = () => {
   const [brand, setBrand] = useState<BrandContext | null>(null);
   const [config, setConfig] = useState<VideoConfig | null>(null);
-  const [workflowJobId, setWorkflowJobId] = useState<string | null>(null);
+  // Initialize from sessionStorage to persist across page reloads/HMR
+  const [workflowJobId, setWorkflowJobId] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(WORKFLOW_JOB_ID_KEY);
+    } catch {
+      return null;
+    }
+  });
   const [generation, setGeneration] = useState<ExtendedGenerationState>({
     isGenerating: false,
     progressMessage: '',
   });
 
-  const startGeneration = async (brandData: BrandContext, configData: VideoConfig) => {
+  // Persist workflowJobId to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (workflowJobId) {
+        sessionStorage.setItem(WORKFLOW_JOB_ID_KEY, workflowJobId);
+      } else {
+        sessionStorage.removeItem(WORKFLOW_JOB_ID_KEY);
+      }
+    } catch {
+      // sessionStorage not available (e.g., private browsing)
+    }
+  }, [workflowJobId]);
+
+  const startGeneration = async (brandData: BrandContext, configData: VideoConfig, scriptScenes?: SceneDescription[]) => {
     setBrand(brandData);
     setConfig(configData);
     setGeneration({
@@ -54,7 +76,7 @@ const App: React.FC = () => {
 
     try {
       // Use the new Workflow Streaming API
-      const jobId = await startWorkflow(brandData, configData);
+      const jobId = await startWorkflow(brandData, configData, scriptScenes);
       setWorkflowJobId(jobId);
     } catch (error: any) {
       console.error(error);

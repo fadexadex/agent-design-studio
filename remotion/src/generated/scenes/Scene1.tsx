@@ -1,48 +1,120 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, interpolate, spring, Easing } from 'remotion';
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  interpolate,
+  spring,
+  useVideoConfig,
+} from 'remotion';
 
-// Constants for geometric sizing and spacing
-const LETTER_WIDTH = 80;
-const LETTER_HEIGHT = 100;
-const STROKE_WIDTH = 10;
-const LETTER_SPACING = 20; // Space between letters
+export const Scene1: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
-// Off-screen initial positions for elements
-const OFF_SCREEN_X = 1000;
-const OFF_SCREEN_Y = 1000;
+  const brandName = "Campor";
+  const letters = brandName.split("");
 
-interface SegmentProps {
-    frame: number;
-    delay: number;
-    duration: number;
-    initialX: number;
-    initialY: number;
-    finalX: number;
-    finalY: number;
-    width: number;
-    height: number;
-    rotation?: number;
-    transformOrigin?: string;
-}
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: '#FFFFFF',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  };
 
-const GeometricSegment: React.FC<SegmentProps> = ({
-    frame,
-    delay,
-    duration,
-    initialX,
-    initialY,
-    finalX,
-    finalY,
-    width,
-    height,
-    rotation = 0,
-    transformOrigin = 'center center',
-}) => {
-    // Animation progress for each segment
-    const progress = spring({
-        frame: frame - delay,
-        fps: 30, // Assuming 30fps for the composition
-        config: {
-            damping: 200
+  const wordmarkContainer: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '200px',
+    overflow: 'hidden',
+  };
 
-export const Scene1 = LETTER_WIDTH;
+  return (
+    <AbsoluteFill style={containerStyle}>
+      <div style={wordmarkContainer}>
+        {letters.map((letter, i) => {
+          const delay = i * 3;
+          
+          const move = spring({
+            frame: frame - delay,
+            fps,
+            config: {
+              stiffness: 120,
+              damping: 15,
+              mass: 0.8,
+            },
+          });
+
+          const translateY = interpolate(move, [0, 1], [120, 0]);
+          const opacity = interpolate(move, [0, 0.5], [0, 1]);
+          const maskHeight = interpolate(move, [0, 1], [0, 100]);
+
+          return (
+            <div
+              key={i}
+              style={{
+                position: 'relative',
+                overflow: 'hidden',
+                padding: '0 2px',
+              }}
+            >
+              {/* Geometric reveal mask line */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '2px',
+                  backgroundColor: '#000000',
+                  transform: `translateY(${-translateY}px)`,
+                  opacity: interpolate(move, [0, 0.1, 0.9, 1], [0, 1, 1, 0]),
+                }}
+              />
+              
+              {/* Letter component */}
+              <div
+                style={{
+                  fontSize: '110px',
+                  fontWeight: 800,
+                  color: '#000000',
+                  letterSpacing: '-0.05em',
+                  transform: `translateY(${translateY}%)`,
+                  opacity: opacity,
+                  lineHeight: 1,
+                }}
+              >
+                {letter}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Subtle geometric accent lines */}
+      <div
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: interpolate(frame, [10, 35], [0, 100], { extrapolateRight: 'clamp' }),
+          backgroundColor: '#000000',
+          left: '15%',
+          top: '40%',
+          opacity: interpolate(frame, [10, 20, 35, 44], [0, 0.2, 0.2, 0]),
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: interpolate(frame, [15, 40], [0, 150], { extrapolateRight: 'clamp' }),
+          backgroundColor: '#000000',
+          right: '15%',
+          bottom: '35%',
+          opacity: interpolate(frame, [15, 25, 40, 44], [0, 0.1, 0.1, 0]),
+        }}
+      />
+    </AbsoluteFill>
+  );
+};

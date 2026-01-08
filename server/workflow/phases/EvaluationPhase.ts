@@ -7,6 +7,7 @@ import {
 } from '../state';
 import { BasePhase, PhaseContext, PhaseResult } from './BasePhase';
 import { AI_MODELS } from '../../agent/models';
+import { extractGeminiThoughts, getThinkingConfig } from '../../agent/geminiThoughts';
 
 /**
  * Evaluation result from the AI critic.
@@ -115,7 +116,18 @@ export class EvaluationPhase extends BasePhase {
     currentState = this.updateProgress(currentState, 40, 'AI Review', 'Analyzing code');
 
     try {
-      const evaluation = await this.evaluateCode(currentState, currentRound);
+      const { evaluation, thoughtSummary } = await this.evaluateCode(currentState, currentRound);
+
+      // Emit the model's thinking if available
+      if (thoughtSummary) {
+        currentState = this.thinkWithModelThinking(
+          currentState,
+          'observe',
+          'Evaluation reasoning complete',
+          thoughtSummary,
+          context
+        );
+      }
 
       // OBSERVE: Process evaluation results
       currentState = this.think(
@@ -172,7 +184,7 @@ export class EvaluationPhase extends BasePhase {
   private async evaluateCode(
     state: WorkflowState,
     round: NonNullable<ReturnType<typeof getCurrentRound>>
-  ): Promise<EvaluationResult> {
+  ): Promise<{ evaluation: EvaluationResult; thoughtSummary?: string }> {
     const ai = this.getAI();
 
     // Collect all code for review
@@ -224,17 +236,29 @@ OUTPUT FORMAT - Return ONLY valid JSON:
 
 Return ONLY the JSON, no markdown or explanations.`;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODELS.SMART,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: 1024
-      }
-    });
+    // Enable thinking to capture the model's reasoning process
+    const thinkingConfig = getThinkingConfig({ includeThoughts: true });
 
-    const responseText = response.text?.trim() || '';
-    return this.parseEvaluationResponse(responseText);
+    // Use rate-limited call to respect API quotas
+    const response = await this.rateLimitedCall(() =>
+      ai.models.generateContent({
+        model: AI_MODELS.SMART,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          temperature: 0.3,
+          maxOutputTokens: 1024,
+          ...thinkingConfig
+        }
+      })
+    );
+
+    // Extract thoughts and text from the response
+    const { text: responseText, thoughtSummary } = extractGeminiThoughts(response);
+
+    return {
+      evaluation: this.parseEvaluationResponse(responseText.trim()),
+      thoughtSummary
+    };
   }
 
   /**

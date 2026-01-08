@@ -34,7 +34,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
         id: s.id,
         title: `Scene ${s.sceneNumber}`,
         description: s.description,
-        duration: 5,
+        duration: 9, // ~9 seconds per scene for 45s total video
         index: idx
     })) || [], [state?.plan]);
 
@@ -154,7 +154,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
     };
 
     return (
-        <div className="flex h-screen w-full bg-black text-white font-sans overflow-hidden">
+        <div className="flex flex-nowrap h-screen w-full bg-black text-white font-sans overflow-hidden">
 
             {/* Left Sidebar: Thought Stream */}
             <div className={`${sidebarCollapsed ? 'w-12' : 'w-80'} shrink-0 transition-all duration-300 z-10 hidden md:block`}>
@@ -243,14 +243,15 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                             </div>
                         )}
 
-                        {/* Feedback Controls Overlay */}
+                        {/* Feedback Controls Overlay - Compact when scene is selected */}
                         {(currentPhase === WorkflowPhase.AWAITING_FEEDBACK || currentPhase === WorkflowPhase.EVALUATION) && (
-                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl z-30">
+                            <div className={`absolute z-50 transition-all duration-500 ease-out ${activeSceneId ? 'bottom-4 right-4' : 'bottom-6 right-6 w-full max-w-2xl'}`}>
                                 <FeedbackControls
                                     status={state?.progress?.subStep === 'processing_feedback' ? 'processing' : 'idle'}
                                     targetLabel={activeSceneId ? `Scene ${activeScenes.find(s => s.id === activeSceneId)?.index! + 1}` : 'Global Project'}
                                     onSubmit={handleFeedbackSubmit}
-                                    onApprove={handleApprove}
+                                    onApprove={!activeSceneId ? handleApprove : undefined}
+                                    compact={!!activeSceneId}
                                 />
                             </div>
                         )}
