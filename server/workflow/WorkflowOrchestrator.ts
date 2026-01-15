@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import * as path from 'path';
 import {
   WorkflowState,
   WorkflowPhase,
@@ -8,12 +9,31 @@ import {
   addThought,
   setTargetScenes,
   clearTargetScenes,
-  storeEvaluation
+  storeEvaluation,
+  SceneRenderStatus,
+  ImplementationPlan,
+  SceneDescription
 } from './state';
 import { PhaseManager, PhaseContext, PhaseResult } from './phases';
 import { IterationController, IterationDecision, EvaluationResult } from './iteration';
 import { BrandContext, VideoConfig } from '../agent/types';
 import { AgentThought } from '../agent/orchestrator';
+import { RemotionRenderer } from '../renderer/remotionRenderer';
+
+/**
+ * Script data provided from the script generation endpoint.
+ * Contains the narrative script and scene breakdown.
+ */
+export interface ProvidedScript {
+  script: string;
+  scenes: Array<{
+    id: string;
+    sceneNumber: number;
+    description: string;
+    frameRange: { start: number; end: number };
+    keyElements: string[];
+  }>;
+}
 
 /**
  * User feedback provided during AWAITING_FEEDBACK phase.
@@ -37,6 +57,8 @@ export interface WorkflowEvents {
   phaseComplete: (phase: WorkflowPhase, result: PhaseResult) => void;
   thought: (thought: AgentThought) => void;
   progress: (message: string, detail?: string) => void;
+  sceneProgress: (status: SceneRenderStatus) => void;
+  renderProgress: (data: { progress: number }) => void;
   error: (error: Error) => void;
   complete: (state: WorkflowState) => void;
 }
@@ -108,19 +130,26 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   /**
-   * Start a new workflow with the given brand and config.
+   * Start a new workflow with the given brand, config, and pre-generated script.
    *
    * @param jobId - Unique identifier for this workflow run
    * @param brand - Brand context for video generation
    * @param videoConfig - Video configuration (style, aspect ratio, etc.)
+   * @param script - Pre-generated script with scenes (REQUIRED)
    */
   async start(
     jobId: string,
     brand: BrandContext,
-    videoConfig: VideoConfig
+    videoConfig: VideoConfig,
+    script: ProvidedScript
   ): Promise<WorkflowState> {
     if (this.isRunning) {
       throw new Error('Workflow is already running. Call stop() first.');
+    }
+
+    // Validate that script is provided
+    if (!script || !script.scenes || script.scenes.length === 0) {
+      throw new Error('Script with scenes is required. Generate a script using /api/generate-script first.');
     }
 
     // Initialize state
@@ -131,13 +160,40 @@ export class WorkflowOrchestrator extends EventEmitter {
 
     // Emit initial state
     this.emitStateUpdate();
-    this.emitThought('reason', 'Starting new workflow. Analyzing brand context and video requirements.');
+    this.emitThought('reason', 'Loading pre-generated script for review.');
 
-    // Transition to first phase
-    this.state = transitionPhase(this.state, WorkflowPhase.QUERY_ENHANCEMENT);
+    // Convert the provided script scenes to SceneDescription format
+    const sceneBreakdown: SceneDescription[] = script.scenes.map((scene, idx) => ({
+      id: scene.id || `scene-${idx + 1}`,
+      sceneNumber: scene.sceneNumber || idx + 1,
+      description: scene.description,
+      frameRange: scene.frameRange,
+      keyElements: scene.keyElements || []
+    }));
+
+    // Create the implementation plan from the provided script
+    const plan: ImplementationPlan = {
+      approach: script.script, // The narrative script
+      sceneBreakdown,
+      estimatedComplexity: sceneBreakdown.length > 4 ? 'high' : sceneBreakdown.length > 2 ? 'medium' : 'low',
+      createdAt: new Date()
+    };
+
+    // Set the plan on the state
+    this.state = updateState(this.state, { plan });
+
+    this.emitThought('observe', `Loaded ${sceneBreakdown.length} scenes from provided script. Ready for review.`);
+
+    // Transition to AWAITING_FEEDBACK so the user can review/edit scenes in the workflow UI
+    // This shows the ScriptEditor with the provided scenes
+    this.state = transitionPhase(
+      this.state,
+      WorkflowPhase.AWAITING_FEEDBACK,
+      'Script loaded. Review and edit scenes, then approve to start implementation.'
+    );
     this.emitStateUpdate();
 
-    // Start the main loop
+    // Start the main loop (will immediately pause at AWAITING_FEEDBACK)
     await this.runLoop();
 
     return this.state;
@@ -314,26 +370,84 @@ export class WorkflowOrchestrator extends EventEmitter {
 
   /**
    * Handle the rendering phase.
-   * This is a placeholder - actual rendering is handled externally.
+   * Actually invokes the RemotionRenderer to render the final video.
    */
-  private handleRenderingPhase(context: PhaseContext): PhaseResult {
+  private async handleRenderingPhase(context: PhaseContext): Promise<PhaseResult> {
     if (!this.state) {
       return { state: this.state!, success: false, error: 'No state available' };
     }
 
-    context.onProgress('Starting video render...', 'Invoking Remotion renderer');
+    context.onProgress('Starting video render...', 'Preparing Remotion renderer');
     this.emitThought('act', 'Initiating video rendering process.');
 
-    // Rendering is handled externally by RemotionRenderer
-    // The API layer will call this and then invoke the renderer
-    // For now, we transition to complete after rendering
-    const updatedState = transitionPhase(
-      this.state,
-      WorkflowPhase.COMPLETE,
-      'Video generation complete'
-    );
+    try {
+      // Find the MainComposition file from the generated scenes
+      const generatedScenesDir = path.join(process.cwd(), 'remotion', 'src', 'generated', 'scenes');
+      const mainCompositionPath = path.join(generatedScenesDir, 'MainComposition.tsx');
 
-    return { state: updatedState, success: true };
+      // Check if we have implementation rounds with files
+      if (this.state.rounds.length === 0) {
+        throw new Error('No implementation rounds found - cannot render without generated code');
+      }
+
+      const lastRound = this.state.rounds[this.state.rounds.length - 1];
+      if (!lastRound.files || lastRound.files.length === 0) {
+        throw new Error('No generated files found in the last implementation round');
+      }
+
+      // Create renderer and render the video
+      const renderer = new RemotionRenderer();
+
+      this.emitThought('observe', 'Bundling Remotion project and rendering frames...');
+
+      const videoPath = await renderer.render(
+        mainCompositionPath,
+        this.state.config,
+        (progress: number) => {
+          const progressPercent = Math.round(progress * 100);
+          context.onProgress(`Rendering video: ${progressPercent}%`, 'Encoding video frames');
+
+          // Emit a render progress event
+          this.emit('renderProgress', { progress: progressPercent });
+
+          // Update state with render progress
+          if (this.state) {
+            this.state = updateState(this.state, {
+              progress: {
+                ...this.state.progress,
+                phaseProgress: progressPercent,
+                currentMessage: `Rendering: ${progressPercent}%`,
+                subStep: 'Encoding frames'
+              }
+            });
+          }
+        }
+      );
+
+      this.emitThought('observe', `Video rendered successfully: ${videoPath}`);
+      context.onProgress('Video render complete!', 'Video ready for playback');
+
+      // Update state with the output video path
+      const updatedState = updateState(
+        transitionPhase(this.state, WorkflowPhase.COMPLETE, 'Video generation complete'),
+        { outputVideoPath: videoPath }
+      );
+
+      return { state: updatedState, success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.emitThought('observe', `Rendering failed: ${errorMessage}`);
+      context.onProgress('Rendering failed', errorMessage);
+
+      // Transition to error state
+      const errorState = transitionPhase(
+        this.state,
+        WorkflowPhase.ERROR,
+        `Rendering failed: ${errorMessage}`
+      );
+
+      return { state: errorState, success: false, error: errorMessage };
+    }
   }
 
   /**
@@ -382,6 +496,45 @@ export class WorkflowOrchestrator extends EventEmitter {
 
     switch (feedback.action) {
       case 'approve':
+        // Apply any modifications if provided (user may have edited scenes before approving)
+        if (feedback.modifications?.plan && this.state.plan) {
+          let updatedSceneBreakdown = this.state.plan.sceneBreakdown;
+
+          if (feedback.modifications.plan.sceneBreakdown) {
+            const originalScenes = this.state.plan.sceneBreakdown;
+            const modifiedScenes = feedback.modifications.plan.sceneBreakdown;
+
+            updatedSceneBreakdown = modifiedScenes.map((modifiedScene, idx) => {
+              const originalScene = originalScenes.find(os => os.id === modifiedScene.id);
+
+              if (originalScene) {
+                return {
+                  ...originalScene,
+                  ...modifiedScene,
+                  frameRange: modifiedScene.frameRange || originalScene.frameRange,
+                  keyElements: modifiedScene.keyElements || originalScene.keyElements
+                };
+              } else {
+                return {
+                  id: modifiedScene.id,
+                  sceneNumber: modifiedScene.sceneNumber || idx + 1,
+                  description: modifiedScene.description || 'New scene',
+                  frameRange: modifiedScene.frameRange || { start: idx * 270, end: (idx + 1) * 270 },
+                  keyElements: modifiedScene.keyElements || ['animated element', 'brand colors']
+                };
+              }
+            });
+          }
+
+          const updatedPlan = {
+            ...this.state.plan,
+            ...feedback.modifications.plan,
+            sceneBreakdown: updatedSceneBreakdown
+          };
+          this.state = updateState(this.state, { plan: updatedPlan });
+          this.emitThought('act', 'Applied user scene edits before proceeding.');
+        }
+
         // Determine the next step based on where we are
         let nextPhase = WorkflowPhase.RENDERING;
         let msg = 'User approved. Proceeding to render.';
@@ -400,24 +553,57 @@ export class WorkflowOrchestrator extends EventEmitter {
         break;
 
       case 'reject':
-        // User rejected, go back to planning
+        // User rejected - since we use pre-generated scripts, go to error state
+        // The user should generate a new script via /api/generate-script and start a new workflow
         this.state = transitionPhase(
           this.state,
-          WorkflowPhase.PLANNING,
-          feedback.message || 'User requested changes. Restarting planning phase.'
+          WorkflowPhase.ERROR,
+          feedback.message || 'Workflow rejected. Please generate a new script and start a new workflow.'
         );
-        // Reset round counter for fresh attempt
-        this.state = updateState(this.state, { currentRound: 0 });
         break;
 
       case 'modify':
         // User wants specific modifications
 
-        // 1. Apply plan updates if provided
+        // 1. Apply plan updates if provided - do DEEP merge to preserve scene data
         if (feedback.modifications?.plan && this.state.plan) {
+          let updatedSceneBreakdown = this.state.plan.sceneBreakdown;
+
+          // If sceneBreakdown is being modified, do a deep merge per-scene
+          if (feedback.modifications.plan.sceneBreakdown) {
+            const originalScenes = this.state.plan.sceneBreakdown;
+            const modifiedScenes = feedback.modifications.plan.sceneBreakdown;
+
+            updatedSceneBreakdown = modifiedScenes.map((modifiedScene, idx) => {
+              // Find the original scene by ID to preserve unchanged fields
+              const originalScene = originalScenes.find(os => os.id === modifiedScene.id);
+
+              if (originalScene) {
+                // Merge: modified fields override original, but keep original for anything not specified
+                return {
+                  ...originalScene,
+                  ...modifiedScene,
+                  // Ensure critical fields are always present
+                  frameRange: modifiedScene.frameRange || originalScene.frameRange,
+                  keyElements: modifiedScene.keyElements || originalScene.keyElements
+                };
+              } else {
+                // New scene - ensure all required fields are present
+                return {
+                  id: modifiedScene.id,
+                  sceneNumber: modifiedScene.sceneNumber || idx + 1,
+                  description: modifiedScene.description || 'New scene',
+                  frameRange: modifiedScene.frameRange || { start: idx * 270, end: (idx + 1) * 270 },
+                  keyElements: modifiedScene.keyElements || ['animated element', 'brand colors']
+                };
+              }
+            });
+          }
+
           const updatedPlan = {
             ...this.state.plan,
-            ...feedback.modifications.plan
+            ...feedback.modifications.plan,
+            sceneBreakdown: updatedSceneBreakdown
           };
           this.state = updateState(this.state, { plan: updatedPlan });
           this.emitThought('act', 'Applied user modifications to the plan.');
@@ -477,6 +663,25 @@ export class WorkflowOrchestrator extends EventEmitter {
         if (this.state) {
           this.state = addThought(this.state, thought);
         }
+      },
+      onSceneProgress: (status: SceneRenderStatus) => {
+        this.emit('sceneProgress', status);
+        // Also update state with the scene status
+        if (this.state) {
+          const existingStatuses = this.state.sceneStatuses || [];
+          const updatedStatuses = existingStatuses.map(s =>
+            s.sceneNumber === status.sceneNumber ? status : s
+          );
+          // If the scene wasn't in the list, add it
+          if (!existingStatuses.find(s => s.sceneNumber === status.sceneNumber)) {
+            updatedStatuses.push(status);
+          }
+          this.state = updateState(this.state, {
+            sceneStatuses: updatedStatuses
+          });
+        }
+        // Emit a state update so the frontend gets the new scene status
+        this.emitStateUpdate();
       }
     };
   }

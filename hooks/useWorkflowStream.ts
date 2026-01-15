@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { WorkflowState, AgentThought } from '../types';
+import { WorkflowState, AgentThought, SceneRenderStatus } from '../types';
 
 export function useWorkflowStream(jobId: string | null) {
     const [state, setState] = useState<WorkflowState | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isError, setIsError] = useState(false);
+    const [renderProgress, setRenderProgress] = useState<number>(0);
 
     useEffect(() => {
         if (!jobId) {
             setState(null);
             setIsConnected(false);
+            setRenderProgress(0);
             return;
         }
 
@@ -74,6 +76,40 @@ export function useWorkflowStream(jobId: string | null) {
             }
         });
 
+        // Listen for scene progress updates (incremental scene generation)
+        eventSource.addEventListener('sceneProgress', (event) => {
+            try {
+                const sceneStatus: SceneRenderStatus = JSON.parse((event as MessageEvent).data);
+                setState(currentState => {
+                    if (!currentState) return null;
+                    const existingStatuses = currentState.sceneStatuses || [];
+                    const updatedStatuses = existingStatuses.map(s =>
+                        s.sceneNumber === sceneStatus.sceneNumber ? sceneStatus : s
+                    );
+                    // If the scene wasn't in the list, add it
+                    if (!existingStatuses.find(s => s.sceneNumber === sceneStatus.sceneNumber)) {
+                        updatedStatuses.push(sceneStatus);
+                    }
+                    return {
+                        ...currentState,
+                        sceneStatuses: updatedStatuses
+                    };
+                });
+            } catch (e) {
+                console.error('[SSE] Failed to parse sceneProgress', e);
+            }
+        });
+
+        // Listen for render progress updates
+        eventSource.addEventListener('renderProgress', (event) => {
+            try {
+                const { progress } = JSON.parse((event as MessageEvent).data);
+                setRenderProgress(progress);
+            } catch (e) {
+                console.error('[SSE] Failed to parse renderProgress', e);
+            }
+        });
+
         // Listen for phaseStart (optional, can just rely on stateUpdate)
         // Listen for phaseComplete (optional)
 
@@ -110,5 +146,5 @@ export function useWorkflowStream(jobId: string | null) {
         };
     }, [jobId]);
 
-    return { state, isConnected, isError };
+    return { state, isConnected, isError, renderProgress };
 }

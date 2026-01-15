@@ -1,80 +1,77 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, interpolate, Easing, useVideoConfig } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, interpolate, useVideoConfig, Easing } from 'remotion';
 
 export const Scene3: React.FC = () => {
   const frame = useCurrentFrame();
-  const { height } = useVideoConfig();
+  const { fps } = useVideoConfig();
 
-  // Aggressive ease-in-out curve for a snappy transition
-  const snappyEasing = Easing.bezier(0.9, 0, 0.1, 1);
+  // Morphing: Circle (50%) to Square (0%)
+  const borderRadius = interpolate(frame, [0, 45], [50, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: Easing.bezier(0.42, 0, 0.58, 1),
+  });
 
-  // The composition starts fully visible and slides up out of view
-  // Animation starts at frame 10 and finishes by frame 38 to ensure a clean black hold
-  const translateY = interpolate(
-    frame,
-    [10, 38],
-    [0, -height],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: snappyEasing,
-    }
-  );
+  // Breathing rhythm: Subtle scale oscillation
+  const breathing = Math.sin(frame / 20) * 0.02;
 
-  // Subtle opacity fade on the text to enhance the exit feel
-  const contentOpacity = interpolate(
-    frame,
-    [10, 25],
-    [1, 0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    }
-  );
+  // Text: 'Seamless Experience' fade in
+  const textOpacity = interpolate(frame, [70, 100], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  // Transition: Expansion to fill screen with black
+  const transitionStart = 190;
+  const expansionScale = interpolate(frame, [transitionStart, 224], [1, 100], {
+    extrapolateLeft: 'clamp',
+    easing: Easing.in(Easing.expo),
+  });
+
+  // Square background fill during transition
+  const fillOpacity = interpolate(frame, [transitionStart, transitionStart + 10], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  const finalScale = (1 + breathing) * expansionScale;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000000' }}>
-      <AbsoluteFill
+    <AbsoluteFill style={{ backgroundColor: '#FFFFFF', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      {/* Central Morphing Shape */}
+      <div
         style={{
-          backgroundColor: '#FFFFFF',
-          transform: `translateY(${translateY}px)`,
+          width: 350,
+          height: 350,
+          border: '1.5px solid #000000',
+          borderRadius: `${borderRadius}%`,
+          transform: `scale(${finalScale})`,
+          backgroundColor: `rgba(0, 0, 0, ${fillOpacity})`,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          flexDirection: 'column',
+          zIndex: 2,
+        }}
+      />
+
+      {/* Typography */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '15%',
+          fontFamily: 'Helvetica, Arial, sans-serif',
+          fontSize: 40,
+          fontWeight: 300,
+          letterSpacing: '0.3em',
+          color: '#000000',
+          opacity: textOpacity,
+          textTransform: 'uppercase',
+          textAlign: 'center',
+          zIndex: 1,
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            opacity: contentOpacity,
-          }}
-        >
-          <div
-            style={{
-              fontFamily: 'Helvetica, Arial, sans-serif',
-              fontSize: 64,
-              fontWeight: 200,
-              letterSpacing: '0.25em',
-              color: '#000000',
-              textTransform: 'uppercase',
-              marginBottom: 20,
-            }}
-          >
-            Campor
-          </div>
-          <div
-            style={{
-              width: 40,
-              height: 1,
-              backgroundColor: '#000000',
-              opacity: 0.6,
-            }}
-          />
-        </div>
-      </AbsoluteFill>
+        Seamless Experience
+      </div>
     </AbsoluteFill>
   );
 };

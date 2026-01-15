@@ -3,8 +3,8 @@ import { Layout } from './components/Layout';
 import { BrandWizard } from './components/BrandWizard';
 import { MotionPreview } from './components/MotionPreview';
 import { WorkflowDashboard } from './components/workflow/WorkflowDashboard';
-import { BrandContext, VideoConfig, GenerationState, SceneDescription } from './types';
-import { generateMotionVideo, startWorkflow, AgentProgress, AgentThought } from './services/geminiService';
+import { BrandContext, VideoConfig, GenerationState, VideoScript } from './types';
+import { startWorkflow, AgentProgress, AgentThought } from './services/geminiService';
 import { AlertCircle, Brain, Zap, Eye, Wrench, Film } from 'lucide-react';
 
 const WORKFLOW_JOB_ID_KEY = 'agent_design_studio_workflow_job_id';
@@ -65,7 +65,7 @@ const App: React.FC = () => {
     }
   }, [workflowJobId]);
 
-  const startGeneration = async (brandData: BrandContext, configData: VideoConfig, scriptScenes?: SceneDescription[]) => {
+  const startGeneration = async (brandData: BrandContext, configData: VideoConfig, script: VideoScript) => {
     setBrand(brandData);
     setConfig(configData);
     setGeneration({
@@ -75,8 +75,8 @@ const App: React.FC = () => {
     });
 
     try {
-      // Use the new Workflow Streaming API
-      const jobId = await startWorkflow(brandData, configData, scriptScenes);
+      // Use the new Workflow Streaming API with required script
+      const jobId = await startWorkflow(brandData, configData, script);
       setWorkflowJobId(jobId);
     } catch (error: any) {
       console.error(error);
@@ -86,6 +86,8 @@ const App: React.FC = () => {
         errorMessage = 'API Key error. Please ensure the GEMINI_API_KEY is correctly configured.';
       } else if (error.message === "BACKEND_ERROR") {
         errorMessage = 'Cannot connect to backend server. Please ensure the server is running (npm run server).';
+      } else if (error.message?.includes('Script with scenes is required')) {
+        errorMessage = 'Please generate or upload a script before rendering.';
       }
 
       setGeneration({

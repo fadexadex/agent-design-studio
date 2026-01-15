@@ -17,6 +17,7 @@ export {
   type GeneratedFile,
   type EvaluationResultRef,
   type SceneScoreRef,
+  type SceneRenderStatus,
 
   // Functions
   createInitialState,

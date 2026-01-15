@@ -9,6 +9,10 @@ export type SceneNodeData = {
     duration: number; // in seconds
     index: number;
     onChange?: (id: string, data: Partial<SceneNodeData>) => void;
+    // Preserve backend SceneDescription fields for sync
+    sceneNumber?: number;
+    frameRange?: { start: number; end: number };
+    keyElements?: string[];
 };
 
 // We extend NodeProps to include our specific data type if needed, 

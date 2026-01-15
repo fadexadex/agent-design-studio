@@ -1,126 +1,127 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, interpolate, spring, useVideoConfig } from 'remotion';
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  interpolate,
+  spring,
+  useVideoConfig,
+} from 'remotion';
 
 export const Scene2: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  // Animation values
-  const opacity = interpolate(frame, [0, 15], [0, 1], {
+  // Animation Constants
+  const gridOpacity = interpolate(frame, [0, 40], [0, 0.1], {
     extrapolateRight: 'clamp',
   });
 
-  const contentSpring = spring({
-    frame,
-    fps,
-    config: {
-      stiffness: 40,
-      damping: 20,
-    },
+  const textOpacity = interpolate(frame, [60, 90], [0, 1], {
+    extrapolateRight: 'clamp',
   });
 
-  // Subtle 1D motion for grid lines (slow vertical drift)
-  const gridDrift = interpolate(frame, [0, 60], [0, 30]);
+  const textTranslateY = interpolate(frame, [60, 90], [20, 0], {
+    extrapolateRight: 'clamp',
+  });
 
-  const containerStyle: React.CSSProperties = {
-    backgroundColor: '#FFFFFF',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    overflow: 'hidden',
-  };
+  // Grid Intersection Coordinates
+  const x1 = width * 0.333;
+  const x2 = width * 0.666;
+  const y1 = height * 0.333;
+  const y2 = height * 0.666;
 
-  const wordmarkStyle: React.CSSProperties = {
-    color: '#000000',
-    fontSize: '110px',
-    fontWeight: 300,
-    letterSpacing: '0.25em',
-    textTransform: 'uppercase',
-    opacity,
-    transform: `scale(${interpolate(contentSpring, [0, 1], [0.98, 1])})`,
-    zIndex: 10,
-    textAlign: 'center',
-  };
+  // Circle Movement Logic
+  // Entry: Frame 10-50
+  // Glide 1: Frame 80-140
+  // Glide 2: Frame 160-220
+  
+  const circleEntry = spring({
+    frame: frame - 10,
+    fps,
+    config: { damping: 15, stiffness: 60 },
+  });
 
-  const gridLineStyle: React.CSSProperties = {
+  const circleGlide1 = spring({
+    frame: frame - 80,
+    fps,
+    config: { damping: 20, stiffness: 30 },
+  });
+
+  const circleGlide2 = spring({
+    frame: frame - 160,
+    fps,
+    config: { damping: 20, stiffness: 30 },
+  });
+
+  const circleX = interpolate(
+    circleGlide1,
+    [0, 1],
+    [interpolate(circleEntry, [0, 1], [-50, x1]), x2]
+  );
+
+  const circleY = interpolate(
+    circleGlide2,
+    [0, 1],
+    [y1, y2]
+  );
+
+  const circleOpacity = interpolate(frame, [10, 30], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
+
+  const gridStyle: React.CSSProperties = {
     position: 'absolute',
     backgroundColor: '#000000',
-    opacity: 0.08,
+    opacity: gridOpacity,
   };
 
   return (
-    <AbsoluteFill style={containerStyle}>
-      {/* Vertical Grid Lines with subtle movement */}
+    <AbsoluteFill style={{ backgroundColor: '#FFFFFF' }}>
+      {/* Grid System */}
+      <div style={{ ...gridStyle, width: 1, height: '100%', left: '33.33%' }} />
+      <div style={{ ...gridStyle, width: 1, height: '100%', left: '66.66%' }} />
+      <div style={{ ...gridStyle, width: '100%', height: 1, top: '33.33%' }} />
+      <div style={{ ...gridStyle, width: '100%', height: 1, top: '66.66%' }} />
+
+      {/* Abstract Product Dot */}
       <div
         style={{
-          ...gridLineStyle,
-          width: '1px',
-          height: '100%',
-          left: '15%',
-          transform: `translateY(${gridDrift}px)`,
-        }}
-      />
-      <div
-        style={{
-          ...gridLineStyle,
-          width: '1px',
-          height: '100%',
-          right: '15%',
-          transform: `translateY(${-gridDrift}px)`,
+          position: 'absolute',
+          width: 24,
+          height: 24,
+          backgroundColor: '#000000',
+          borderRadius: '50%',
+          left: circleX - 12,
+          top: circleY - 12,
+          opacity: circleOpacity,
         }}
       />
 
-      {/* Horizontal Grid Lines with subtle movement */}
+      {/* Typography */}
       <div
         style={{
-          ...gridLineStyle,
+          position: 'absolute',
+          bottom: '10%',
           width: '100%',
-          height: '1px',
-          top: '20%',
-          opacity: 0.05,
-          transform: `translateX(${gridDrift * 0.5}px)`,
+          display: 'flex',
+          justifyContent: 'center',
+          opacity: textOpacity,
+          transform: `translateY(${textTranslateY}px)`,
         }}
-      />
-      <div
-        style={{
-          ...gridLineStyle,
-          width: '100%',
-          height: '1px',
-          bottom: '20%',
-          opacity: 0.05,
-          transform: `translateX(${-gridDrift * 0.5}px)`,
-        }}
-      />
-
-      {/* Centered Wordmark */}
-      <div style={wordmarkStyle}>
-        CAMPOR
+      >
+        <span
+          style={{
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            fontSize: 22,
+            fontWeight: 300,
+            letterSpacing: '0.25em',
+            color: '#000000',
+            textTransform: 'uppercase',
+          }}
+        >
+          Curated Selection
+        </span>
       </div>
-
-      {/* Decorative thin frame elements */}
-      <div
-        style={{
-          position: 'absolute',
-          width: '40px',
-          height: '1px',
-          backgroundColor: '#000000',
-          top: '50%',
-          left: '10%',
-          opacity: interpolate(frame, [10, 30], [0, 0.4], { extrapolateRight: 'clamp' }),
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          width: '40px',
-          height: '1px',
-          backgroundColor: '#000000',
-          top: '50%',
-          right: '10%',
-          opacity: interpolate(frame, [10, 30], [0, 0.4], { extrapolateRight: 'clamp' }),
-        }}
-      />
     </AbsoluteFill>
   );
 };

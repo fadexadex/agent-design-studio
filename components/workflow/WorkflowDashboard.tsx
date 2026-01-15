@@ -20,9 +20,11 @@ const PHASES = [
 ];
 
 export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) => {
-    const { state, isConnected, isError } = useWorkflowStream(jobId);
+    const { state, isConnected, isError, renderProgress } = useWorkflowStream(jobId);
     const [activeSceneId, setActiveSceneId] = useState<string>('');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // Track if user is actively editing a scene (clicked on a scene node)
+    const [isEditingScene, setIsEditingScene] = useState(false);
 
     // State for local edits to the plan
     const [editedScenes, setEditedScenes] = useState<SceneNodeData[] | null>(null);
@@ -30,12 +32,17 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
     // Sync state plan to local scenes if we haven't edited them yet, or if a new plan arrives (e.g. re-plan)
     // We need to be careful not to overwrite user edits if the stream just sends a keep-alive.
     // So we track the plan generation timestamp or just check if we have scenes.
+    // IMPORTANT: Preserve all SceneDescription fields to avoid data loss during round-trip
     const serverScenes = useMemo(() => state?.plan?.sceneBreakdown?.map((s, idx) => ({
         id: s.id,
         title: `Scene ${s.sceneNumber}`,
         description: s.description,
-        duration: 9, // ~9 seconds per scene for 45s total video
-        index: idx
+        duration: s.frameRange ? Math.round((s.frameRange.end - s.frameRange.start) / 30) : 9, // Convert frames to seconds (30fps)
+        index: idx,
+        // Preserve original backend data for sync
+        sceneNumber: s.sceneNumber,
+        frameRange: s.frameRange,
+        keyElements: s.keyElements
     })) || [], [state?.plan]);
 
     useEffect(() => {
@@ -52,6 +59,9 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
 
     // Current scenes to display: local edits or server fallbacks
     const activeScenes = editedScenes || serverScenes;
+
+    // Logic for video URL
+    const videoUrl = state?.outputVideoPath || undefined;
 
     if (isError) {
         return (
@@ -87,27 +97,28 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
         WorkflowPhase.RENDERING
     ].includes(currentPhase);
 
-    // Logic for code preview
-    // In a real app we'd fetch the file content from state.rounds or generated files
-    const currentCode = state?.rounds?.[state.currentRound - 1]?.files?.find(f => f.content.includes('Composition'))?.content || '// Code generation in progress...';
-    // Logic for video URL
-    const videoUrl = state?.outputVideoPath || undefined;
-
     const handleFeedbackSubmit = async (text: string) => {
         try {
             // Include edits if we are in planning mode
+            // IMPORTANT: Properly reconstruct SceneDescription with all required fields
             const modifications = isPlanning && editedScenes ? {
                 plan: {
-                    sceneBreakdown: editedScenes.map(s => ({
-                        id: s.id,
-                        sceneNumber: s.index + 1,
-                        description: s.description,
-                        // partial remap: we only edited description mostly.
-                        // We need to make sure we don't lose other data if we can't map it back perfectly.
-                        // Ideally checking ID match with original valid plan.
-                        frameRange: state?.plan?.sceneBreakdown?.find(os => os.id === s.id)?.frameRange,
-                        keyElements: state?.plan?.sceneBreakdown?.find(os => os.id === s.id)?.keyElements
-                    }))
+                    sceneBreakdown: editedScenes.map((s, idx) => {
+                        // Calculate frame range: each scene gets equal frames, 30fps * duration
+                        const framesPerScene = Math.round(s.duration * 30);
+                        const start = idx * framesPerScene;
+                        const end = start + framesPerScene;
+
+                        return {
+                            id: s.id,
+                            sceneNumber: idx + 1,
+                            description: s.description,
+                            // Use preserved frameRange if available, otherwise calculate from duration/index
+                            frameRange: s.frameRange || { start, end },
+                            // Use preserved keyElements if available, otherwise provide sensible default
+                            keyElements: s.keyElements || ['animated element', 'brand colors']
+                        };
+                    })
                 }
             } : undefined;
 
@@ -128,15 +139,25 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
     const handleApprove = async () => {
         try {
             // Include edits if we are in planning mode
+            // IMPORTANT: Properly reconstruct SceneDescription with all required fields
             const modifications = isPlanning && editedScenes ? {
                 plan: {
-                    sceneBreakdown: editedScenes.map(s => ({
-                        id: s.id,
-                        sceneNumber: s.index + 1,
-                        description: s.description,
-                        frameRange: state?.plan?.sceneBreakdown?.find(os => os.id === s.id)?.frameRange || { start: 0, end: 0 },
-                        keyElements: state?.plan?.sceneBreakdown?.find(os => os.id === s.id)?.keyElements || []
-                    }))
+                    sceneBreakdown: editedScenes.map((s, idx) => {
+                        // Calculate frame range: each scene gets equal frames, 30fps * duration
+                        const framesPerScene = Math.round(s.duration * 30);
+                        const start = idx * framesPerScene;
+                        const end = start + framesPerScene;
+
+                        return {
+                            id: s.id,
+                            sceneNumber: idx + 1,
+                            description: s.description,
+                            // Use preserved frameRange if available, otherwise calculate from duration/index
+                            frameRange: s.frameRange || { start, end },
+                            // Use preserved keyElements if available, otherwise provide sensible default
+                            keyElements: s.keyElements || ['animated element', 'brand colors']
+                        };
+                    })
                 }
             } : undefined;
 
@@ -214,14 +235,19 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                             <ScriptEditor
                                 scenes={activeScenes}
                                 onScenesChange={setEditedScenes}
+                                onSceneSelect={(sceneId) => {
+                                    setActiveSceneId(sceneId || '');
+                                    setIsEditingScene(!!sceneId);
+                                }}
                             />
                         ) : isRefining ? (
                             <LivePreview
                                 videoUrl={videoUrl}
-                                currentCode={currentCode}
                                 scenes={activeScenes}
+                                sceneStatuses={state?.sceneStatuses}
                                 activeSceneId={activeSceneId}
                                 onSceneSelect={setActiveSceneId}
+                                renderProgress={renderProgress}
                             />
                         ) : (
                             // Final or Initialization
@@ -231,7 +257,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                                         <>
                                             <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Production Complete</h2>
                                             <p className="text-zinc-400">Your video is ready for download.</p>
-                                            {videoUrl && <LivePreview videoUrl={videoUrl} currentCode="" scenes={activeScenes} activeSceneId="" onSceneSelect={() => { }} />}
+                                            {videoUrl && <LivePreview videoUrl={videoUrl} scenes={activeScenes} activeSceneId="" onSceneSelect={() => { }} />}
                                         </>
                                     ) : (
                                         <div className="animate-pulse">
@@ -243,14 +269,28 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                             </div>
                         )}
 
-                        {/* Feedback Controls Overlay - Compact when scene is selected */}
-                        {(currentPhase === WorkflowPhase.AWAITING_FEEDBACK || currentPhase === WorkflowPhase.EVALUATION) && (
+                        {/* Planning Phase: Show Continue button when not editing a scene */}
+                        {isPlanning && currentPhase === WorkflowPhase.AWAITING_FEEDBACK && !isEditingScene && (
+                            <div className="absolute bottom-6 right-6 z-50">
+                                <button
+                                    onClick={handleApprove}
+                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-green-900/30 transition-all duration-300 hover:scale-105"
+                                >
+                                    <Check size={20} />
+                                    Continue to Implementation
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Feedback Controls - Only show when editing a scene (planning) or during refinement phase */}
+                        {(currentPhase === WorkflowPhase.AWAITING_FEEDBACK || currentPhase === WorkflowPhase.EVALUATION) &&
+                         (isPlanning ? isEditingScene : true) && (
                             <div className={`absolute z-50 transition-all duration-500 ease-out ${activeSceneId ? 'bottom-4 right-4' : 'bottom-6 right-6 w-full max-w-2xl'}`}>
                                 <FeedbackControls
                                     status={state?.progress?.subStep === 'processing_feedback' ? 'processing' : 'idle'}
                                     targetLabel={activeSceneId ? `Scene ${activeScenes.find(s => s.id === activeSceneId)?.index! + 1}` : 'Global Project'}
                                     onSubmit={handleFeedbackSubmit}
-                                    onApprove={!activeSceneId ? handleApprove : undefined}
+                                    onApprove={!isPlanning && !activeSceneId ? handleApprove : undefined}
                                     compact={!!activeSceneId}
                                 />
                             </div>

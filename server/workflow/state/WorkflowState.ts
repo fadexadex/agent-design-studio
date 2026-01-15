@@ -25,6 +25,20 @@ export interface EvaluationResultRef {
 }
 
 /**
+ * Scene render status for tracking individual scene generation and rendering progress.
+ * Used for incremental UI updates during the implementation phase.
+ */
+export interface SceneRenderStatus {
+  sceneNumber: number;
+  sceneId: string;
+  status: 'pending' | 'generating' | 'rendering' | 'complete' | 'error';
+  progress: number; // 0-100
+  message?: string;
+  previewUrl?: string;
+  error?: string;
+}
+
+/**
  * Workflow Phases - The discrete states in the video generation pipeline.
  * Follows the distributed agent architecture for modular scene generation.
  */
@@ -146,6 +160,9 @@ export interface WorkflowState {
   currentRound: number;
   maxRounds: number;
   rounds: ImplementationRound[];
+
+  // Scene Generation Progress (for incremental UI updates)
+  sceneStatuses?: SceneRenderStatus[];
 
   // Iteration Control
   lastEvaluation?: EvaluationResultRef; // Latest evaluation for iteration decisions

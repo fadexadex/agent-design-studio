@@ -66,9 +66,10 @@ interface ScriptEditorProps {
     scenes: SceneNodeData[];
     onScenesChange?: (scenes: SceneNodeData[]) => void;
     onAddScene?: () => void;
+    onSceneSelect?: (sceneId: string | null) => void;
 }
 
-const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesChange, onAddScene }) => {
+const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesChange, onAddScene, onSceneSelect }) => {
     const { fitView } = useReactFlow();
 
     // Add new scene handler
@@ -76,12 +77,20 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         if (!onScenesChange) return;
 
         const newSceneIndex = scenes.length;
+        // Calculate frame range based on previous scenes
+        const framesPerScene = 270; // ~9 seconds at 30fps
+        const startFrame = newSceneIndex * framesPerScene;
+
         const newScene: SceneNodeData = {
             id: `scene-${Date.now()}`,
             title: `Scene ${newSceneIndex + 1}`,
             description: 'New scene description. Click to edit.',
             duration: 9, // ~9 seconds per scene for 45s total
             index: newSceneIndex,
+            // Include backend fields for proper sync
+            sceneNumber: newSceneIndex + 1,
+            frameRange: { start: startFrame, end: startFrame + framesPerScene },
+            keyElements: ['animated element', 'brand colors']
         };
 
         const updatedScenes = [...scenes, newScene];
@@ -187,6 +196,17 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         }
     }, [nodes.length]); // Dependency on length so it runs when nodes are added
 
+    // Handle node selection to notify parent
+    const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: Node<SceneNodeData>[] }) => {
+        if (onSceneSelect) {
+            if (selectedNodes.length > 0) {
+                onSceneSelect(selectedNodes[0].id);
+            } else {
+                onSceneSelect(null);
+            }
+        }
+    }, [onSceneSelect]);
+
     return (
         <div className="w-full h-full min-h-[500px] bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800">
             <ReactFlow
@@ -195,6 +215,7 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
                 onNodesChange={onNodesChangeState}
                 onEdgesChange={onEdgesChangeState}
                 onConnect={onConnect}
+                onSelectionChange={onSelectionChange}
                 nodeTypes={nodeTypes}
                 fitView
             >

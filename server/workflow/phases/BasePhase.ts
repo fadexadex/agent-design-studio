@@ -1,4 +1,4 @@
-import { WorkflowState, WorkflowPhase, updateState, addThought } from '../state';
+import { WorkflowState, WorkflowPhase, updateState, addThought, SceneRenderStatus } from '../state';
 import { AgentThought } from '../../agent/orchestrator';
 import { rateLimitedCall } from '../../agent/rateLimiter';
 
@@ -22,6 +22,8 @@ export interface PhaseContext {
   onProgress: (message: string, detail?: string) => void;
   /** Emit a thought to the cognitive trace */
   onThought: (thought: AgentThought) => void;
+  /** Emit scene-level progress for incremental UI updates */
+  onSceneProgress?: (status: SceneRenderStatus) => void;
   /** Signal to abort the current operation */
   abortSignal?: AbortSignal;
 }

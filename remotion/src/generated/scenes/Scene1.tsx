@@ -5,116 +5,115 @@ import {
   interpolate,
   spring,
   useVideoConfig,
+  interpolateColors,
 } from 'remotion';
 
 export const Scene1: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
 
-  const brandName = "Campor";
-  const letters = brandName.split("");
+  const ROWS = 6;
+  const COLS = 11;
+  const cellWidth = width / COLS;
+  const cellHeight = height / ROWS;
 
-  const containerStyle: React.CSSProperties = {
-    backgroundColor: '#FFFFFF',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  };
-
-  const wordmarkContainer: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: '200px',
-    overflow: 'hidden',
-  };
+  const brandRed = '#c91313';
+  const brandBlack = '#000000';
 
   return (
-    <AbsoluteFill style={containerStyle}>
-      <div style={wordmarkContainer}>
-        {letters.map((letter, i) => {
-          const delay = i * 3;
+    <AbsoluteFill style={{ backgroundColor: '#ffffff' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          width: '100%',
+          height: '100%',
+        }}
+      >
+        {Array.from({ length: ROWS * COLS }).map((_, i) => {
+          const row = Math.floor(i / COLS);
+          const col = i % COLS;
+
+          // Staggering logic based on grid position (diagonal burst)
+          const staggerOffset = (row + col) * 1.2;
           
-          const move = spring({
-            frame: frame - delay,
+          const animationProgress = spring({
+            frame: frame - staggerOffset,
             fps,
             config: {
               stiffness: 120,
-              damping: 15,
+              damping: 14,
               mass: 0.8,
             },
           });
 
-          const translateY = interpolate(move, [0, 1], [120, 0]);
-          const opacity = interpolate(move, [0, 0.5], [0, 1]);
-          const maskHeight = interpolate(move, [0, 1], [0, 100]);
+          // Morphing: Circle (50%) to Square (0%)
+          const borderRadius = interpolate(animationProgress, [0, 1], [50, 0]);
+
+          // Color transition: Red to Black
+          const backgroundColor = interpolateColors(
+            animationProgress,
+            [0, 1],
+            [brandRed, brandBlack]
+          );
+
+          // 90-degree rotation
+          const rotation = interpolate(animationProgress, [0, 1], [0, 90]);
+
+          // Staggered scaling burst
+          const scale = interpolate(
+            animationProgress,
+            [0, 0.4, 1],
+            [0, 1.1, 1]
+          );
+
+          // Opacity fade in
+          const opacity = interpolate(animationProgress, [0, 0.2], [0, 1]);
 
           return (
             <div
-              key={i}
+              key={`${row}-${col}`}
               style={{
-                position: 'relative',
-                overflow: 'hidden',
-                padding: '0 2px',
+                width: cellWidth,
+                height: cellHeight,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {/* Geometric reveal mask line */}
               <div
                 style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '2px',
-                  backgroundColor: '#000000',
-                  transform: `translateY(${-translateY}px)`,
-                  opacity: interpolate(move, [0, 0.1, 0.9, 1], [0, 1, 1, 0]),
+                  width: Math.min(cellWidth, cellHeight) * 0.85,
+                  height: Math.min(cellWidth, cellHeight) * 0.85,
+                  backgroundColor,
+                  borderRadius: `${borderRadius}%`,
+                  opacity,
+                  transform: `rotate(${rotation}deg) scale(${scale})`,
+                  boxShadow: `0 4px 15px rgba(0,0,0,${interpolate(animationProgress, [0, 1], [0, 0.15])})`,
                 }}
               />
-              
-              {/* Letter component */}
-              <div
-                style={{
-                  fontSize: '110px',
-                  fontWeight: 800,
-                  color: '#000000',
-                  letterSpacing: '-0.05em',
-                  transform: `translateY(${translateY}%)`,
-                  opacity: opacity,
-                  lineHeight: 1,
-                }}
-              >
-                {letter}
-              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Subtle geometric accent lines */}
-      <div
+      {/* Subtle overlay for geometric texture */}
+      <AbsoluteFill
         style={{
-          position: 'absolute',
-          width: '1px',
-          height: interpolate(frame, [10, 35], [0, 100], { extrapolateRight: 'clamp' }),
-          backgroundColor: '#000000',
-          left: '15%',
-          top: '40%',
-          opacity: interpolate(frame, [10, 20, 35, 44], [0, 0.2, 0.2, 0]),
+          pointerEvents: 'none',
+          border: '20px solid transparent',
+          boxSizing: 'border-box',
         }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          width: '1px',
-          height: interpolate(frame, [15, 40], [0, 150], { extrapolateRight: 'clamp' }),
-          backgroundColor: '#000000',
-          right: '15%',
-          bottom: '35%',
-          opacity: interpolate(frame, [15, 25, 40, 44], [0, 0.1, 0.1, 0]),
-        }}
-      />
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            border: `2px solid ${brandBlack}`,
+            opacity: interpolate(frame, [0, 15, 45], [0, 0.1, 0.1]),
+          }}
+        />
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

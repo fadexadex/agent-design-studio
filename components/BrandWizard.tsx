@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { BrandContext, VideoConfig, MotionStyle, SceneDescription } from '../types';
+import { BrandContext, VideoConfig, MotionStyle, SceneDescription, VideoScript } from '../types';
 import { Check, ChevronRight, Upload, Palette, Rocket, Zap, Sliders, FileText, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 
 interface BrandWizardProps {
-  onComplete: (brand: BrandContext, config: VideoConfig, scriptScenes?: SceneDescription[]) => void;
+  onComplete: (brand: BrandContext, config: VideoConfig, script: VideoScript) => void;
 }
 
 export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
@@ -162,7 +162,8 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
 
   const isFoundationComplete = brand.name && brand.industry;
   const isCreativeComplete = config.prompt.length > 10;
-  const isScriptComplete = parsedScenes.length > 0 || scriptMode === null;
+  // Script is REQUIRED - must have at least one scene
+  const isScriptComplete = parsedScenes.length > 0;
 
   return (
     <div className="max-w-2xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -620,7 +621,14 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
         ) : (
           <button
             disabled={!isScriptComplete || isGeneratingScript}
-            onClick={() => onComplete(brand, config, parsedScenes.length > 0 ? parsedScenes : undefined)}
+            onClick={() => {
+              // Build the full VideoScript object
+              const script: VideoScript = {
+                script: generatedScript || uploadedScript || '',
+                scenes: parsedScenes
+              };
+              onComplete(brand, config, script);
+            }}
             className="bg-white text-black px-12 py-4 rounded-full font-bold flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Render Vision <Zap size={18} fill="currentColor" />

@@ -1,79 +1,129 @@
 import React from 'react';
 import {
-  AbsoluteFill,
-  useCurrentFrame,
-  interpolate,
-  spring,
-  useVideoConfig,
+	AbsoluteFill,
+	useCurrentFrame,
+	interpolate,
+	spring,
+	useVideoConfig,
+	Easing,
 } from 'remotion';
 
 export const Scene4: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+	const frame = useCurrentFrame();
+	const { width, height, fps } = useVideoConfig();
 
-  // Opacity fade in over the first 15 frames
-  const opacity = interpolate(frame, [0, 15], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+	const pathData = "M 384 756 C 576 756, 672 324, 960 540 S 1344 108, 1536 324";
+	
+	// Path drawing animation (0 to 1)
+	const pathDrawProgress = interpolate(frame, [0, 120], [0, 1], {
+		extrapolateLeft: 'clamp',
+		extrapolateRight: 'clamp',
+		easing: Easing.bezier(0.33, 1, 0.68, 1),
+	});
 
-  // Subtle scale spring for a premium feel
-  const scale = spring({
-    frame,
-    fps,
-    from: 0.96,
-    to: 1,
-    config: {
-      damping: 20,
-      stiffness: 60,
-    },
-  });
+	// Dot movement animation (slightly delayed and follows path)
+	const dotProgress = interpolate(frame, [15, 135], [0, 1], {
+		extrapolateLeft: 'clamp',
+		extrapolateRight: 'clamp',
+		easing: Easing.bezier(0.33, 1, 0.68, 1),
+	});
 
-  // Minimalist letter spacing expansion
-  const letterSpacing = interpolate(frame, [0, 30], [0.15, 0.25], {
-    extrapolateRight: 'clamp',
-  });
+	// Text animation
+	const textSpring = spring({
+		frame: frame - 100,
+		fps,
+		config: {
+			damping: 12,
+			stiffness: 100,
+		},
+	});
 
-  const containerStyle: React.CSSProperties = {
-    backgroundColor: '#000000',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  };
+	const textOpacity = interpolate(frame, [100, 130], [0, 1], {
+		extrapolateLeft: 'clamp',
+		extrapolateRight: 'clamp',
+	});
 
-  const logoContainerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    opacity,
-    transform: `scale(${scale})`,
-  };
+	const textMove = interpolate(textSpring, [0, 1], [20, 0]);
 
-  const logoTextStyle: React.CSSProperties = {
-    color: '#FFFFFF',
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    fontSize: '90px',
-    fontWeight: 200,
-    letterSpacing: `${letterSpacing}em`,
-    textTransform: 'uppercase',
-    margin: 0,
-    padding: 0,
-  };
+	return (
+		<AbsoluteFill style={{ backgroundColor: '#000000', color: '#FFFFFF', fontFamily: 'Inter, system-ui, sans-serif' }}>
+			{/* Abstract Delivery Path */}
+			<svg
+				width={width}
+				height={height}
+				viewBox={`0 0 ${width} ${height}`}
+				fill="none"
+				style={{ position: 'absolute' }}
+			>
+				<path
+					d={pathData}
+					stroke="#FFFFFF"
+					strokeWidth="1.5"
+					strokeDasharray="2000"
+					strokeDashoffset={2000 * (1 - pathDrawProgress)}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				/>
+				
+				{/* Traveling Dot */}
+				<circle
+					r="5"
+					fill="#FFFFFF"
+					style={{
+						offsetPath: `path("${pathData}")`,
+						offsetDistance: `${dotProgress * 100}%`,
+						opacity: dotProgress > 0 && dotProgress < 1 ? 1 : 0,
+						filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.8))',
+					}}
+				/>
+			</svg>
 
-  const underlineStyle: React.CSSProperties = {
-    width: '40px',
-    height: '1px',
-    backgroundColor: '#FFFFFF',
-    marginTop: '20px',
-    opacity: interpolate(frame, [10, 25], [0, 0.8], { extrapolateLeft: 'clamp' }),
-  };
+			{/* Minimalist Text */}
+			<div
+				style={{
+					position: 'absolute',
+					bottom: '15%',
+					width: '100%',
+					textAlign: 'center',
+					opacity: textOpacity,
+					transform: `translateY(${textMove}px)`,
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					gap: '10px',
+				}}
+			>
+				<div
+					style={{
+						fontSize: '48px',
+						fontWeight: 300,
+						letterSpacing: '0.2em',
+						textTransform: 'uppercase',
+					}}
+				>
+					Direct To You
+				</div>
+				<div
+					style={{
+						width: interpolate(textSpring, [0, 1], [0, 60]),
+						height: '1px',
+						backgroundColor: '#FFFFFF',
+						marginTop: '10px',
+					}}
+				/>
+			</div>
 
-  return (
-    <AbsoluteFill style={containerStyle}>
-      <div style={logoContainerStyle}>
-        <h1 style={logoTextStyle}>Campor</h1>
-        <div style={underlineStyle} />
-      </div>
-    </AbsoluteFill>
-  );
+			{/* Subtle Vignette for Depth */}
+			<div
+				style={{
+					position: 'absolute',
+					inset: 0,
+					background: 'radial-gradient(circle, transparent 40%, rgba(0,0,0,0.4) 100%)',
+					pointerEvents: 'none',
+				}}
+			/>
+		</AbsoluteFill>
+	);
 };
+
+export default Scene4;

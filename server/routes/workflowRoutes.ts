@@ -8,10 +8,17 @@ const orchestratorMap = new Map<string, WorkflowOrchestrator>();
 // === 1. Start Workflow ===
 router.post('/start', async (req, res) => {
     try {
-        const { jobId, brand, config } = req.body;
+        const { jobId, brand, config, script } = req.body;
 
         if (!jobId || !brand || !config) {
             return res.status(400).json({ error: 'Missing required fields: jobId, brand, config' });
+        }
+
+        // Script with scenes is REQUIRED - the workflow uses the provided scenes
+        if (!script || !script.scenes || !Array.isArray(script.scenes) || script.scenes.length === 0) {
+            return res.status(400).json({
+                error: 'Missing required field: script. You must provide a script with scenes from /api/generate-script first.'
+            });
         }
 
         if (orchestratorMap.has(jobId)) {
@@ -21,8 +28,8 @@ router.post('/start', async (req, res) => {
         const orchestrator = createOrchestrator();
         orchestratorMap.set(jobId, orchestrator);
 
-        // Start the workflow asynchronously
-        orchestrator.start(jobId, brand, config).catch(err => {
+        // Start the workflow asynchronously with the provided script
+        orchestrator.start(jobId, brand, config, script).catch(err => {
             console.error(`[Workflow Route] Unhandled error in workflow ${jobId}:`, err);
         });
 
@@ -60,6 +67,8 @@ router.get('/:jobId/stream', (req, res) => {
     const onPhaseComplete = (phase: string, result: any) => sendEvent('phaseComplete', { phase, result });
     const onThought = (thought: any) => sendEvent('thought', thought);
     const onProgress = (message: string, detail?: string) => sendEvent('progress', { message, detail });
+    const onSceneProgress = (status: any) => sendEvent('sceneProgress', status);
+    const onRenderProgress = (data: { progress: number }) => sendEvent('renderProgress', data);
     const onError = (error: Error) => sendEvent('error', { message: error.message });
     const onComplete = (state: WorkflowState) => {
         sendEvent('complete', state);
@@ -72,6 +81,8 @@ router.get('/:jobId/stream', (req, res) => {
     orchestrator.on('phaseComplete', onPhaseComplete);
     orchestrator.on('thought', onThought);
     orchestrator.on('progress', onProgress);
+    orchestrator.on('sceneProgress', onSceneProgress);
+    orchestrator.on('renderProgress', onRenderProgress);
     orchestrator.on('error', onError);
     orchestrator.on('complete', onComplete);
 
@@ -88,6 +99,8 @@ router.get('/:jobId/stream', (req, res) => {
         orchestrator.off('phaseComplete', onPhaseComplete);
         orchestrator.off('thought', onThought);
         orchestrator.off('progress', onProgress);
+        orchestrator.off('sceneProgress', onSceneProgress);
+        orchestrator.off('renderProgress', onRenderProgress);
         orchestrator.off('error', onError);
         orchestrator.off('complete', onComplete);
     });

@@ -126,7 +126,37 @@ IMPORTANT: Return ONLY valid JSON, no additional text, no markdown code blocks, 
       // Try to extract JSON from the response (handle potential markdown wrapping)
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        scriptData = JSON.parse(jsonMatch[0]);
+        let jsonString = jsonMatch[0];
+
+        // First attempt: try parsing directly
+        try {
+          scriptData = JSON.parse(jsonString);
+        } catch (firstError) {
+          // Second attempt: repair the JSON and try again
+          console.log('[Script Generation] Initial parse failed, attempting JSON repair...');
+          const repairedJson = repairJSON(jsonString);
+
+          try {
+            scriptData = JSON.parse(repairedJson);
+            console.log('[Script Generation] JSON repair successful');
+          } catch (secondError) {
+            // Third attempt: more aggressive repair - remove all content between }] and the final }
+            console.log('[Script Generation] Standard repair failed, trying aggressive fix...');
+
+            // Find the last valid array closing and trim everything after
+            const aggressiveRepair = repairedJson
+              .replace(/\}\s*\}\s*\n\s*\}/g, '}\n}')  // Fix triple closing braces
+              .replace(/\]\s*\}\s*\}/g, ']}')  // Fix }]} -> ]}
+              .replace(/\}\}\s*,/g, '},');  // Fix }}, -> },
+
+            try {
+              scriptData = JSON.parse(aggressiveRepair);
+              console.log('[Script Generation] Aggressive JSON repair successful');
+            } catch (thirdError) {
+              throw firstError; // Throw the original error for better debugging
+            }
+          }
+        }
       } else {
         console.error('[Script Generation] No JSON found in response:', responseText);
         return res.status(500).json({ error: 'AI response was not in the expected format. Please try again.' });
@@ -185,6 +215,65 @@ function getStyleDescription(style: string): string {
     cinematic: 'Dramatic, lighting-focused, narrative-driven with epic scale'
   };
   return descriptions[style] || 'Modern motion design';
+}
+
+/**
+ * Attempt to repair common JSON issues from AI-generated responses
+ */
+function repairJSON(jsonString: string): string {
+  let repaired = jsonString;
+
+  // Remove any markdown code blocks
+  repaired = repaired.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+  // Fix double closing braces/brackets patterns like "]}}" or "}]}"
+  // These often appear when the AI adds an extra brace
+  repaired = repaired.replace(/\}\s*\}\s*,/g, '},');
+  repaired = repaired.replace(/\]\s*\]\s*,/g, '],');
+
+  // Fix pattern where there's an extra } before a },
+  // e.g., "value"}\n    }, -> "value"\n    },
+  repaired = repaired.replace(/"\s*\}\s*\n(\s*)\},/g, '"\n$1},');
+  repaired = repaired.replace(/\]\s*\}\s*\n(\s*)\},/g, ']\n$1},');
+
+  // Fix trailing commas before closing brackets (common AI mistake)
+  repaired = repaired.replace(/,(\s*[}\]])/g, '$1');
+
+  // Fix missing commas between array elements (look for }{ or ][ patterns)
+  repaired = repaired.replace(/\}(\s*)\{/g, '},$1{');
+  repaired = repaired.replace(/\](\s*)\[/g, '],$1[');
+
+  // Try to balance braces - count open vs close
+  const openBraces = (repaired.match(/\{/g) || []).length;
+  const closeBraces = (repaired.match(/\}/g) || []).length;
+
+  if (closeBraces > openBraces) {
+    // Too many closing braces - try to remove extras from the middle
+    // Find and remove isolated extra } that appear before a },
+    const extraCount = closeBraces - openBraces;
+    for (let i = 0; i < extraCount; i++) {
+      // Look for patterns like "}\n  }," which indicate an extra brace
+      repaired = repaired.replace(/\}\s*\n(\s*)\},/, '\n$1},');
+    }
+  } else if (openBraces > closeBraces) {
+    // Missing closing braces - add them at the end
+    repaired = repaired + '}'.repeat(openBraces - closeBraces);
+  }
+
+  // Balance brackets similarly
+  const openBrackets = (repaired.match(/\[/g) || []).length;
+  const closeBrackets = (repaired.match(/\]/g) || []).length;
+
+  if (closeBrackets > openBrackets) {
+    const extraCount = closeBrackets - openBrackets;
+    for (let i = 0; i < extraCount; i++) {
+      repaired = repaired.replace(/\]\s*\n(\s*)\],/, '\n$1],');
+    }
+  } else if (openBrackets > closeBrackets) {
+    repaired = repaired + ']'.repeat(openBrackets - closeBrackets);
+  }
+
+  return repaired;
 }
 
 /**

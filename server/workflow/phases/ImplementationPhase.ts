@@ -9,7 +9,8 @@ import {
   GeneratedFile,
   ImplementationRound,
   ValidationResult,
-  SceneDescription
+  SceneDescription,
+  SceneRenderStatus
 } from '../state';
 import { errorTracker } from '../state';
 import { BasePhase, PhaseContext, PhaseResult } from './BasePhase';
@@ -89,6 +90,25 @@ export class ImplementationPhase extends BasePhase {
       currentRound: roundNumber
     });
 
+    // Initialize scene statuses for incremental UI updates
+    const initialSceneStatuses: SceneRenderStatus[] = scenesToGenerate.map(scene => ({
+      sceneNumber: scene.sceneNumber,
+      sceneId: scene.id,
+      status: 'pending' as const,
+      progress: 0,
+      message: 'Waiting to generate...'
+    }));
+    currentState = updateState(currentState, {
+      sceneStatuses: initialSceneStatuses
+    });
+
+    // Emit initial scene statuses
+    if (context.onSceneProgress) {
+      for (const status of initialSceneStatuses) {
+        context.onSceneProgress(status);
+      }
+    }
+
     try {
       // ACT: Generate scene files
       currentState = this.think(
@@ -105,6 +125,19 @@ export class ImplementationPhase extends BasePhase {
         const scene = scenesToGenerate[i];
         const progressPercent = 10 + Math.round((i / totalScenes) * 60);
 
+        // Emit scene "generating" status
+        const generatingStatus: SceneRenderStatus = {
+          sceneNumber: scene.sceneNumber,
+          sceneId: scene.id,
+          status: 'generating',
+          progress: 10,
+          message: `Generating Scene ${scene.sceneNumber}...`
+        };
+        if (context.onSceneProgress) {
+          context.onSceneProgress(generatingStatus);
+        }
+        currentState = this.updateSceneStatus(currentState, generatingStatus);
+
         this.emitProgress(
           context,
           `Generating Scene ${scene.sceneNumber}...`,
@@ -117,27 +150,75 @@ export class ImplementationPhase extends BasePhase {
           `Scene ${scene.sceneNumber}`
         );
 
-        const { file: sceneFile, thoughtSummary } = await this.generateSceneFile(currentState, scene, context);
-        generatedFiles.push(sceneFile);
+        try {
+          const { file: sceneFile, thoughtSummary } = await this.generateSceneFile(currentState, scene, context);
+          generatedFiles.push(sceneFile);
 
-        // Emit the model's thinking if available
-        if (thoughtSummary) {
-          currentState = this.thinkWithModelThinking(
-            currentState,
-            'observe',
-            `Scene ${scene.sceneNumber} reasoning complete`,
-            thoughtSummary,
-            context
-          );
-        }
+          // Emit the model's thinking if available
+          if (thoughtSummary) {
+            currentState = this.thinkWithModelThinking(
+              currentState,
+              'observe',
+              `Scene ${scene.sceneNumber} reasoning complete`,
+              thoughtSummary,
+              context
+            );
+          }
 
-        // Validate the scene file
-        const validation = this.validateSceneCode(sceneFile.content, scene.sceneNumber);
-        if (!validation.valid) {
-          round.issues.push(`Scene ${scene.sceneNumber}: ${validation.errors.join(', ')}`);
-          round.validationResult.errors.push(...validation.errors);
+          // Validate the scene file
+          const validation = this.validateSceneCode(sceneFile.content, scene.sceneNumber);
+          if (!validation.valid) {
+            round.issues.push(`Scene ${scene.sceneNumber}: ${validation.errors.join(', ')}`);
+            round.validationResult.errors.push(...validation.errors);
+
+            // Emit scene error status
+            const errorStatus: SceneRenderStatus = {
+              sceneNumber: scene.sceneNumber,
+              sceneId: scene.id,
+              status: 'error',
+              progress: 100,
+              message: `Validation failed`,
+              error: validation.errors.join(', ')
+            };
+            if (context.onSceneProgress) {
+              context.onSceneProgress(errorStatus);
+            }
+            currentState = this.updateSceneStatus(currentState, errorStatus);
+          } else {
+            // Emit scene complete status (code generated successfully)
+            const completeStatus: SceneRenderStatus = {
+              sceneNumber: scene.sceneNumber,
+              sceneId: scene.id,
+              status: 'complete',
+              progress: 100,
+              message: `Scene ${scene.sceneNumber} generated successfully`
+            };
+            if (context.onSceneProgress) {
+              context.onSceneProgress(completeStatus);
+            }
+            currentState = this.updateSceneStatus(currentState, completeStatus);
+          }
+          round.validationResult.warnings.push(...validation.warnings);
+        } catch (sceneError) {
+          const errorMessage = sceneError instanceof Error ? sceneError.message : String(sceneError);
+
+          // Emit scene error status
+          const errorStatus: SceneRenderStatus = {
+            sceneNumber: scene.sceneNumber,
+            sceneId: scene.id,
+            status: 'error',
+            progress: 0,
+            message: `Generation failed`,
+            error: errorMessage
+          };
+          if (context.onSceneProgress) {
+            context.onSceneProgress(errorStatus);
+          }
+          currentState = this.updateSceneStatus(currentState, errorStatus);
+
+          round.issues.push(`Scene ${scene.sceneNumber}: ${errorMessage}`);
+          round.validationResult.errors.push(errorMessage);
         }
-        round.validationResult.warnings.push(...validation.warnings);
       }
 
       // Generate the MainComposition that sequences all scenes
@@ -576,5 +657,24 @@ export default MainComposition;
     };
 
     return guidelines[style] || guidelines.minimalist;
+  }
+
+  /**
+   * Helper to update a scene status in the workflow state immutably.
+   */
+  private updateSceneStatus(state: WorkflowState, status: SceneRenderStatus): WorkflowState {
+    const existingStatuses = state.sceneStatuses || [];
+    const updatedStatuses = existingStatuses.map(s =>
+      s.sceneNumber === status.sceneNumber ? status : s
+    );
+
+    // If the scene wasn't in the list, add it
+    if (!existingStatuses.find(s => s.sceneNumber === status.sceneNumber)) {
+      updatedStatuses.push(status);
+    }
+
+    return updateState(state, {
+      sceneStatuses: updatedStatuses
+    });
   }
 }

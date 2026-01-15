@@ -41,3 +41,112 @@
 .writing-vertical-rl {
     writing-mode: vertical-rl;
 }
+
+/* Scene Progress Animations */
+
+/* Shimmer effect for generating state */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s linear infinite;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+}
+
+/* Pulse glow for generating scenes */
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 10px 0 rgba(168, 85, 247, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px 5px rgba(168, 85, 247, 0.5);
+    }
+}
+
+.scene-card-generating {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.scene-button-generating {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Render flicker effect */
+@keyframes render-flicker {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 10px 0 rgba(59, 130, 246, 0.3);
+    }
+    50% {
+        opacity: 0.9;
+        box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.6);
+    }
+}
+
+.scene-card-rendering {
+    animation: render-flicker 0.5s ease-in-out infinite;
+}
+
+.scene-button-rendering {
+    animation: render-flicker 0.5s ease-in-out infinite;
+}
+
+/* Progress ring animation */
+@keyframes progress-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Gradient text animation */
+@keyframes gradient-shift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+.animate-gradient-text {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+}
+
+/* Smooth fade in */
+@keyframes fade-in-up {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }

@@ -69,6 +69,15 @@ export interface SceneDescription {
   keyElements: string[];
 }
 
+/**
+ * Script data containing narrative and scene breakdown.
+ * This is required when starting a workflow.
+ */
+export interface VideoScript {
+  script: string; // The narrative script
+  scenes: SceneDescription[];
+}
+
 export interface ImplementationPlan {
   approach: string;
   sceneBreakdown: SceneDescription[];
@@ -123,6 +132,20 @@ export interface WorkflowProgress {
   subStep?: string;
 }
 
+/**
+ * Scene render status for tracking individual scene generation and rendering progress.
+ * Used for incremental UI updates during the implementation phase.
+ */
+export interface SceneRenderStatus {
+  sceneNumber: number;
+  sceneId: string;
+  status: 'pending' | 'generating' | 'rendering' | 'complete' | 'error';
+  progress: number; // 0-100
+  message?: string;
+  previewUrl?: string;
+  error?: string;
+}
+
 export interface SceneScoreRef {
   sceneId: string;
   sceneNumber: number;
@@ -153,6 +176,7 @@ export interface WorkflowState {
   currentRound: number;
   maxRounds: number;
   rounds: ImplementationRound[];
+  sceneStatuses?: SceneRenderStatus[];
   lastEvaluation?: EvaluationResultRef;
   nextRoundTargets?: string[];
   checkpoints: Checkpoint[];
