@@ -5,6 +5,8 @@ config({ path: '.env.local' });
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { AgentOrchestrator, AgentProgress, AgentThought } from './agent/orchestrator';
 import workflowRoutes from './routes/workflowRoutes';
@@ -397,6 +399,25 @@ app.get('/api/video/:jobId', (req, res) => {
   }
 
   res.sendFile(job.videoPath);
+});
+
+/**
+ * GET /api/preview/:filename
+ * Stream scene preview video file
+ */
+app.get('/api/preview/:filename', (req, res) => {
+  const { filename } = req.params;
+
+  // Sanitize filename to prevent directory traversal
+  const sanitizedFilename = path.basename(filename);
+  const previewPath = path.join(process.cwd(), 'output', 'previews', sanitizedFilename);
+
+  // Check if file exists and send it
+  if (fs.existsSync(previewPath)) {
+    res.sendFile(previewPath);
+  } else {
+    res.status(404).json({ error: 'Preview not found' });
+  }
 });
 
 // Health check

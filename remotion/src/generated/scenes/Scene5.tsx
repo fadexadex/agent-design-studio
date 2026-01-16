@@ -5,129 +5,132 @@ export const Scene5: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  // 1. Cube to 'O' Transformation
-  const cubeScale = interpolate(frame, [0, 60], [2.5, 1], {
-    extrapolateRight: 'clamp',
-  });
-  
-  const cubeBorderRadius = interpolate(frame, [20, 50], [0, 100], {
-    extrapolateRight: 'clamp',
-  });
-
-  const cubeRotate = interpolate(frame, [0, 60], [45, 0], {
-    extrapolateRight: 'clamp',
-  });
-
-  // 2. Logo Assembly (CAMPOR)
-  // The 'O' is the 5th letter: C-A-M-P-O-R
-  const logoSpring = spring({
-    frame: frame - 30,
+  // Button Appearance
+  const buttonAppearScale = spring({
+    frame,
     fps,
     config: { damping: 12, stiffness: 100 },
   });
+  const buttonOpacity = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: 'clamp' });
 
-  const letterOpacity = interpolate(frame, [40, 70], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
+  // Path Animation (The thin line drawing into the button)
+  const lineProgress = interpolate(frame, [40, 90], [0, 1], { extrapolateRight: 'clamp' });
+  const lineOpacity = interpolate(frame, [40, 50, 90, 100], [0, 1, 1, 0], { extrapolateRight: 'clamp' });
 
-  const letterSpacing = interpolate(frame, [40, 90], [80, 20], {
-    extrapolateRight: 'clamp',
-  });
+  // Text Animation
+  const textOpacity = interpolate(frame, [100, 115], [1, 0], { extrapolateRight: 'clamp' });
+  const textY = interpolate(frame, [100, 115], [0, -10], { extrapolateRight: 'clamp' });
 
-  // 3. CTA Button Appearance
-  const ctaOpacity = interpolate(frame, [100, 130], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
-
-  const ctaSlide = spring({
-    frame: frame - 100,
+  // Button Interaction (Slight shrink when line "clicks")
+  const clickScale = spring({
+    frame: frame - 90,
     fps,
-    config: { damping: 15, stiffness: 80 },
+    config: { damping: 10, stiffness: 200 },
   });
+  const activeScale = frame > 90 && frame < 120 ? interpolate(clickScale, [0, 1], [1, 0.95]) : 1;
 
-  const ctaTranslateY = interpolate(ctaSlide, [0, 1], [30, 0]);
+  // Checkmark Animation
+  const checkProgress = interpolate(frame, [115, 145], [1, 0], { extrapolateRight: 'clamp' });
+  const checkOpacity = interpolate(frame, [115, 120], [0, 1], { extrapolateRight: 'clamp' });
 
-  // 4. Final Fade to White
-  const finalFade = interpolate(frame, [240, 265], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
-
-  const containerStyle: React.CSSProperties = {
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    display: 'flex',
-    flexDirection: 'column',
-    fontFamily: 'Helvetica, Arial, sans-serif',
-  };
-
-  const logoContainerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#FFFFFF',
-    fontSize: 110,
-    fontWeight: 300,
-    letterSpacing: `${letterSpacing}px`,
-    textTransform: 'uppercase',
-  };
-
-  const letterStyle: React.CSSProperties = {
-    opacity: letterOpacity,
-  };
-
-  const cubeOStyle: React.CSSProperties = {
-    width: 85,
-    height: 85,
-    border: '6px solid #FFFFFF',
-    borderRadius: `${cubeBorderRadius}%`,
-    transform: `scale(${cubeScale}) rotate(${cubeRotate}deg)`,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: '0 10px',
-    boxSizing: 'border-box',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    marginTop: 80,
-    padding: '15px 50px',
-    border: '1px solid #FFFFFF',
-    color: '#FFFFFF',
-    fontSize: 24,
-    letterSpacing: 6,
-    opacity: ctaOpacity,
-    transform: `translateY(${ctaTranslateY}px)`,
-    fontWeight: 300,
-  };
-
-  const whiteOverlayStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#FFFFFF',
-    opacity: finalFade,
-  };
+  // Final Button Shape Morph (Optional subtle rounding)
+  const borderRadius = interpolate(frame, [110, 130], [8, 50], { extrapolateRight: 'clamp' });
+  const buttonWidth = interpolate(frame, [110, 130], [280, 80], { extrapolateRight: 'clamp' });
 
   return (
-    <AbsoluteFill style={containerStyle}>
-      <div style={logoContainerStyle}>
-        <span style={letterStyle}>C</span>
-        <span style={letterStyle}>A</span>
-        <span style={letterStyle}>M</span>
-        <span style={letterStyle}>P</span>
-        <div style={cubeOStyle} />
-        <span style={letterStyle}>R</span>
+    <AbsoluteFill style={{ backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
+      {/* The Animated Path Line */}
+      <svg
+        width={width}
+        height={height}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          opacity: lineOpacity,
+          zIndex: 1,
+        }}
+      >
+        <path
+          d={`M ${width * 0.2} ${height * 0.6} Q ${width * 0.4} ${height * 0.4}, ${width * 0.5} ${height * 0.5}`}
+          fill="none"
+          stroke="#000000"
+          strokeWidth="2"
+          strokeDasharray="400"
+          strokeDashoffset={400 * (1 - lineProgress)}
+        />
+      </svg>
+
+      {/* The Button */}
+      <div
+        style={{
+          width: buttonWidth,
+          height: 80,
+          backgroundColor: '#000000',
+          borderRadius: borderRadius,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          opacity: buttonOpacity,
+          transform: `scale(${buttonAppearScale * activeScale})`,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Checkout Text */}
+        <div
+          style={{
+            color: '#FFFFFF',
+            fontSize: 32,
+            fontWeight: 600,
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            opacity: textOpacity,
+            transform: `translateY(${textY}px)`,
+            position: 'absolute',
+          }}
+        >
+          Checkout
+        </div>
+
+        {/* Checkmark Icon */}
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 100 100"
+          style={{
+            opacity: checkOpacity,
+            position: 'absolute',
+          }}
+        >
+          <path
+            d="M 20 50 L 45 75 L 80 30"
+            fill="none"
+            stroke="#FFFFFF"
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="100"
+            strokeDashoffset={100 * checkProgress}
+          />
+        </svg>
       </div>
 
-      <div style={buttonStyle}>
-        SHOP NOW
+      {/* Brand Tagline (Minimalist Footer) */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 80,
+          fontFamily: 'Helvetica, Arial, sans-serif',
+          fontSize: 24,
+          letterSpacing: 4,
+          color: '#000000',
+          opacity: interpolate(frame, [150, 180], [0, 0.5], { extrapolateRight: 'clamp' }),
+          textTransform: 'uppercase',
+        }}
+      >
+        Campor
       </div>
-
-      <div style={whiteOverlayStyle} />
     </AbsoluteFill>
   );
 };

@@ -57,7 +57,8 @@ export class RemotionRenderer {
     }
 
     /**
-     * Render a single scene as a preview video clip
+     * Render a single scene as a preview video clip.
+     * Uses the scene's preview wrapper as the entry point for independent bundling.
      */
     async renderScenePreview(
         sceneNumber: number,
@@ -65,6 +66,9 @@ export class RemotionRenderer {
         config: VideoConfig,
         onProgress: (progress: number) => void
     ): Promise<ScenePreviewResult> {
+        // CRITICAL: Clear bundle cache to pick up new scene files
+        this.clearBundleCache();
+
         // Ensure preview directory exists
         await fs.mkdir(this.scenePreviewDir, { recursive: true });
 
@@ -74,36 +78,46 @@ export class RemotionRenderer {
         try {
             const width = config.aspectRatio === '16:9' ? 1920 : 1080;
             const height = config.aspectRatio === '16:9' ? 1080 : 1920;
-            const scale = config.resolution === '1080p' ? 1 : 0.667;
+            // Always use 720p for previews (faster rendering)
+            const scale = 0.667;
 
-            // Bundle (or use cached bundle)
-            const bundled = await this.ensureBundle((p) => onProgress(p * 0.3));
+            // Use the scene preview wrapper as the entry point
+            const previewEntryPoint = path.join(
+                process.cwd(),
+                'remotion',
+                'src',
+                'generated',
+                'scenes',
+                'previews',
+                `ScenePreview${sceneNumber}.tsx`
+            );
 
-            // For scene preview, we need to render just that scene
-            // We'll use a special composition ID pattern: ScenePreview{N}
-            const compositionId = `ScenePreview${sceneNumber}`;
-
-            console.log(`[RemotionRenderer] Selecting composition: ${compositionId}`);
-
-            // Try to select the scene-specific composition
-            let composition;
+            // Verify the entry point exists
             try {
-                composition = await selectComposition({
-                    serveUrl: bundled,
-                    id: compositionId,
-                });
-            } catch (e) {
-                // Fallback: use the main composition but we can't easily render just one scene
-                // For now, we'll skip individual scene previews and just mark as complete
-                console.log(`[RemotionRenderer] Scene preview composition ${compositionId} not found, skipping preview`);
-                return {
-                    sceneNumber,
-                    videoPath: '', // No preview available
-                    durationInFrames: sceneDurationFrames
-                };
+                await fs.access(previewEntryPoint);
+            } catch {
+                throw new Error(`Scene preview entry point not found: ${previewEntryPoint}`);
             }
 
-            console.log(`[RemotionRenderer] Rendering scene ${sceneNumber} preview...`);
+            console.log(`[RemotionRenderer] Bundling scene ${sceneNumber} preview from ${previewEntryPoint}...`);
+
+            // Bundle from the scene preview entry point (not the main Root.tsx)
+            const bundled = await bundle({
+                entryPoint: previewEntryPoint,
+                onProgress: (progress) => {
+                    onProgress(progress * 0.3);
+                },
+            });
+
+            console.log(`[RemotionRenderer] Bundle complete, selecting ScenePreview composition...`);
+
+            // Select the ScenePreview composition (defined in the preview wrapper)
+            const composition = await selectComposition({
+                serveUrl: bundled,
+                id: 'ScenePreview',
+            });
+
+            console.log(`[RemotionRenderer] Rendering scene ${sceneNumber} preview at ${Math.round(width * scale)}x${Math.round(height * scale)}...`);
 
             await renderMedia({
                 composition: {
@@ -130,12 +144,7 @@ export class RemotionRenderer {
             };
         } catch (error) {
             console.error(`[RemotionRenderer] Scene ${sceneNumber} preview error:`, error);
-            // Return empty path on error - scene preview is optional
-            return {
-                sceneNumber,
-                videoPath: '',
-                durationInFrames: sceneDurationFrames
-            };
+            throw error; // Propagate error for proper handling
         }
     }
 

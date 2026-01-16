@@ -16,6 +16,7 @@ import { errorTracker } from '../state';
 import { BasePhase, PhaseContext, PhaseResult } from './BasePhase';
 import { AI_MODELS } from '../../agent/models';
 import { extractGeminiThoughts, getThinkingConfig } from '../../agent/geminiThoughts';
+import { RemotionRenderer } from '../../renderer/remotionRenderer';
 
 /**
  * ImplementationPhase (The "Code Generator") generates Remotion code
@@ -33,10 +34,14 @@ export class ImplementationPhase extends BasePhase {
 
   private ai: GoogleGenAI | null = null;
   private outputDir: string;
+  private previewsDir: string;
+  private renderer: RemotionRenderer;
 
   constructor() {
     super();
     this.outputDir = path.join(process.cwd(), 'remotion', 'src', 'generated', 'scenes');
+    this.previewsDir = path.join(this.outputDir, 'previews');
+    this.renderer = new RemotionRenderer();
   }
 
   private getAI(): GoogleGenAI {
@@ -74,6 +79,7 @@ export class ImplementationPhase extends BasePhase {
 
     // Ensure output directory exists
     await fs.mkdir(this.outputDir, { recursive: true });
+    await fs.mkdir(this.previewsDir, { recursive: true });
 
     // Start a new implementation round
     const roundNumber = currentState.currentRound + 1;
@@ -185,18 +191,75 @@ export class ImplementationPhase extends BasePhase {
             }
             currentState = this.updateSceneStatus(currentState, errorStatus);
           } else {
-            // Emit scene complete status (code generated successfully)
-            const completeStatus: SceneRenderStatus = {
+            // Scene code generated and validated successfully - now render preview
+            // First, save the scene file so the preview can import it
+            await fs.writeFile(sceneFile.filePath, sceneFile.content, 'utf-8');
+
+            // Generate and save the preview wrapper
+            const previewWrapper = this.generateScenePreviewWrapper(scene, state);
+            await fs.writeFile(previewWrapper.filePath, previewWrapper.content, 'utf-8');
+
+            // Update status to rendering
+            const renderingStatus: SceneRenderStatus = {
               sceneNumber: scene.sceneNumber,
               sceneId: scene.id,
-              status: 'complete',
-              progress: 100,
-              message: `Scene ${scene.sceneNumber} generated successfully`
+              status: 'rendering',
+              progress: 0,
+              message: `Rendering Scene ${scene.sceneNumber} preview...`
             };
             if (context.onSceneProgress) {
-              context.onSceneProgress(completeStatus);
+              context.onSceneProgress(renderingStatus);
             }
-            currentState = this.updateSceneStatus(currentState, completeStatus);
+            currentState = this.updateSceneStatus(currentState, renderingStatus);
+
+            // Render the scene preview
+            try {
+              const sceneDuration = scene.frameRange.end - scene.frameRange.start + 1;
+              const previewResult = await this.renderer.renderScenePreview(
+                scene.sceneNumber,
+                sceneDuration,
+                currentState.config,
+                (progress) => {
+                  const updatedProgress: SceneRenderStatus = {
+                    ...renderingStatus,
+                    progress: Math.round(progress * 100),
+                    message: `Rendering Scene ${scene.sceneNumber}: ${Math.round(progress * 100)}%`
+                  };
+                  if (context.onSceneProgress) {
+                    context.onSceneProgress(updatedProgress);
+                  }
+                }
+              );
+
+              // Get preview URL and update status to complete
+              const previewUrl = this.renderer.getScenePreviewUrl(previewResult.videoPath);
+              const completeStatus: SceneRenderStatus = {
+                sceneNumber: scene.sceneNumber,
+                sceneId: scene.id,
+                status: 'complete',
+                progress: 100,
+                message: `Scene ${scene.sceneNumber} ready`,
+                previewUrl: previewUrl || undefined
+              };
+              if (context.onSceneProgress) {
+                context.onSceneProgress(completeStatus);
+              }
+              currentState = this.updateSceneStatus(currentState, completeStatus);
+            } catch (renderError) {
+              // Preview rendering failed, but scene code is valid - mark complete without preview
+              console.warn(`[ImplementationPhase] Scene ${scene.sceneNumber} preview rendering failed:`, renderError);
+              const completeStatus: SceneRenderStatus = {
+                sceneNumber: scene.sceneNumber,
+                sceneId: scene.id,
+                status: 'complete',
+                progress: 100,
+                message: `Scene ${scene.sceneNumber} generated (preview unavailable)`
+              };
+              if (context.onSceneProgress) {
+                context.onSceneProgress(completeStatus);
+              }
+              currentState = this.updateSceneStatus(currentState, completeStatus);
+            }
           }
           round.validationResult.warnings.push(...validation.warnings);
         } catch (sceneError) {
@@ -235,12 +298,21 @@ export class ImplementationPhase extends BasePhase {
         round.validationResult.errors.push(...mainValidation.errors);
       }
 
-      // Write all files to disk
+      // Write remaining files to disk
+      // Scene files that passed validation were already saved during preview rendering
+      // Scene files that failed validation still need to be saved for debugging
       this.emitProgress(context, 'Writing files to disk...');
       currentState = this.updateProgress(currentState, 85, 'Saving files');
 
       for (const file of generatedFiles) {
-        await fs.writeFile(file.filePath, file.content, 'utf-8');
+        // Check if file already exists (was saved during preview rendering)
+        try {
+          await fs.access(file.filePath);
+          // File exists, skip writing
+        } catch {
+          // File doesn't exist, write it
+          await fs.writeFile(file.filePath, file.content, 'utf-8');
+        }
       }
 
       // OBSERVE: Summarize the implementation result
@@ -645,6 +717,48 @@ export default MainComposition;
     return {
       filePath,
       content: code
+    };
+  }
+
+  /**
+   * Generate a preview wrapper for a single scene.
+   * This creates a standalone Remotion entry point for rendering just that scene.
+   */
+  private generateScenePreviewWrapper(scene: SceneDescription, state: WorkflowState): GeneratedFile {
+    const sceneDuration = scene.frameRange.end - scene.frameRange.start + 1;
+    const width = state.config.aspectRatio === '16:9' ? 1920 : 1080;
+    const height = state.config.aspectRatio === '16:9' ? 1080 : 1920;
+
+    const code = `import React from 'react';
+import { Composition, registerRoot } from 'remotion';
+import { Scene${scene.sceneNumber} } from '../Scene${scene.sceneNumber}';
+
+/**
+ * Scene Preview Wrapper for Scene ${scene.sceneNumber}
+ * Auto-generated for independent scene rendering
+ */
+export const ScenePreview${scene.sceneNumber}: React.FC = () => <Scene${scene.sceneNumber} />;
+
+export const RemotionRoot: React.FC = () => (
+  <>
+    <Composition
+      id="ScenePreview"
+      component={ScenePreview${scene.sceneNumber}}
+      durationInFrames={${sceneDuration}}
+      fps={30}
+      width={${width}}
+      height={${height}}
+    />
+  </>
+);
+
+registerRoot(RemotionRoot);
+`;
+
+    return {
+      filePath: path.join(this.previewsDir, `ScenePreview${scene.sceneNumber}.tsx`),
+      content: code,
+      sceneId: scene.id
     };
   }
 

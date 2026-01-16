@@ -1,116 +1,119 @@
 import React from 'react';
-import {
-  AbsoluteFill,
-  useCurrentFrame,
-  interpolate,
-  spring,
-  useVideoConfig,
-} from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
 
 export const Scene6: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Animations
-  const secondaryFadeOut = interpolate(frame, [0, 20], [1, 0], {
-    extrapolateRight: 'clamp',
-  });
-
-  const logoScaleSpring = spring({
-    frame: frame - 15,
+  // Logo Entrance (0-40)
+  const logoOpacity = interpolate(frame, [0, 25], [0, 1], { extrapolateRight: 'clamp' });
+  const logoTranslateY = interpolate(frame, [0, 40], [20, 0], { extrapolateRight: 'clamp' });
+  const logoSpring = spring({
+    frame,
     fps,
-    config: {
-      damping: 12,
-      stiffness: 100,
-    },
+    config: { damping: 12, stiffness: 100 },
   });
 
-  const logoScale = interpolate(logoScaleSpring, [0, 1], [1.2, 1]);
+  // Tagline Sequential Appearance (40-120)
+  const word1Opacity = interpolate(frame, [45, 60], [0, 1], { extrapolateRight: 'clamp' });
+  const word2Opacity = interpolate(frame, [70, 85], [0, 1], { extrapolateRight: 'clamp' });
+  const word3Opacity = interpolate(frame, [95, 110], [0, 1], { extrapolateRight: 'clamp' });
 
-  const lineProgress = spring({
-    frame: frame - 60,
-    fps,
-    config: {
-      stiffness: 40,
-      damping: 15,
-    },
-  });
-
-  const urlOpacity = interpolate(frame, [100, 130], [0, 1], {
+  // Final Scale and Fade (180-225)
+  const finalScale = interpolate(frame, [185, 225], [1, 15], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-
-  const urlTranslateY = interpolate(frame, [100, 130], [20, 0], {
+  const finalFadeOut = interpolate(frame, [185, 210], [1, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-
-  const containerStyle: React.CSSProperties = {
-    backgroundColor: '#FFFFFF',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-  };
-
-  const logoStyle: React.CSSProperties = {
-    fontSize: '120px',
-    fontWeight: 800,
-    color: '#000000',
-    letterSpacing: '-0.05em',
-    transform: `scale(${logoScale})`,
-    marginBottom: '10px',
-  };
-
-  const underlineStyle: React.CSSProperties = {
-    width: `${lineProgress * 300}px`,
-    height: '4px',
-    backgroundColor: '#000000',
-    borderRadius: '2px',
-  };
-
-  const urlStyle: React.CSSProperties = {
-    position: 'absolute',
-    bottom: '80px',
-    fontSize: '32px',
-    fontWeight: 400,
-    color: '#000000',
-    letterSpacing: '0.2em',
-    opacity: urlOpacity,
-    transform: `translateY(${urlTranslateY}px)`,
-  };
-
-  const secondaryTextStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '40%',
-    fontSize: '40px',
-    color: '#000000',
-    opacity: secondaryFadeOut,
-    fontWeight: 300,
-  };
+  const whiteOverlay = interpolate(frame, [215, 225], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
 
   return (
-    <AbsoluteFill style={containerStyle}>
-      {/* Ghost of previous scene text fading out */}
-      <div style={secondaryTextStyle}>Curated Excellence</div>
-
-      {/* Main Logo Section */}
+    <AbsoluteFill style={{ backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
+          transform: `scale(${finalScale})`,
         }}
       >
-        <div style={logoStyle}>Campor</div>
-        <div style={underlineStyle} />
+        {/* Logo */}
+        <div
+          style={{
+            opacity: logoOpacity,
+            transform: `translateY(${logoTranslateY}px)`,
+            color: '#000000',
+            fontSize: 110,
+            fontWeight: 800,
+            letterSpacing: '-0.05em',
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            marginBottom: 20,
+          }}
+        >
+          Campor
+        </div>
+
+        {/* Tagline Container */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            opacity: finalFadeOut,
+          }}
+        >
+          <span
+            style={{
+              opacity: word1Opacity,
+              color: '#000000',
+              fontSize: 24,
+              fontWeight: 300,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Simple.
+          </span>
+          <span
+            style={{
+              opacity: word2Opacity,
+              color: '#000000',
+              fontSize: 24,
+              fontWeight: 300,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Essential.
+          </span>
+          <span
+            style={{
+              opacity: word3Opacity,
+              color: '#000000',
+              fontSize: 24,
+              fontWeight: 300,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Yours.
+          </span>
+        </div>
       </div>
 
-      {/* Final CTA */}
-      <div style={urlStyle}>campor.com</div>
+      {/* Final White Fade Overlay */}
+      <AbsoluteFill
+        style={{
+          backgroundColor: '#FFFFFF',
+          opacity: whiteOverlay,
+          pointerEvents: 'none',
+        }}
+      />
     </AbsoluteFill>
   );
 };
