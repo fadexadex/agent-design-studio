@@ -240,6 +240,15 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                                     setIsEditingScene(!!sceneId);
                                 }}
                             />
+                        ) : isPlanning && activeScenes.length === 0 ? (
+                            // Planning phase but scenes haven't loaded yet
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center space-y-4 animate-pulse">
+                                    <Loader2 size={48} className="mx-auto text-purple-500 animate-spin mb-4" />
+                                    <p className="text-zinc-400 font-mono text-sm uppercase">Loading Scenes...</p>
+                                    <p className="text-zinc-600 text-xs">Preparing your script for review</p>
+                                </div>
+                            </div>
                         ) : isRefining ? (
                             <LivePreview
                                 videoUrl={videoUrl}
@@ -259,6 +268,12 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                                             <p className="text-zinc-400">Your video is ready for download.</p>
                                             {videoUrl && <LivePreview videoUrl={videoUrl} scenes={activeScenes} activeSceneId="" onSceneSelect={() => { }} />}
                                         </>
+                                    ) : currentPhase === WorkflowPhase.ERROR ? (
+                                        <div className="space-y-4">
+                                            <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
+                                            <p className="text-red-400 font-mono text-sm uppercase">Workflow Error</p>
+                                            <p className="text-zinc-500 text-xs">{state?.progress?.currentMessage || 'An error occurred'}</p>
+                                        </div>
                                     ) : (
                                         <div className="animate-pulse">
                                             <Loader2 size={48} className="mx-auto text-zinc-700 animate-spin mb-4" />

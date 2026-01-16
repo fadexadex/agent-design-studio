@@ -152,15 +152,11 @@ export class WorkflowOrchestrator extends EventEmitter {
       throw new Error('Script with scenes is required. Generate a script using /api/generate-script first.');
     }
 
-    // Initialize state
+    // Initialize state - skip INITIALIZATION phase since we have a pre-generated script
     this.state = createInitialState(jobId, brand, videoConfig);
     this.state.maxRounds = this.config.maxRounds!;
     this.isRunning = true;
     this.isPaused = false;
-
-    // Emit initial state
-    this.emitStateUpdate();
-    this.emitThought('reason', 'Loading pre-generated script for review.');
 
     // Convert the provided script scenes to SceneDescription format
     const sceneBreakdown: SceneDescription[] = script.scenes.map((scene, idx) => ({
@@ -179,19 +175,22 @@ export class WorkflowOrchestrator extends EventEmitter {
       createdAt: new Date()
     };
 
-    // Set the plan on the state
-    this.state = updateState(this.state, { plan });
+    // Set the plan AND transition to AWAITING_FEEDBACK in a single update
+    // This ensures the state is complete before any emissions
+    this.state = updateState(this.state, {
+      plan,
+      currentPhase: WorkflowPhase.AWAITING_FEEDBACK,
+      progress: {
+        currentPhase: WorkflowPhase.AWAITING_FEEDBACK,
+        phaseProgress: 100,
+        currentMessage: 'Script loaded. Review and edit scenes, then approve to start implementation.'
+      }
+    });
 
-    this.emitThought('observe', `Loaded ${sceneBreakdown.length} scenes from provided script. Ready for review.`);
-
-    // Transition to AWAITING_FEEDBACK so the user can review/edit scenes in the workflow UI
-    // This shows the ScriptEditor with the provided scenes
-    this.state = transitionPhase(
-      this.state,
-      WorkflowPhase.AWAITING_FEEDBACK,
-      'Script loaded. Review and edit scenes, then approve to start implementation.'
-    );
+    // Now emit state update - state is fully ready with plan and correct phase
     this.emitStateUpdate();
+    this.emitThought('reason', 'Loading pre-generated script for review.');
+    this.emitThought('observe', `Loaded ${sceneBreakdown.length} scenes from provided script. Ready for review.`);
 
     // Start the main loop (will immediately pause at AWAITING_FEEDBACK)
     await this.runLoop();

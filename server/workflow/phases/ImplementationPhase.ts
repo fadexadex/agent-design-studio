@@ -350,52 +350,89 @@ export class ImplementationPhase extends BasePhase {
   ): Promise<{ file: GeneratedFile; thoughtSummary?: string; thoughtSignature?: string }> {
     const ai = this.getAI();
     const errorContext = errorTracker.getErrorContext(state);
+    const maxRetries = 2;
+    let lastError: Error | null = null;
 
-    const prompt = this.buildScenePrompt(state, scene, errorContext);
+    // Retry loop for robustness
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const prompt = this.buildScenePrompt(state, scene, errorContext);
 
-    // Enable thinking to capture the model's reasoning process
-    const thinkingConfig = getThinkingConfig({ includeThoughts: true });
+        // Enable thinking to capture the model's reasoning process
+        const thinkingConfig = getThinkingConfig({ includeThoughts: true });
 
-    // Use rate-limited call to respect API quotas
-    const response = await this.rateLimitedCall(() =>
-      ai.models.generateContent({
-        model: AI_MODELS.SMART,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-          temperature: 0.6,
-          maxOutputTokens: 8192,
-          ...thinkingConfig
+        // Use rate-limited call to respect API quotas
+        const response = await this.rateLimitedCall(() =>
+          ai.models.generateContent({
+            model: AI_MODELS.SMART,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+              temperature: attempt === 0 ? 0.4 : 0.2, // Lower temperature on retry for consistency
+              maxOutputTokens: 8192,
+              ...thinkingConfig
+            }
+          })
+        );
+
+        // Extract thoughts and text from the response
+        const { text: responseText, thoughtSummary, thoughtSignature } = extractGeminiThoughts(response);
+        let code = this.extractCode(responseText);
+
+        if (!code) {
+          throw new Error(`No code generated for Scene ${scene.sceneNumber}`);
         }
-      })
-    );
 
-    // Extract thoughts and text from the response
-    const { text: responseText, thoughtSummary, thoughtSignature } = extractGeminiThoughts(response);
-    let code = this.extractCode(responseText);
+        // Auto-fix common issues
+        code = this.autoFixSceneCode(code, scene.sceneNumber);
 
-    if (!code) {
-      throw new Error(`No code generated for Scene ${scene.sceneNumber}`);
+        // Validate before returning
+        const validation = this.validateSceneCode(code, scene.sceneNumber);
+        if (!validation.valid && attempt < maxRetries) {
+          throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+        }
+
+        const fileName = `Scene${scene.sceneNumber}.tsx`;
+        const filePath = path.join(this.outputDir, fileName);
+
+        return {
+          file: {
+            filePath,
+            content: code,
+            sceneId: scene.id
+          },
+          thoughtSummary,
+          thoughtSignature
+        };
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`[ImplementationPhase] Scene ${scene.sceneNumber} attempt ${attempt + 1} failed: ${lastError.message}`);
+
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
+      }
     }
 
-    // Auto-fix common issues
-    code = this.autoFixSceneCode(code, scene.sceneNumber);
-
+    // All retries failed - use fallback template
+    console.warn(`[ImplementationPhase] Using fallback template for Scene ${scene.sceneNumber}`);
+    const fallbackCode = this.generateFallbackScene(state, scene);
     const fileName = `Scene${scene.sceneNumber}.tsx`;
     const filePath = path.join(this.outputDir, fileName);
 
     return {
       file: {
         filePath,
-        content: code,
+        content: fallbackCode,
         sceneId: scene.id
       },
-      thoughtSummary,
-      thoughtSignature
+      thoughtSummary: `Used fallback template after ${maxRetries + 1} failed attempts: ${lastError?.message}`
     };
   }
 
   /**
    * Build the prompt for generating a scene file.
+   * Uses a proven template structure with explicit examples for high success rate.
    */
   private buildScenePrompt(
     state: WorkflowState,
@@ -403,42 +440,160 @@ export class ImplementationPhase extends BasePhase {
     errorContext: string
   ): string {
     const frameCount = scene.frameRange.end - scene.frameRange.start + 1;
+    const fps = 30;
+    const durationSeconds = Math.round(frameCount / fps * 10) / 10;
 
-    return `You are a senior React/Remotion developer. Generate a SINGLE scene component file.
+    // Provide a working example to ensure consistent output
+    const exampleCode = `import React from 'react';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
 
-FILE: Scene${scene.sceneNumber}.tsx
-EXPORT: The component MUST be exported as "export const Scene${scene.sceneNumber}"
+export const Scene1: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
-SCENE DETAILS:
-- Scene Number: ${scene.sceneNumber}
-- Description: ${scene.description}
-- Frame Range: ${scene.frameRange.start} to ${scene.frameRange.end} (${frameCount} frames)
-- Key Elements: ${scene.keyElements.join(', ')}
+  // Animation values
+  const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+  const scale = spring({ frame, fps, config: { damping: 15, stiffness: 100 } });
 
-BRAND CONTEXT:
-- Name: ${state.brand.name}
-- Industry: ${state.brand.industry}
-- Tagline: "${state.brand.tagline}"
-- Colors: ${state.brand.colors.join(', ')}
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{
+        opacity,
+        transform: \`scale(\${scale})\`,
+        color: '#FFFFFF',
+        fontSize: 64,
+        fontWeight: 'bold',
+      }}>
+        Brand Name
+      </div>
+    </AbsoluteFill>
+  );
+};`;
 
-STYLE: ${state.config.style}
-ASPECT RATIO: ${state.config.aspectRatio}
+    return `You are an expert React/Remotion developer. Generate a complete, working scene component.
 
-TECHNICAL REQUIREMENTS:
-1. Import React and Remotion primitives (AbsoluteFill, useCurrentFrame, interpolate, spring, etc.)
-2. The component receives NO props - use the brand values directly
-3. Use useCurrentFrame() to get current frame (0 to ${frameCount - 1} relative to scene)
-4. Use interpolate() and spring() for smooth animations
-5. All animations should be contained within the ${frameCount} frame duration
-6. Use the brand colors: ${state.brand.colors.map(c => `"${c}"`).join(', ')}
-7. Export as: export const Scene${scene.sceneNumber}: React.FC = () => { ... }
+## TASK
+Create Scene${scene.sceneNumber}.tsx - a self-contained Remotion scene component.
 
-STYLE GUIDELINES (${state.config.style}):
+## SCENE SPECIFICATION
+- **Description**: ${scene.description}
+- **Duration**: ${frameCount} frames (${durationSeconds} seconds at ${fps}fps)
+- **Key Elements**: ${scene.keyElements.join(', ')}
+
+## BRAND
+- **Name**: "${state.brand.name}"
+- **Industry**: ${state.brand.industry}
+- **Tagline**: "${state.brand.tagline || ''}"
+- **Primary Color**: ${state.brand.colors[0] || '#000000'}
+- **Secondary Color**: ${state.brand.colors[1] || '#FFFFFF'}
+
+## STYLE: ${state.config.style.toUpperCase()}
 ${this.getStyleGuidelines(state.config.style)}
 
-${errorContext ? `\n${errorContext}\n` : ''}
+## WORKING EXAMPLE (follow this structure exactly)
+\`\`\`tsx
+${exampleCode}
+\`\`\`
 
-Return ONLY the TypeScript/React code. No explanations, no markdown code blocks.`;
+## REQUIREMENTS (MUST FOLLOW)
+1. Start with: import React from 'react';
+2. Import from 'remotion': AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring
+3. Export as: export const Scene${scene.sceneNumber}: React.FC = () => { ... }
+4. Use useCurrentFrame() for frame-based animations (0 to ${frameCount - 1})
+5. Use interpolate() with extrapolateRight: 'clamp' for smooth animations
+6. Use spring() for physics-based motion
+7. AbsoluteFill as root with backgroundColor set
+8. Hardcode brand colors: primary="${state.brand.colors[0] || '#000000'}", secondary="${state.brand.colors[1] || '#FFFFFF'}"
+${errorContext ? `\n## PREVIOUS ERRORS TO AVOID\n${errorContext}` : ''}
+
+## OUTPUT
+Return ONLY valid TypeScript/React code. No markdown, no explanations, no code fences.
+The code must compile without errors.`;
+  }
+
+  /**
+   * Generate a fallback scene when AI generation fails.
+   * This ensures the workflow can continue even if the AI doesn't cooperate.
+   */
+  private generateFallbackScene(state: WorkflowState, scene: SceneDescription): string {
+    const frameCount = scene.frameRange.end - scene.frameRange.start + 1;
+    const primaryColor = state.brand.colors[0] || '#000000';
+    const secondaryColor = state.brand.colors[1] || '#FFFFFF';
+
+    return `import React from 'react';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
+
+export const Scene${scene.sceneNumber}: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+
+  // Smooth fade in
+  const opacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
+
+  // Scale animation with spring physics
+  const scale = spring({
+    frame,
+    fps,
+    config: { damping: 12, stiffness: 80 },
+  });
+
+  // Slide in from bottom
+  const translateY = interpolate(
+    frame,
+    [0, 30],
+    [50, 0],
+    { extrapolateRight: 'clamp' }
+  );
+
+  // Fade out at the end
+  const fadeOut = interpolate(
+    frame,
+    [${frameCount - 30}, ${frameCount}],
+    [1, 0],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
+
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundColor: '${primaryColor}',
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: opacity * fadeOut,
+      }}
+    >
+      <div
+        style={{
+          transform: \`scale(\${scale}) translateY(\${translateY}px)\`,
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            color: '${secondaryColor}',
+            fontSize: Math.min(width, height) * 0.08,
+            fontWeight: 'bold',
+            marginBottom: 20,
+            fontFamily: 'system-ui, sans-serif',
+          }}
+        >
+          ${state.brand.name}
+        </div>
+        <div
+          style={{
+            color: '${secondaryColor}',
+            fontSize: Math.min(width, height) * 0.03,
+            opacity: 0.8,
+            fontFamily: 'system-ui, sans-serif',
+          }}
+        >
+          Scene ${scene.sceneNumber}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+`;
   }
 
   /**
