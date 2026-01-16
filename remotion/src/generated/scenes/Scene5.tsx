@@ -1,114 +1,133 @@
 import React from 'react';
-import {
-	AbsoluteFill,
-	interpolate,
-	spring,
-	useCurrentFrame,
-	useVideoConfig,
-	interpolateColors,
-} from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
 
 export const Scene5: React.FC = () => {
-	const frame = useCurrentFrame();
-	const { fps } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
 
-	// 1. Circular Mask Expansion Transition
-	const maskProgress = spring({
-		frame,
-		fps,
-		config: {
-			stiffness: 40,
-			damping: 20,
-		},
-	});
+  // 1. Cube to 'O' Transformation
+  const cubeScale = interpolate(frame, [0, 60], [2.5, 1], {
+    extrapolateRight: 'clamp',
+  });
+  
+  const cubeBorderRadius = interpolate(frame, [20, 50], [0, 100], {
+    extrapolateRight: 'clamp',
+  });
 
-	const maskRadius = interpolate(maskProgress, [0, 1], [0, 150]);
+  const cubeRotate = interpolate(frame, [0, 60], [45, 0], {
+    extrapolateRight: 'clamp',
+  });
 
-	// 2. Subtle Background Pulse
-	// Oscillates between frame 0 and 225
-	const pulseValue = Math.sin(frame / 30);
-	const backgroundColor = interpolateColors(
-		pulseValue,
-		[-1, 1],
-		['#FFFFFF', '#F2F2F2']
-	);
+  // 2. Logo Assembly (CAMPOR)
+  // The 'O' is the 5th letter: C-A-M-P-O-R
+  const logoSpring = spring({
+    frame: frame - 30,
+    fps,
+    config: { damping: 12, stiffness: 100 },
+  });
 
-	// 3. Main Text Animation (CAMPOR)
-	const mainTextSpring = spring({
-		frame: frame - 25,
-		fps,
-		config: {
-			damping: 12,
-			stiffness: 100,
-		},
-	});
+  const letterOpacity = interpolate(frame, [40, 70], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
 
-	const mainTextOpacity = interpolate(frame, [25, 45], [0, 1], {
-		extrapolateLeft: 'clamp',
-		extrapolateRight: 'clamp',
-	});
+  const letterSpacing = interpolate(frame, [40, 90], [80, 20], {
+    extrapolateRight: 'clamp',
+  });
 
-	const mainTextScale = interpolate(mainTextSpring, [0, 1], [0.85, 1]);
+  // 3. CTA Button Appearance
+  const ctaOpacity = interpolate(frame, [100, 130], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
 
-	// 4. Secondary Text Animation (Redefining Ecommerce)
-	const subTextSpring = spring({
-		frame: frame - 45,
-		fps,
-		config: {
-			damping: 15,
-		},
-	});
+  const ctaSlide = spring({
+    frame: frame - 100,
+    fps,
+    config: { damping: 15, stiffness: 80 },
+  });
 
-	const subTextOpacity = interpolate(frame, [45, 65], [0, 1], {
-		extrapolateLeft: 'clamp',
-		extrapolateRight: 'clamp',
-	});
+  const ctaTranslateY = interpolate(ctaSlide, [0, 1], [30, 0]);
 
-	const subTextTranslateY = interpolate(subTextSpring, [0, 1], [20, 0]);
+  // 4. Final Fade to White
+  const finalFade = interpolate(frame, [240, 265], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
 
-	const containerStyle: React.CSSProperties = {
-		backgroundColor: '#000000', // Underlay for the mask transition
-	};
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    fontFamily: 'Helvetica, Arial, sans-serif',
+  };
 
-	const contentStyle: React.CSSProperties = {
-		backgroundColor,
-		clipPath: `circle(${maskRadius}% at 50% 50%)`,
-		display: 'flex',
-		flexDirection: 'column',
-		justifyContent: 'center',
-		alignItems: 'center',
-		fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-	};
+  const logoContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#FFFFFF',
+    fontSize: 110,
+    fontWeight: 300,
+    letterSpacing: `${letterSpacing}px`,
+    textTransform: 'uppercase',
+  };
 
-	const titleStyle: React.CSSProperties = {
-		fontSize: '140px',
-		fontWeight: 900,
-		color: '#000000',
-		letterSpacing: '-0.02em',
-		margin: 0,
-		padding: 0,
-		opacity: mainTextOpacity,
-		transform: `scale(${mainTextScale})`,
-		lineHeight: 1,
-	};
+  const letterStyle: React.CSSProperties = {
+    opacity: letterOpacity,
+  };
 
-	const subtitleStyle: React.CSSProperties = {
-		fontSize: '28px',
-		fontWeight: 300,
-		color: '#000000',
-		letterSpacing: '0.4em',
-		textTransform: 'uppercase',
-		marginTop: '40px',
-		opacity: subTextOpacity,
-		transform: `translateY(${subTextTranslateY}px)`,
-	};
+  const cubeOStyle: React.CSSProperties = {
+    width: 85,
+    height: 85,
+    border: '6px solid #FFFFFF',
+    borderRadius: `${cubeBorderRadius}%`,
+    transform: `scale(${cubeScale}) rotate(${cubeRotate}deg)`,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: '0 10px',
+    boxSizing: 'border-box',
+  };
 
-	return (
-		<AbsoluteFill style={containerStyle}>
-			<AbsoluteFill style={contentStyle}>
-				<div style={titleStyle}>CAMPOR</div>
-				<div style={subtitleStyle}>Redefining Ecommerce</div>
-			</AbsoluteFill>
-		</AbsoluteFill>
-	);
+  const buttonStyle: React.CSSProperties = {
+    marginTop: 80,
+    padding: '15px 50px',
+    border: '1px solid #FFFFFF',
+    color: '#FFFFFF',
+    fontSize: 24,
+    letterSpacing: 6,
+    opacity: ctaOpacity,
+    transform: `translateY(${ctaTranslateY}px)`,
+    fontWeight: 300,
+  };
+
+  const whiteOverlayStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    opacity: finalFade,
+  };
+
+  return (
+    <AbsoluteFill style={containerStyle}>
+      <div style={logoContainerStyle}>
+        <span style={letterStyle}>C</span>
+        <span style={letterStyle}>A</span>
+        <span style={letterStyle}>M</span>
+        <span style={letterStyle}>P</span>
+        <div style={cubeOStyle} />
+        <span style={letterStyle}>R</span>
+      </div>
+
+      <div style={buttonStyle}>
+        SHOP NOW
+      </div>
+
+      <div style={whiteOverlayStyle} />
+    </AbsoluteFill>
+  );
 };

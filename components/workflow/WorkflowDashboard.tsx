@@ -300,7 +300,11 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                         {/* Feedback Controls - Only show when editing a scene (planning) or during refinement phase */}
                         {(currentPhase === WorkflowPhase.AWAITING_FEEDBACK || currentPhase === WorkflowPhase.EVALUATION) &&
                          (isPlanning ? isEditingScene : true) && (
-                            <div className={`absolute z-50 transition-all duration-500 ease-out ${activeSceneId ? 'bottom-4 right-4' : 'bottom-6 right-6 w-full max-w-2xl'}`}>
+                            <div
+                                className={`absolute z-50 transition-all duration-500 ease-out ${activeSceneId ? 'bottom-4 right-4' : 'bottom-6 right-6 w-full max-w-2xl'}`}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 <FeedbackControls
                                     status={state?.progress?.subStep === 'processing_feedback' ? 'processing' : 'idle'}
                                     targetLabel={activeSceneId ? `Scene ${activeScenes.find(s => s.id === activeSceneId)?.index! + 1}` : 'Global Project'}

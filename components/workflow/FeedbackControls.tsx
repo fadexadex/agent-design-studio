@@ -40,7 +40,7 @@ export const FeedbackControls: React.FC<FeedbackControlsProps> = ({
     };
 
     return (
-        <div className={compact ? "w-full max-w-md" : "w-full max-w-3xl mx-auto"}>
+        <div className={compact ? "w-full max-w-lg" : "w-full max-w-3xl mx-auto"}>
             {/* Floating Island Container */}
             <div className={`bg-zinc-900/80 backdrop-blur-xl border border-zinc-700/50 shadow-2xl ring-1 ring-black/20 ${compact ? 'rounded-xl p-3' : 'rounded-2xl p-4'}`}>
 
@@ -73,16 +73,16 @@ export const FeedbackControls: React.FC<FeedbackControlsProps> = ({
                         onChange={(e) => setFeedback(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={compact ? "Edit this scene..." : "Describe what you want to change..."}
-                        className={`relative w-full bg-zinc-950/50 text-white placeholder:text-zinc-600 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/50 border border-zinc-800 transition-all font-sans ${compact ? 'text-xs min-h-[40px] max-h-[80px]' : 'text-sm min-h-[60px] max-h-[120px]'}`}
+                        className={`relative w-full bg-zinc-950/50 text-white placeholder:text-zinc-600 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/50 border border-zinc-800 transition-all font-sans ${compact ? 'text-sm min-h-[80px] max-h-[120px]' : 'text-sm min-h-[60px] max-h-[120px]'}`}
                         disabled={status === 'processing'}
                     />
 
                     <button
                         onClick={handleSubmit}
                         disabled={!feedback.trim() || status === 'processing'}
-                        className={`absolute right-2 bottom-2 bg-white text-black rounded-lg hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${compact ? 'p-1.5' : 'p-2'}`}
+                        className={`absolute right-3 bottom-3 bg-white text-black rounded-lg hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${compact ? 'p-2' : 'p-2'}`}
                     >
-                        {status === 'processing' ? <Loader2 size={compact ? 12 : 16} className="animate-spin" /> : <Send size={compact ? 12 : 16} />}
+                        {status === 'processing' ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
                 </div>
 

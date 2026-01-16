@@ -1,119 +1,73 @@
 import React from 'react';
-import {
-  AbsoluteFill,
-  useCurrentFrame,
-  interpolate,
-  spring,
-  useVideoConfig,
-  interpolateColors,
-} from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
 
 export const Scene1: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  const ROWS = 6;
-  const COLS = 11;
-  const cellWidth = width / COLS;
-  const cellHeight = height / ROWS;
+  // Smooth fade in
+  const opacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
 
-  const brandRed = '#c91313';
-  const brandBlack = '#000000';
+  // Scale animation with spring physics
+  const scale = spring({
+    frame,
+    fps,
+    config: { damping: 12, stiffness: 80 },
+  });
+
+  // Slide in from bottom
+  const translateY = interpolate(
+    frame,
+    [0, 30],
+    [50, 0],
+    { extrapolateRight: 'clamp' }
+  );
+
+  // Fade out at the end
+  const fadeOut = interpolate(
+    frame,
+    [241, 271],
+    [1, 0],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#ffffff' }}>
+    <AbsoluteFill
+      style={{
+        backgroundColor: '#000000',
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: opacity * fadeOut,
+      }}
+    >
       <div
         style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          width: '100%',
-          height: '100%',
-        }}
-      >
-        {Array.from({ length: ROWS * COLS }).map((_, i) => {
-          const row = Math.floor(i / COLS);
-          const col = i % COLS;
-
-          // Staggering logic based on grid position (diagonal burst)
-          const staggerOffset = (row + col) * 1.2;
-          
-          const animationProgress = spring({
-            frame: frame - staggerOffset,
-            fps,
-            config: {
-              stiffness: 120,
-              damping: 14,
-              mass: 0.8,
-            },
-          });
-
-          // Morphing: Circle (50%) to Square (0%)
-          const borderRadius = interpolate(animationProgress, [0, 1], [50, 0]);
-
-          // Color transition: Red to Black
-          const backgroundColor = interpolateColors(
-            animationProgress,
-            [0, 1],
-            [brandRed, brandBlack]
-          );
-
-          // 90-degree rotation
-          const rotation = interpolate(animationProgress, [0, 1], [0, 90]);
-
-          // Staggered scaling burst
-          const scale = interpolate(
-            animationProgress,
-            [0, 0.4, 1],
-            [0, 1.1, 1]
-          );
-
-          // Opacity fade in
-          const opacity = interpolate(animationProgress, [0, 0.2], [0, 1]);
-
-          return (
-            <div
-              key={`${row}-${col}`}
-              style={{
-                width: cellWidth,
-                height: cellHeight,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <div
-                style={{
-                  width: Math.min(cellWidth, cellHeight) * 0.85,
-                  height: Math.min(cellWidth, cellHeight) * 0.85,
-                  backgroundColor,
-                  borderRadius: `${borderRadius}%`,
-                  opacity,
-                  transform: `rotate(${rotation}deg) scale(${scale})`,
-                  boxShadow: `0 4px 15px rgba(0,0,0,${interpolate(animationProgress, [0, 1], [0, 0.15])})`,
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Subtle overlay for geometric texture */}
-      <AbsoluteFill
-        style={{
-          pointerEvents: 'none',
-          border: '20px solid transparent',
-          boxSizing: 'border-box',
+          transform: `scale(${scale}) translateY(${translateY}px)`,
+          textAlign: 'center',
         }}
       >
         <div
           style={{
-            width: '100%',
-            height: '100%',
-            border: `2px solid ${brandBlack}`,
-            opacity: interpolate(frame, [0, 15, 45], [0, 0.1, 0.1]),
+            color: '#FFFFFF',
+            fontSize: Math.min(width, height) * 0.08,
+            fontWeight: 'bold',
+            marginBottom: 20,
+            fontFamily: 'system-ui, sans-serif',
           }}
-        />
-      </AbsoluteFill>
+        >
+          Campor
+        </div>
+        <div
+          style={{
+            color: '#FFFFFF',
+            fontSize: Math.min(width, height) * 0.03,
+            opacity: 0.8,
+            fontFamily: 'system-ui, sans-serif',
+          }}
+        >
+          Scene 1
+        </div>
+      </div>
     </AbsoluteFill>
   );
 };
