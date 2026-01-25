@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "server": "tsx server/index.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
-    "clean:generated": "rm -f remotion/src/generated/Composition_*.tsx"
+    "clean:generated": "rm -f remotion/src/generated/Composition_*.tsx",
+    "postinstall": "cd remotion && npm install"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

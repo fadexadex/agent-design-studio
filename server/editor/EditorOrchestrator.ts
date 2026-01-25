@@ -412,7 +412,8 @@ export class EditorOrchestrator {
     return this.queueOperation(async () => {
       if (!this.state) throw new Error('Editor not initialized');
 
-      this.emit({ type: 'thinking', message: 'Creating new scene...' });
+      try {
+        this.emit({ type: 'thinking', message: 'Creating new scene...' });
 
       // Determine insert position
       let insertIndex = this.state.scenes.length;
@@ -506,6 +507,9 @@ export class EditorOrchestrator {
       this.state.scenes = recalculateSceneOrders(this.state.scenes);
       this.state.totalDuration = calculateTotalDuration(this.state.scenes);
 
+      // Get the scene reference from the array (recalculateSceneOrders creates new objects)
+      const sceneInArray = this.state.scenes.find(s => s.id === newSceneId)!;
+
       this.emit({ type: 'sceneStatus', sceneId: newSceneId, status: 'rendering', message: 'Rendering preview...', progress: 0 });
 
       // Render preview
@@ -519,20 +523,24 @@ export class EditorOrchestrator {
           }
         );
 
-        newScene.previewUrl = `/api/preview/${path.basename(previewResult.videoPath)}`;
-        initialVersion.previewUrl = newScene.previewUrl;
-        newScene.status = 'ready';
+        sceneInArray.previewUrl = `/api/preview/${path.basename(previewResult.videoPath)}`;
+        // Update the version's previewUrl too
+        const versionInArray = sceneInArray.versions.find(v => v.id === sceneInArray.currentVersionId);
+        if (versionInArray) {
+          versionInArray.previewUrl = sceneInArray.previewUrl;
+        }
+        sceneInArray.status = 'ready';
 
         this.emit({
           type: 'sceneUpdated',
           sceneId: newSceneId,
-          previewUrl: newScene.previewUrl,
+          previewUrl: sceneInArray.previewUrl,
           code: addResult.code,
-          versionId: initialVersion.id,
+          versionId: sceneInArray.currentVersionId,
         });
       } catch (renderError) {
         console.error(`Failed to render preview for new scene:`, renderError);
-        newScene.status = 'ready';
+        sceneInArray.status = 'ready';
       }
 
       // Update MainComposition
@@ -543,18 +551,24 @@ export class EditorOrchestrator {
         'add',
         [newSceneId],
         [],
-        [cloneScene(newScene)],
+        [cloneScene(sceneInArray)],
         `Add scene: ${prompt.substring(0, 30)}...`
       );
       this.pushToUndoStack(operation);
 
       // Save state
       await this.saveState();
-
+      
       // Emit full state sync
       this.emit({ type: 'stateSync', state: this.state });
 
       return newSceneId;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[EditorOrchestrator] addScene failed:', errorMessage);
+        this.emit({ type: 'error', message: `Failed to add scene: ${errorMessage}` });
+        throw error;
+      }
     });
   }
 
