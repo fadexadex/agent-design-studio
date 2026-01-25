@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { BrandContext, VideoConfig, VideoScript } from "../types";
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = '/api';
 
 export interface AgentThought {
   type: 'reason' | 'act' | 'observe';
