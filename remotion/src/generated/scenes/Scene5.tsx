@@ -3,134 +3,97 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } fr
 
 export const Scene5: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { fps, width } = useVideoConfig();
 
-  // Button Appearance
-  const buttonAppearScale = spring({
-    frame,
+  // Animation constants
+  const primaryColor = "#000000";
+  const secondaryColor = "#FFFFFF";
+
+  // Entrance animations
+  const opacity = interpolate(frame, [0, 45], [0, 1], { extrapolateRight: 'clamp' });
+  const exitOpacity = interpolate(frame, [250, 270], [1, 0], { extrapolateLeft: 'clamp' });
+  
+  const textReveal = spring({
+    frame: frame - 10,
     fps,
     config: { damping: 12, stiffness: 100 },
   });
-  const buttonOpacity = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: 'clamp' });
 
-  // Path Animation (The thin line drawing into the button)
-  const lineProgress = interpolate(frame, [40, 90], [0, 1], { extrapolateRight: 'clamp' });
-  const lineOpacity = interpolate(frame, [40, 50, 90, 100], [0, 1, 1, 0], { extrapolateRight: 'clamp' });
-
-  // Text Animation
-  const textOpacity = interpolate(frame, [100, 115], [1, 0], { extrapolateRight: 'clamp' });
-  const textY = interpolate(frame, [100, 115], [0, -10], { extrapolateRight: 'clamp' });
-
-  // Button Interaction (Slight shrink when line "clicks")
-  const clickScale = spring({
-    frame: frame - 90,
+  const lineProgress = spring({
+    frame: frame - 30,
     fps,
-    config: { damping: 10, stiffness: 200 },
+    config: { damping: 20, stiffness: 40 },
   });
-  const activeScale = frame > 90 && frame < 120 ? interpolate(clickScale, [0, 1], [1, 0.95]) : 1;
 
-  // Checkmark Animation
-  const checkProgress = interpolate(frame, [115, 145], [1, 0], { extrapolateRight: 'clamp' });
-  const checkOpacity = interpolate(frame, [115, 120], [0, 1], { extrapolateRight: 'clamp' });
+  // Subtle continuous motion
+  const letterSpacing = interpolate(frame, [0, 271], [12, 24], { extrapolateRight: 'clamp' });
+  const scale = interpolate(frame, [0, 271], [0.95, 1.05], { extrapolateRight: 'clamp' });
 
-  // Final Button Shape Morph (Optional subtle rounding)
-  const borderRadius = interpolate(frame, [110, 130], [8, 50], { extrapolateRight: 'clamp' });
-  const buttonWidth = interpolate(frame, [110, 130], [280, 80], { extrapolateRight: 'clamp' });
+  // Vertical slide for the text
+  const translateY = interpolate(textReveal, [0, 1], [20, 0]);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
-      {/* The Animated Path Line */}
-      <svg
-        width={width}
-        height={height}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          opacity: lineOpacity,
-          zIndex: 1,
-        }}
-      >
-        <path
-          d={`M ${width * 0.2} ${height * 0.6} Q ${width * 0.4} ${height * 0.4}, ${width * 0.5} ${height * 0.5}`}
-          fill="none"
-          stroke="#000000"
-          strokeWidth="2"
-          strokeDasharray="400"
-          strokeDashoffset={400 * (1 - lineProgress)}
-        />
-      </svg>
-
-      {/* The Button */}
-      <div
-        style={{
-          width: buttonWidth,
-          height: 80,
-          backgroundColor: '#000000',
-          borderRadius: borderRadius,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          opacity: buttonOpacity,
-          transform: `scale(${buttonAppearScale * activeScale})`,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Checkout Text */}
-        <div
-          style={{
-            color: '#FFFFFF',
-            fontSize: 32,
-            fontWeight: 600,
-            fontFamily: 'Helvetica, Arial, sans-serif',
-            opacity: textOpacity,
-            transform: `translateY(${textY}px)`,
-            position: 'absolute',
-          }}
-        >
-          Checkout
+    <AbsoluteFill style={{ 
+      backgroundColor: secondaryColor, 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      overflow: 'hidden'
+    }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        opacity: opacity * exitOpacity,
+        transform: `scale(${scale})`,
+      }}>
+        {/* Brand Name */}
+        <div style={{
+          color: primaryColor,
+          fontSize: 80,
+          fontWeight: 300,
+          textTransform: 'uppercase',
+          letterSpacing: `${letterSpacing}px`,
+          transform: `translateY(${translateY}px)`,
+          fontFamily: 'Helvetica, Arial, sans-serif',
+          marginBottom: 20,
+          marginLeft: letterSpacing, // Offset to keep text centered due to letter spacing
+        }}>
+          Campor
         </div>
 
-        {/* Checkmark Icon */}
-        <svg
-          width="40"
-          height="40"
-          viewBox="0 0 100 100"
-          style={{
-            opacity: checkOpacity,
-            position: 'absolute',
-          }}
-        >
-          <path
-            d="M 20 50 L 45 75 L 80 30"
-            fill="none"
-            stroke="#FFFFFF"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="100"
-            strokeDashoffset={100 * checkProgress}
-          />
-        </svg>
+        {/* Minimalist Line Decor */}
+        <div style={{
+          height: '1px',
+          backgroundColor: primaryColor,
+          width: lineProgress * 300,
+          opacity: 0.6,
+        }} />
+
+        {/* Subtle Tagline Placeholder (Minimalist style) */}
+        <div style={{
+          marginTop: 20,
+          color: primaryColor,
+          fontSize: 14,
+          fontWeight: 400,
+          letterSpacing: '4px',
+          textTransform: 'uppercase',
+          opacity: interpolate(frame, [60, 90], [0, 0.5], { extrapolateRight: 'clamp' }),
+        }}>
+          Ecommerce Redefined
+        </div>
       </div>
 
-      {/* Brand Tagline (Minimalist Footer) */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 80,
-          fontFamily: 'Helvetica, Arial, sans-serif',
-          fontSize: 24,
-          letterSpacing: 4,
-          color: '#000000',
-          opacity: interpolate(frame, [150, 180], [0, 0.5], { extrapolateRight: 'clamp' }),
-          textTransform: 'uppercase',
-        }}
-      >
-        Campor
-      </div>
+      {/* Thin border frame for minimalist aesthetic */}
+      <div style={{
+        position: 'absolute',
+        top: 40,
+        left: 40,
+        right: 40,
+        bottom: 40,
+        border: `1px solid ${primaryColor}`,
+        opacity: interpolate(frame, [0, 60], [0, 0.1], { extrapolateRight: 'clamp' }) * exitOpacity,
+        pointerEvents: 'none',
+      }} />
     </AbsoluteFill>
   );
 };

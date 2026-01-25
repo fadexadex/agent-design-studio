@@ -9,7 +9,8 @@ import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { AgentOrchestrator, AgentProgress, AgentThought } from './agent/orchestrator';
-import workflowRoutes from './routes/workflowRoutes';
+import workflowRoutes, { orchestratorMap } from './routes/workflowRoutes';
+import { initEditorRoutes } from './routes/editorRoutes';
 import { AI_MODELS } from './agent/models';
 import { rateLimitedCall } from './agent/rateLimiter';
 
@@ -43,6 +44,7 @@ const generateJobId = () => `job_${Date.now()}_${Math.random().toString(36).subs
 
 // API Routes
 app.use('/api/workflow', workflowRoutes);
+app.use('/api/editor', initEditorRoutes(orchestratorMap));
 
 /**
  * POST /api/generate-script

@@ -3,7 +3,9 @@ import { WorkflowOrchestrator, createOrchestrator } from '../workflow/WorkflowOr
 import { WorkflowState } from '../workflow/state';
 
 const router = Router();
-const orchestratorMap = new Map<string, WorkflowOrchestrator>();
+
+// Export the orchestrator map so the editor can access workflow states
+export const orchestratorMap = new Map<string, WorkflowOrchestrator>();
 
 // === 1. Start Workflow ===
 router.post('/start', async (req, res) => {

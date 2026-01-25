@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { BrandWizard } from './components/BrandWizard';
 import { MotionPreview } from './components/MotionPreview';
 import { WorkflowDashboard } from './components/workflow/WorkflowDashboard';
+import { SceneEditor } from './components/editor/SceneEditor';
 import { BrandContext, VideoConfig, GenerationState, VideoScript } from './types';
 import { startWorkflow, AgentProgress, AgentThought } from './services/geminiService';
 import { AlertCircle, Brain, Zap, Eye, Wrench, Film } from 'lucide-react';
@@ -36,7 +38,11 @@ interface ExtendedGenerationState extends GenerationState {
   agentProgress?: AgentProgress;
 }
 
-const App: React.FC = () => {
+/**
+ * Home page component - handles brand wizard and workflow initiation
+ */
+const HomePage: React.FC = () => {
+  const navigate = useNavigate();
   const [brand, setBrand] = useState<BrandContext | null>(null);
   const [config, setConfig] = useState<VideoConfig | null>(null);
   // Initialize from sessionStorage to persist across page reloads/HMR
@@ -70,7 +76,7 @@ const App: React.FC = () => {
     setConfig(configData);
     setGeneration({
       isGenerating: true,
-      progressMessage: '🚀 Initializing AI Agent...',
+      progressMessage: 'Initializing AI Agent...',
       agentProgress: { stage: 'reasoning', message: 'Starting up' }
     });
 
@@ -105,8 +111,9 @@ const App: React.FC = () => {
     setGeneration({ isGenerating: false, progressMessage: '', error: undefined });
   };
 
+  // If we have a workflow job ID, render the WorkflowDashboard
   if (workflowJobId) {
-    return <WorkflowDashboard jobId={workflowJobId} />;
+    return <WorkflowDashboard jobId={workflowJobId} onNavigateToEditor={(jobId) => navigate(`/editor/${jobId}`)} />;
   }
 
   const currentStage = generation.agentProgress?.stage || 'reasoning';
@@ -153,6 +160,65 @@ const App: React.FC = () => {
         </>
       )}
     </Layout>
+  );
+};
+
+/**
+ * Workflow page wrapper - extracts jobId from URL params
+ */
+const WorkflowPage: React.FC = () => {
+  const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
+  
+  if (!jobId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-red-500 gap-4">
+        <AlertCircle size={48} />
+        <h2 className="text-xl font-bold">Invalid Job ID</h2>
+        <button onClick={() => navigate('/')} className="text-purple-400 hover:underline">
+          Go Home
+        </button>
+      </div>
+    );
+  }
+
+  return <WorkflowDashboard jobId={jobId} onNavigateToEditor={(id) => navigate(`/editor/${id}`)} />;
+};
+
+/**
+ * Editor page wrapper - extracts jobId from URL params
+ */
+const EditorPage: React.FC = () => {
+  const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
+  
+  if (!jobId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-red-500 gap-4">
+        <AlertCircle size={48} />
+        <h2 className="text-xl font-bold">Invalid Job ID</h2>
+        <button onClick={() => navigate('/')} className="text-purple-400 hover:underline">
+          Go Home
+        </button>
+      </div>
+    );
+  }
+
+  return <SceneEditor jobId={jobId} onBack={() => navigate(`/workflow/${jobId}`)} />;
+};
+
+/**
+ * Main App component with routing
+ */
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/workflow/:jobId" element={<WorkflowPage />} />
+        <Route path="/editor/:jobId" element={<EditorPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 

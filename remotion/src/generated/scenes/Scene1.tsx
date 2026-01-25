@@ -3,114 +3,131 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } fr
 
 export const Scene1: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { fps } = useVideoConfig();
 
-  // 1. Pixel to Line Animation (Frames 0 - 45)
-  const pixelOpacity = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: 'clamp' });
-  const pixelWidth = interpolate(frame, [10, 45], [4, 120], { extrapolateRight: 'clamp' });
-  const pixelHeight = interpolate(frame, [10, 45], [4, 2], { extrapolateRight: 'clamp' });
-  const lineOpacity = interpolate(frame, [45, 60], [1, 0], { extrapolateRight: 'clamp' });
+  // Animation constants
+  const primaryColor = '#000000';
+  const secondaryColor = '#FFFFFF';
 
-  // 2. Line to 'C' Morph (Frames 45 - 90)
-  const cOpacity = interpolate(frame, [45, 60], [0, 1], { extrapolateRight: 'clamp' });
-  const cStrokeDash = 250;
-  const cStrokeOffset = interpolate(frame, [45, 90], [cStrokeDash, 0], { extrapolateRight: 'clamp' });
+  // Entrance animations
+  const contentOpacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+  const contentFadeOut = interpolate(frame, [240, 270], [1, 0], { extrapolateRight: 'clamp' });
+  
+  const lineScale = spring({
+    frame: frame - 10,
+    fps,
+    config: { stiffness: 60, damping: 20 },
+  });
 
-  // 3. 'ampor' Fade and Kerning (Frames 80 - 200)
-  const amporOpacity = interpolate(frame, [80, 120], [0, 1], { extrapolateRight: 'clamp' });
-  const amporLetterSpacing = interpolate(frame, [80, 200], [1.2, 0.05], { extrapolateRight: 'clamp' });
-  const amporTranslateX = interpolate(frame, [80, 120], [30, 0], { extrapolateRight: 'clamp' });
+  const textReveal = spring({
+    frame: frame - 25,
+    fps,
+    config: { stiffness: 100, damping: 15 },
+  });
 
-  // 4. Overall Scene Dynamics
-  const sceneScale = interpolate(frame, [0, 226], [0.98, 1.05], { extrapolateRight: 'clamp' });
-  const springConfig = { damping: 20, stiffness: 60 };
-  const entranceSpring = spring({ frame, fps, config: springConfig });
+  const letterSpacing = interpolate(frame, [20, 200], [2, 12], {
+    extrapolateRight: 'clamp',
+  });
 
-  const primaryColor = "#000000";
-  const secondaryColor = "#FFFFFF";
+  const translateY = interpolate(textReveal, [0, 1], [20, 0]);
 
   return (
-    <AbsoluteFill style={{ 
-      backgroundColor: secondaryColor, 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      fontFamily: 'Helvetica, Arial, sans-serif'
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transform: `scale(${sceneScale})`,
-      }}>
-        
-        {/* The Initial Expanding Line */}
-        <div style={{
-          position: 'absolute',
-          width: pixelWidth,
-          height: pixelHeight,
-          backgroundColor: primaryColor,
-          opacity: lineOpacity * pixelOpacity,
-          borderRadius: 2,
-        }} />
-
-        {/* The Logo Container */}
-        <div style={{
+    <AbsoluteFill style={{ backgroundColor: primaryColor, justifyContent: 'center', alignItems: 'center' }}>
+      <div
+        style={{
+          opacity: contentOpacity * contentFadeOut,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          position: 'relative',
-        }}>
-          
-          {/* Animated 'C' SVG */}
-          <div style={{ 
-            opacity: cOpacity,
-            width: 100,
-            height: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <svg width="100" height="100" viewBox="0 0 100 100">
-              <path
-                d="M 75 25 A 35 35 0 1 0 75 75"
-                fill="none"
-                stroke={primaryColor}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={cStrokeDash}
-                strokeDashoffset={cStrokeOffset}
-              />
-            </svg>
-          </div>
+          width: '100%',
+        }}
+      >
+        {/* Top Thin Line */}
+        <div
+          style={{
+            width: interpolate(lineScale, [0, 1], [0, 120]),
+            height: '1px',
+            backgroundColor: secondaryColor,
+            marginBottom: '40px',
+            opacity: 0.6,
+          }}
+        />
 
-          {/* 'ampor' Text */}
-          <div style={{
-            opacity: amporOpacity,
-            color: primaryColor,
-            fontSize: 82,
+        {/* Brand Name */}
+        <div
+          style={{
+            transform: `translateY(${translateY}px)`,
+            opacity: textReveal,
+            color: secondaryColor,
+            fontSize: 84,
             fontWeight: 300,
-            letterSpacing: `${amporLetterSpacing}em`,
-            transform: `translateX(${amporTranslateX}px)`,
-            marginLeft: 10,
-            display: 'flex',
-            alignItems: 'center',
-            height: 100,
-            paddingBottom: 8
-          }}>
-            ampor
-          </div>
+            textTransform: 'uppercase',
+            letterSpacing: `${letterSpacing}px`,
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            textAlign: 'center',
+          }}
+        >
+          Campor
         </div>
+
+        {/* Bottom Thin Line */}
+        <div
+          style={{
+            width: interpolate(lineScale, [0, 1], [0, 240]),
+            height: '1px',
+            backgroundColor: secondaryColor,
+            marginTop: '40px',
+            opacity: 0.4,
+          }}
+        />
       </div>
 
-      {/* Subtle minimalist border frame for "airy" feel */}
-      <div style={{
-        position: 'absolute',
-        top: 40,
-        bottom: 40,
-        left: 40,
-        right: 40,
-        border: `1px solid rgba(0,0,0,${interpolate(frame, [150, 200], [0, 0.05], { extrapolateRight: 'clamp' })})`,
-        pointerEvents: 'none'
-      }} />
+      {/* Decorative Corner Lines */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 60,
+          left: 60,
+          width: 40,
+          height: 1,
+          backgroundColor: secondaryColor,
+          opacity: contentOpacity * 0.3,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: 60,
+          left: 60,
+          width: 1,
+          height: 40,
+          backgroundColor: secondaryColor,
+          opacity: contentOpacity * 0.3,
+        }}
+      />
+      
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 60,
+          right: 60,
+          width: 40,
+          height: 1,
+          backgroundColor: secondaryColor,
+          opacity: contentOpacity * 0.3,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 60,
+          right: 60,
+          width: 1,
+          height: 40,
+          backgroundColor: secondaryColor,
+          opacity: contentOpacity * 0.3,
+        }}
+      />
     </AbsoluteFill>
   );
 };

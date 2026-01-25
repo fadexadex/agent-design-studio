@@ -6,10 +6,11 @@ import { LivePreview } from './LivePreview';
 import { ThoughtStream } from './ThoughtStream';
 import { FeedbackControls } from './FeedbackControls';
 import { SceneNodeData } from './SceneNode';
-import { Check, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, ChevronRight, AlertCircle, Loader2, Pencil, Download } from 'lucide-react';
 
 interface WorkflowDashboardProps {
     jobId: string;
+    onNavigateToEditor?: (jobId: string) => void;
 }
 
 const PHASES = [
@@ -19,7 +20,7 @@ const PHASES = [
     { id: WorkflowPhase.COMPLETE, label: 'Final' },
 ];
 
-export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) => {
+export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onNavigateToEditor }) => {
     const { state, isConnected, isError, renderProgress } = useWorkflowStream(jobId);
     const [activeSceneId, setActiveSceneId] = useState<string>('');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -265,8 +266,29 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId }) =
                                     {currentPhase === WorkflowPhase.COMPLETE ? (
                                         <>
                                             <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Production Complete</h2>
-                                            <p className="text-zinc-400">Your video is ready for download.</p>
+                                            <p className="text-zinc-400 mb-6">Your video is ready for download or further editing.</p>
                                             {videoUrl && <LivePreview videoUrl={videoUrl} scenes={activeScenes} activeSceneId="" onSceneSelect={() => { }} />}
+                                            <div className="mt-6 flex items-center justify-center gap-4">
+                                                {videoUrl && (
+                                                    <a
+                                                        href={videoUrl}
+                                                        download
+                                                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-900/30 transition-all duration-300 hover:scale-105"
+                                                    >
+                                                        <Download size={20} />
+                                                        Download Video
+                                                    </a>
+                                                )}
+                                                {onNavigateToEditor && (
+                                                    <button
+                                                        onClick={() => onNavigateToEditor(jobId)}
+                                                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl shadow-lg shadow-purple-900/30 transition-all duration-300 hover:scale-105"
+                                                    >
+                                                        <Pencil size={20} />
+                                                        Edit Video
+                                                    </button>
+                                                )}
+                                            </div>
                                         </>
                                     ) : currentPhase === WorkflowPhase.ERROR ? (
                                         <div className="space-y-4">

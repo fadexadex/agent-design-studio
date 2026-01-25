@@ -319,15 +319,22 @@ Return ONLY the JSON, no markdown or explanations.`;
 
   /**
    * Store the evaluation result in the workflow state.
-   * We add it to the progress for now; a dedicated field could be added later.
+   * Sets lastEvaluation field which is used by iteration_decision phase.
    */
   private storeEvaluation(state: WorkflowState, evaluation: EvaluationResult): WorkflowState {
-    // Store evaluation in progress subStep for now
-    // In a full implementation, we'd add an `evaluation` field to WorkflowState
+    // Convert EvaluationResult to EvaluationResultRef format expected by workflow state
     return updateState(state, {
-      progress: {
-        ...state.progress,
-        subStep: JSON.stringify(evaluation)
+      lastEvaluation: {
+        score: evaluation.overallScore,
+        compilability: evaluation.compilability,
+        visualFidelity: evaluation.visualFidelity,
+        animationSmoothness: evaluation.animationSmoothness,
+        brandConsistency: 70, // Default since EvaluationPhase doesn't calculate this
+        sceneScores: [], // No per-scene scores in basic evaluation
+        feedback: evaluation.feedback,
+        globalSuggestions: evaluation.suggestions,
+        passesThreshold: evaluation.passesThreshold,
+        needsUserFeedback: !evaluation.passesThreshold
       }
     });
   }
@@ -338,6 +345,20 @@ Return ONLY the JSON, no markdown or explanations.`;
  * Returns undefined if no evaluation is stored.
  */
 export function getEvaluationFromState(state: WorkflowState): EvaluationResult | undefined {
+  // First check lastEvaluation (preferred location)
+  if (state.lastEvaluation) {
+    return {
+      overallScore: state.lastEvaluation.score,
+      compilability: state.lastEvaluation.compilability,
+      visualFidelity: state.lastEvaluation.visualFidelity,
+      animationSmoothness: state.lastEvaluation.animationSmoothness,
+      feedback: state.lastEvaluation.feedback,
+      suggestions: state.lastEvaluation.globalSuggestions,
+      passesThreshold: state.lastEvaluation.passesThreshold
+    };
+  }
+
+  // Fallback to legacy progress.subStep storage for backwards compatibility
   try {
     if (state.progress.subStep) {
       const parsed = JSON.parse(state.progress.subStep);

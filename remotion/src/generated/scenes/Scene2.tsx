@@ -1,148 +1,150 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Sequence } from 'remotion';
 
 export const Scene2: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
 
-  // Timing constants
-  const startFadeIn = 0;
-  const endFadeIn = 45;
-  const startFocus = 60;
-  const endFocus = 90;
-  const startExit = 200;
-  const endExit = 225;
+  const primaryColor = '#000000';
+  const secondaryColor = '#FFFFFF';
 
-  // Global opacity for the whole scene
-  const sceneOpacity = interpolate(
-    frame,
-    [startFadeIn, endFadeIn, startExit, endExit],
-    [0, 1, 1, 0],
-    { extrapolateRight: 'clamp' }
-  );
+  // Global entrance/exit
+  const sceneOpacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
+  const sceneExit = interpolate(frame, [180, 210], [1, 0], { extrapolateRight: 'clamp' });
 
-  // Focus animation progress
-  const focusSpring = spring({
-    frame: frame - startFocus,
+  // Header animation
+  const headerReveal = spring({
+    frame: frame - 10,
     fps,
-    config: {
-      damping: 12,
-      stiffness: 100,
-    },
+    config: { stiffness: 100, damping: 20 },
   });
 
-  // Typography animation
-  const textOpacity = interpolate(
-    frame,
-    [startFadeIn + 15, endFadeIn + 15],
-    [0, 1],
-    { extrapolateRight: 'clamp' }
-  );
-  const textTranslateY = interpolate(
-    frame,
-    [startFadeIn + 15, endFadeIn + 15],
-    [20, 0],
-    { extrapolateRight: 'clamp' }
-  );
+  // Steps data
+  const steps = [
+    { id: '01', title: 'SELECT', desc: 'Curated essentials' },
+    { id: '02', title: 'ORDER', desc: 'Seamless experience' },
+    { id: '03', title: 'RECEIVE', desc: 'Express delivery' },
+  ];
 
-  // Grid item properties
-  const focusedIndex = 1; // Top right square
-  const unfocusedOpacity = interpolate(focusSpring, [0, 1], [1, 0.2]);
-  const focusedScale = interpolate(focusSpring, [0, 1], [1, 1.15]);
+  const renderStep = (index: number, content: typeof steps[0]) => {
+    const delay = 40 + index * 25;
+    const stepSpring = spring({
+      frame: frame - delay,
+      fps,
+      config: { stiffness: 80, damping: 15 },
+    });
 
-  const renderSquare = (index: number) => {
-    const isFocused = index === focusedIndex;
-    const itemOpacity = isFocused ? 1 : unfocusedOpacity;
-    const itemScale = isFocused ? focusedScale : 1;
+    const moveUp = interpolate(stepSpring, [0, 1], [40, 0]);
+    const opacity = interpolate(stepSpring, [0, 1], [0, 1]);
 
     return (
       <div
-        key={index}
+        key={content.id}
         style={{
-          width: 160,
-          height: 160,
-          border: '1px solid #000000',
-          opacity: itemOpacity,
-          transform: `scale(${itemScale})`,
+          flex: 1,
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
           alignItems: 'center',
-          backgroundColor: 'transparent',
-          transition: 'opacity 0.3s ease-out',
+          opacity,
+          transform: `translateY(${moveUp}px)`,
         }}
-      />
+      >
+        <span style={{
+          fontSize: 24,
+          fontWeight: 300,
+          color: primaryColor,
+          marginBottom: 10,
+          letterSpacing: 4
+        }}>
+          {content.id}
+        </span>
+        <div style={{
+          width: 40,
+          height: 1,
+          backgroundColor: primaryColor,
+          marginBottom: 20,
+          opacity: 0.3
+        }} />
+        <h3 style={{
+          fontSize: 32,
+          fontWeight: 600,
+          margin: 0,
+          letterSpacing: 8,
+          color: primaryColor
+        }}>
+          {content.title}
+        </h3>
+        <p style={{
+          fontSize: 18,
+          fontWeight: 300,
+          marginTop: 15,
+          color: primaryColor,
+          opacity: 0.6,
+          letterSpacing: 1
+        }}>
+          {content.desc}
+        </p>
+      </div>
     );
   };
 
   return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: '#FFFFFF',
-        opacity: sceneOpacity,
-        fontFamily: 'Helvetica, Arial, sans-serif',
-      }}
-    >
-      {/* Centered Grid */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 160px)',
-          gridTemplateRows: 'repeat(2, 160px)',
-          gap: '40px',
-        }}
-      >
-        {[0, 1, 2, 3].map((i) => renderSquare(i))}
-      </div>
+    <AbsoluteFill style={{ backgroundColor: secondaryColor, opacity: sceneOpacity * sceneExit }}>
+      {/* Top Border Line */}
+      <div style={{
+        position: 'absolute',
+        top: 80,
+        left: '10%',
+        right: '10%',
+        height: 1,
+        backgroundColor: primaryColor,
+        transform: `scaleX(${headerReveal})`,
+        opacity: 0.1
+      }} />
 
-      {/* Bottom Left Typography */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 80,
-          left: 80,
-          opacity: textOpacity,
-          transform: `translateY(${textTranslateY}px)`,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 18,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            color: '#000000',
-            fontWeight: 300,
-          }}
-        >
-          Curated Choice
-        </div>
-        <div
-          style={{
-            width: 40,
-            height: 1,
-            backgroundColor: '#000000',
-            marginTop: 12,
-          }}
-        />
-      </div>
-
-      {/* Brand Watermark (Optional but fits minimalist style) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 80,
-          right: 80,
+      {/* Main Title */}
+      <div style={{
+        marginTop: 140,
+        textAlign: 'center',
+        width: '100%',
+        transform: `translateY(${interpolate(headerReveal, [0, 1], [20, 0])}px)`,
+        opacity: headerReveal
+      }}>
+        <h2 style={{
           fontSize: 14,
-          letterSpacing: '0.1em',
-          color: '#000000',
-          opacity: 0.5,
-        }}
-      >
-        CAMPOR
+          fontWeight: 400,
+          letterSpacing: 12,
+          color: primaryColor,
+          margin: 0,
+          textTransform: 'uppercase'
+        }}>
+          How it works
+        </h2>
       </div>
+
+      {/* Steps Container */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '80%',
+        margin: 'auto',
+        marginTop: 100
+      }}>
+        {steps.map((step, i) => renderStep(i, step))}
+      </div>
+
+      {/* Bottom Decorative Element */}
+      <div style={{
+        position: 'absolute',
+        bottom: 80,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 1,
+        height: interpolate(headerReveal, [0, 1], [0, 60]),
+        backgroundColor: primaryColor,
+        opacity: 0.2
+      }} />
     </AbsoluteFill>
   );
 };

@@ -5,112 +5,100 @@ export const Scene6: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Logo Entrance (0-40)
-  const logoOpacity = interpolate(frame, [0, 25], [0, 1], { extrapolateRight: 'clamp' });
-  const logoTranslateY = interpolate(frame, [0, 40], [20, 0], { extrapolateRight: 'clamp' });
+  // Animation values for the logo
+  const logoOpacity = interpolate(frame, [0, 25], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
+
   const logoSpring = spring({
     frame,
     fps,
-    config: { damping: 12, stiffness: 100 },
+    config: {
+      damping: 20,
+      stiffness: 60,
+    },
   });
 
-  // Tagline Sequential Appearance (40-120)
-  const word1Opacity = interpolate(frame, [45, 60], [0, 1], { extrapolateRight: 'clamp' });
-  const word2Opacity = interpolate(frame, [70, 85], [0, 1], { extrapolateRight: 'clamp' });
-  const word3Opacity = interpolate(frame, [95, 110], [0, 1], { extrapolateRight: 'clamp' });
+  // Scale is slightly larger (1.2) for the final branding
+  const logoScale = interpolate(logoSpring, [0, 1], [0.95, 1.2]);
 
-  // Final Scale and Fade (180-225)
-  const finalScale = interpolate(frame, [185, 225], [1, 15], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const finalFadeOut = interpolate(frame, [185, 210], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const whiteOverlay = interpolate(frame, [215, 225], [0, 1], {
-    extrapolateLeft: 'clamp',
+  // Circular path animation for the dot
+  const radius = 24;
+  const angle = interpolate(frame, [0, 225], [0, Math.PI * 6]); // 3 full rotations
+  const dotX = Math.cos(angle) * radius;
+  const dotY = Math.sin(angle) * radius;
+
+  const dotOpacity = interpolate(frame, [30, 50], [0, 1], {
     extrapolateRight: 'clamp',
   });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
+    <AbsoluteFill
+      style={{
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        fontFamily: 'Helvetica, Arial, sans-serif',
+      }}
+    >
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          transform: `scale(${finalScale})`,
+          justifyContent: 'center',
         }}
       >
-        {/* Logo */}
+        {/* Logo Text */}
         <div
           style={{
             opacity: logoOpacity,
-            transform: `translateY(${logoTranslateY}px)`,
+            transform: `scale(${logoScale})`,
             color: '#000000',
             fontSize: 110,
-            fontWeight: 800,
-            letterSpacing: '-0.05em',
-            fontFamily: 'Helvetica, Arial, sans-serif',
-            marginBottom: 20,
+            fontWeight: 900,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
           }}
         >
           Campor
         </div>
 
-        {/* Tagline Container */}
+        {/* Circular Loading/Focus Element */}
         <div
           style={{
+            height: 100,
+            width: 100,
+            marginTop: 20,
+            position: 'relative',
             display: 'flex',
-            gap: '12px',
-            opacity: finalFadeOut,
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: dotOpacity,
           }}
         >
-          <span
+          <div
             style={{
-              opacity: word1Opacity,
-              color: '#000000',
-              fontSize: 24,
-              fontWeight: 300,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
+              width: 8,
+              height: 8,
+              backgroundColor: '#000000',
+              borderRadius: '50%',
+              position: 'absolute',
+              transform: `translate(${dotX}px, ${dotY}px)`,
             }}
-          >
-            Simple.
-          </span>
-          <span
-            style={{
-              opacity: word2Opacity,
-              color: '#000000',
-              fontSize: 24,
-              fontWeight: 300,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Essential.
-          </span>
-          <span
-            style={{
-              opacity: word3Opacity,
-              color: '#000000',
-              fontSize: 24,
-              fontWeight: 300,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Yours.
-          </span>
+          />
         </div>
       </div>
 
-      {/* Final White Fade Overlay */}
-      <AbsoluteFill
+      {/* Subtle border frame for premium finish */}
+      <div
         style={{
-          backgroundColor: '#FFFFFF',
-          opacity: whiteOverlay,
+          position: 'absolute',
+          top: 40,
+          left: 40,
+          right: 40,
+          bottom: 40,
+          border: '1px solid rgba(0,0,0,0.05)',
           pointerEvents: 'none',
         }}
       />
