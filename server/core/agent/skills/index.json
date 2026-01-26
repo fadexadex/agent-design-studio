@@ -1,0 +1,178 @@
+{
+  "coreRules": [
+    "common-pitfalls",
+    "animations",
+    "timing"
+  ],
+  "availablePackages": [
+    "remotion",
+    "react",
+    "@remotion/transitions",
+    "@remotion/shapes",
+    "@remotion/media"
+  ],
+  "maxFeatureRules": 5,
+  "featureRules": [
+    {
+      "id": "sequencing",
+      "file": "rules/sequencing.md",
+      "keywords": [
+        "sequence", "series", "delay", "stagger", "timing", "order",
+        "after", "before", "chain", "overlap", "offset", "premount",
+        "appear", "entrance", "exit", "schedule"
+      ],
+      "priority": 9,
+      "description": "Control when elements appear with Sequence and Series components"
+    },
+    {
+      "id": "text-animations",
+      "file": "rules/text-animations.md",
+      "keywords": [
+        "text", "typewriter", "typing", "word", "letter", "character",
+        "title", "headline", "caption", "subtitle", "typography",
+        "highlight", "reveal", "write", "sentence"
+      ],
+      "priority": 9,
+      "examples": [
+        "assets/text-animations-typewriter.tsx",
+        "assets/text-animations-word-highlight.tsx"
+      ],
+      "description": "Typewriter, word highlight, and text animation patterns"
+    },
+    {
+      "id": "transitions",
+      "file": "rules/transitions.md",
+      "keywords": [
+        "transition", "fade", "slide", "wipe", "flip", "clock",
+        "scene", "cut", "crossfade", "dissolve", "enter", "exit",
+        "switch", "morph", "between"
+      ],
+      "requires": ["@remotion/transitions"],
+      "priority": 8,
+      "description": "Fullscreen scene transitions using TransitionSeries"
+    },
+    {
+      "id": "trimming",
+      "file": "rules/trimming.md",
+      "keywords": [
+        "trim", "cut", "clip", "start", "end", "duration",
+        "shorten", "limit", "bound"
+      ],
+      "priority": 8,
+      "description": "Trimming patterns - cut the beginning or end of animations"
+    },
+    {
+      "id": "audio",
+      "file": "rules/audio.md",
+      "keywords": [
+        "audio", "sound", "music", "volume", "sfx", "effect",
+        "background", "track", "mp3", "wav", "loop", "mute",
+        "fade", "pitch", "beat", "sync"
+      ],
+      "requires": ["@remotion/media"],
+      "priority": 8,
+      "description": "Audio and sound - importing, trimming, volume, looping, fade"
+    },
+    {
+      "id": "fonts",
+      "file": "rules/fonts.md",
+      "keywords": [
+        "font", "google", "custom", "load", "family", "weight",
+        "typography", "text", "inter", "roboto", "montserrat",
+        "poppins", "bold", "italic"
+      ],
+      "priority": 7,
+      "description": "Loading Google Fonts and custom fonts"
+    },
+    {
+      "id": "images",
+      "file": "rules/images.md",
+      "keywords": [
+        "image", "img", "photo", "picture", "logo", "icon",
+        "background", "staticfile", "asset", "src", "png", "jpg", "svg"
+      ],
+      "priority": 7,
+      "description": "Embedding and animating images with the Img component"
+    },
+    {
+      "id": "assets",
+      "file": "rules/assets.md",
+      "keywords": [
+        "asset", "import", "static", "file", "public", "resource",
+        "media", "load", "bundle"
+      ],
+      "priority": 7,
+      "description": "Importing images, videos, audio, and fonts into Remotion"
+    },
+    {
+      "id": "videos",
+      "file": "rules/videos.md",
+      "keywords": [
+        "video", "clip", "footage", "mp4", "webm", "embed",
+        "playback", "loop", "mute", "volume"
+      ],
+      "priority": 6,
+      "description": "Embedding videos - trimming, volume, speed, looping"
+    },
+    {
+      "id": "measuring-text",
+      "file": "rules/measuring-text.md",
+      "keywords": [
+        "measure", "text", "width", "height", "fit", "overflow",
+        "container", "resize", "dynamic", "responsive"
+      ],
+      "priority": 6,
+      "description": "Measuring text dimensions, fitting text to containers"
+    },
+    {
+      "id": "compositions",
+      "file": "rules/compositions.md",
+      "keywords": [
+        "composition", "register", "folder", "nested", "default",
+        "props", "metadata", "still", "config", "root"
+      ],
+      "priority": 6,
+      "description": "Defining compositions and their configuration"
+    },
+    {
+      "id": "calculate-metadata",
+      "file": "rules/calculate-metadata.md",
+      "keywords": [
+        "metadata", "dynamic", "duration", "dimension", "props",
+        "calculate", "async", "fetch", "data"
+      ],
+      "priority": 5,
+      "description": "Dynamically set composition duration, dimensions, and props"
+    },
+    {
+      "id": "parameters",
+      "file": "rules/parameters.md",
+      "keywords": [
+        "parameter", "schema", "zod", "input", "variable",
+        "customize", "config", "prop", "type"
+      ],
+      "priority": 5,
+      "description": "Make a video parametrizable by adding a Zod schema"
+    },
+    {
+      "id": "measuring-dom-nodes",
+      "file": "rules/measuring-dom-nodes.md",
+      "keywords": [
+        "measure", "dom", "element", "size", "dimension",
+        "ref", "layout", "bounding"
+      ],
+      "priority": 5,
+      "description": "Measuring DOM element dimensions in Remotion"
+    },
+    {
+      "id": "tailwind",
+      "file": "rules/tailwind.md",
+      "keywords": [
+        "tailwind", "tailwindcss", "utility", "class", "className",
+        "css", "style", "flex", "grid"
+      ],
+      "priority": 4,
+      "description": "Using TailwindCSS for styling (static classes only)"
+    }
+  ]
+}

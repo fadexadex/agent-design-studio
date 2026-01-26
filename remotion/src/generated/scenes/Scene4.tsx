@@ -5,115 +5,186 @@ export const Scene4: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  // Animation constants
-  const primaryColor = "#000000";
-  const secondaryColor = "#FFFFFF";
+  const primaryColor = '#000000';
+  const secondaryColor = '#FFFFFF';
 
-  // Entrance animations
-  const contentFade = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
-  const contentMove = spring({
-    frame,
+  // Animation Timings
+  const startDots = 10;
+  const startLines = 40;
+  const startText = 70;
+  const startSquare = 110;
+
+  // Spring animations for dots
+  const dot1Scale = spring({
+    frame: frame - startDots,
     fps,
-    config: { damping: 20, stiffness: 60 },
+    config: { damping: 12, stiffness: 100 },
   });
-  const contentY = interpolate(contentMove, [0, 1], [40, 0]);
 
-  // Line animation
-  const lineProgress = spring({
-    frame: frame - 45,
+  const dot2Scale = spring({
+    frame: frame - (startDots + 10),
     fps,
-    config: { damping: 15, stiffness: 40 },
+    config: { damping: 12, stiffness: 100 },
   });
-  const lineWidth = interpolate(lineProgress, [0, 1], [0, 400]);
 
-  // Subtitle animation
-  const subtitleOpacity = interpolate(frame, [80, 110], [0, 1], { extrapolateRight: 'clamp' });
-  const subtitleLetterSpacing = interpolate(frame, [80, 150], [0.5, 1.2], { extrapolateRight: 'clamp' });
+  // Coordinates
+  const p1 = { x: width * 0.15, y: height * 0.2 };
+  const p2 = { x: width * 0.85, y: height * 0.8 };
+  const center = { x: width / 2, y: height / 2 };
+  const p3 = { x: width * 0.7, y: height * 0.25 };
+  const p4 = { x: width * 0.3, y: height * 0.75 };
 
-  // Exit animation
-  const exitOpacity = interpolate(frame, [250, 270], [1, 0], { extrapolateRight: 'clamp' });
+  // Line drawing progress
+  const lineProgress = interpolate(frame, [startLines, startLines + 60], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
+
+  // Text animation
+  const textOpacity = interpolate(frame, [startText, startText + 30], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
+  const textTranslateY = interpolate(frame, [startText, startText + 30], [20, 0], {
+    extrapolateRight: 'clamp',
+  });
+
+  // Transaction Square Path
+  // Path: P1 -> P4 -> Center -> P3 -> P2
+  const squareProgress = interpolate(frame, [startSquare, startSquare + 120], [0, 4], {
+    extrapolateRight: 'clamp',
+  });
+
+  const getSquarePos = (progress: number) => {
+    if (progress <= 1) {
+      return {
+        x: interpolate(progress, [0, 1], [p1.x, p4.x]),
+        y: interpolate(progress, [0, 1], [p1.y, p4.y]),
+      };
+    } else if (progress <= 2) {
+      return {
+        x: interpolate(progress, [1, 2], [p4.x, center.x]),
+        y: interpolate(progress, [1, 2], [p4.y, center.y]),
+      };
+    } else if (progress <= 3) {
+      return {
+        x: interpolate(progress, [2, 3], [center.x, p3.x]),
+        y: interpolate(progress, [2, 3], [center.y, p3.y]),
+      };
+    } else {
+      return {
+        x: interpolate(progress, [3, 4], [p3.x, p2.x]),
+        y: interpolate(progress, [3, 4], [p3.y, p2.y]),
+      };
+    }
+  };
+
+  const squarePos = getSquarePos(squareProgress);
+  const squareOpacity = interpolate(frame, [startSquare, startSquare + 10, startSquare + 110, startSquare + 120], [0, 1, 1, 0], {
+    extrapolateRight: 'clamp',
+  });
+
+  // Background Grid
+  const gridOpacity = interpolate(frame, [0, 30], [0, 0.15], { extrapolateRight: 'clamp' });
 
   return (
-    <AbsoluteFill style={{ 
-      backgroundColor: primaryColor, 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
-    }}>
-      <div style={{ 
-        opacity: exitOpacity,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%'
-      }}>
-        {/* Main Brand Name */}
-        <div style={{
-          opacity: contentFade,
-          transform: `translateY(${contentY}px)`,
-          color: secondaryColor,
-          fontSize: 110,
-          fontWeight: 200,
-          letterSpacing: '0.15em',
-          textTransform: 'uppercase',
-          marginBottom: 20
-        }}>
-          Campor
-        </div>
-
-        {/* Minimalist Divider Line */}
-        <div style={{
-          width: lineWidth,
-          height: '1px',
-          backgroundColor: secondaryColor,
-          opacity: 0.4,
-        }} />
-
-        {/* Scene Description / Tagline */}
-        <div style={{
-          opacity: subtitleOpacity,
-          color: secondaryColor,
-          fontSize: 28,
-          fontWeight: 300,
-          marginTop: 30,
-          letterSpacing: `${subtitleLetterSpacing}em`,
-          textTransform: 'lowercase',
-          fontStyle: 'italic'
-        }}>
-          the campor
-        </div>
-
-        {/* Decorative Minimalist Elements */}
-        <div style={{
-          position: 'absolute',
-          top: 100,
-          left: 100,
-          width: 40,
-          height: 1,
-          backgroundColor: secondaryColor,
-          opacity: interpolate(frame, [20, 50], [0, 0.2], { extrapolateRight: 'clamp' })
-        }} />
-        
-        <div style={{
-          position: 'absolute',
-          bottom: 100,
-          right: 100,
-          width: 1,
-          height: 40,
-          backgroundColor: secondaryColor,
-          opacity: interpolate(frame, [20, 50], [0, 0.2], { extrapolateRight: 'clamp' })
-        }} />
-      </div>
-
-      {/* Subtle background scale effect */}
+    <AbsoluteFill style={{ backgroundColor: primaryColor, overflow: 'hidden' }}>
+      {/* Grid Background */}
       <div style={{
         position: 'absolute',
         width: '100%',
         height: '100%',
-        border: `${interpolate(frame, [0, 271], [40, 20])}px solid ${secondaryColor}`,
-        opacity: 0.03,
-        pointerEvents: 'none'
+        opacity: gridOpacity,
+        backgroundImage: `linear-gradient(${secondaryColor} 1px, transparent 1px), linear-gradient(90deg, ${secondaryColor} 1px, transparent 1px)`,
+        backgroundSize: '60px 60px',
       }} />
+
+      <svg width={width} height={height} style={{ position: 'absolute' }}>
+        {/* Connection Web */}
+        <g stroke={secondaryColor} strokeWidth="2" fill="none" opacity={0.6}>
+          <line 
+            x1={p1.x} y1={p1.y} 
+            x2={interpolate(lineProgress, [0, 0.4], [p1.x, p4.x], { extrapolateRight: 'clamp' })} 
+            y2={interpolate(lineProgress, [0, 0.4], [p1.y, p4.y], { extrapolateRight: 'clamp' })} 
+          />
+          <line 
+            x1={p4.x} y1={p4.y} 
+            x2={interpolate(lineProgress, [0.2, 0.6], [p4.x, center.x], { extrapolateRight: 'clamp' })} 
+            y2={interpolate(lineProgress, [0.2, 0.6], [p4.y, center.y], { extrapolateRight: 'clamp' })} 
+          />
+          <line 
+            x1={center.x} y1={center.y} 
+            x2={interpolate(lineProgress, [0.4, 0.8], [center.x, p3.x], { extrapolateRight: 'clamp' })} 
+            y2={interpolate(lineProgress, [0.4, 0.8], [center.y, p3.y], { extrapolateRight: 'clamp' })} 
+          />
+          <line 
+            x1={p3.x} y1={p3.y} 
+            x2={interpolate(lineProgress, [0.6, 1], [p3.x, p2.x], { extrapolateRight: 'clamp' })} 
+            y2={interpolate(lineProgress, [0.6, 1], [p3.y, p2.y], { extrapolateRight: 'clamp' })} 
+          />
+          
+          {/* Decorative lines to form a web */}
+          <line 
+            x1={p1.x} y1={p1.y} 
+            x2={interpolate(lineProgress, [0.3, 0.9], [p1.x, p3.x], { extrapolateRight: 'clamp' })} 
+            y2={interpolate(lineProgress, [0.3, 0.9], [p1.y, p3.y], { extrapolateRight: 'clamp' })} 
+          />
+          <line 
+            x1={p4.x} y1={p4.y} 
+            x2={interpolate(lineProgress, [0.3, 0.9], [p4.x, p2.x], { extrapolateRight: 'clamp' })} 
+            y2={interpolate(lineProgress, [0.3, 0.9], [p4.y, p2.y], { extrapolateRight: 'clamp' })} 
+          />
+        </g>
+
+        {/* Student Dots */}
+        <circle cx={p1.x} cy={p1.y} r="12" fill={secondaryColor} style={{ transform: `scale(${dot1Scale})`, transformOrigin: `${p1.x}px ${p1.y}px` }} />
+        <circle cx={p2.x} cy={p2.y} r="12" fill={secondaryColor} style={{ transform: `scale(${dot2Scale})`, transformOrigin: `${p2.x}px ${p2.y}px` }} />
+
+        {/* Transaction Square */}
+        <rect
+          x={squarePos.x - 10}
+          y={squarePos.y - 10}
+          width="20"
+          height="20"
+          fill={secondaryColor}
+          style={{
+            opacity: squareOpacity,
+            transform: `rotate(${frame * 5}deg)`,
+            transformOrigin: `${squarePos.x}px ${squarePos.y}px`,
+          }}
+        />
+      </svg>
+
+      {/* Text Overlay */}
+      <div style={{
+        position: 'absolute',
+        width: '100%',
+        textAlign: 'center',
+        top: '45%',
+        opacity: textOpacity,
+        transform: `translateY(${textTranslateY}px)`,
+        color: secondaryColor,
+        fontFamily: 'sans-serif',
+        fontSize: 80,
+        fontWeight: 900,
+        letterSpacing: '0.2em',
+        pointerEvents: 'none',
+        textShadow: `0 0 20px ${primaryColor}`,
+      }}>
+        ON-CAMPUS NETWORK
+      </div>
+
+      {/* Brand Watermark */}
+      <div style={{
+        position: 'absolute',
+        bottom: 40,
+        right: 40,
+        color: secondaryColor,
+        fontSize: 24,
+        fontWeight: 'bold',
+        letterSpacing: 4,
+        opacity: 0.5,
+      }}>
+        CAMPOR
+      </div>
     </AbsoluteFill>
   );
 };

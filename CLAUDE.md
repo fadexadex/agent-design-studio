@@ -42,7 +42,12 @@ User Input → Frontend (React/Vite:3000) → Backend (Express:3001) → AgentOr
 ### Key Backend Components
 
 - **server/agent/orchestrator.ts** - Main ReAct loop: REASON → ACT → OBSERVE → RENDER. Handles code generation and self-correction.
-- **server/agent/promptBuilder.ts** - Constructs prompts for Gemini with style-specific hints (minimalist, geometric, fluid, brutalist, cinematic).
+- **server/agent/promptBuilder.ts** - Constructs prompts for Gemini with style-specific hints and dynamically selected skills context.
+- **server/agent/skills/** - Smart Skills Router for context-efficient prompt building:
+  - `skillsRouter.ts` - Keyword-based routing that selects relevant Remotion skills based on user prompt
+  - `skillsIndex.ts` - Type definitions for the skills registry
+  - `index.json` - Pre-built registry mapping skills to keywords and package dependencies
+  - `rules/*.md` - AI-optimized markdown files with Remotion best practices and code patterns
 - **server/renderer/remotionRenderer.ts** - Bundles generated compositions and renders to MP4 using Remotion.
 
 ### Key Frontend Components

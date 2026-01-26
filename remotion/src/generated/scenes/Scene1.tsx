@@ -5,154 +5,158 @@ export const Scene1: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
 
-  // Animation constants
-  const primaryColor = '#000000';
-  const secondaryColor = '#FFFFFF';
+  const SHAPE_COUNT = 24;
+  const GRID_COLS = 6;
+  const GRID_ROWS = 4;
 
-  // Entrance animations
-  const lineExpand = spring({
+  // Animation Timings
+  const SNAP_START_FRAME = 120;
+  const TEXT_APPEAR_START = 10;
+  const TEXT_DISAPPEAR_START = 110;
+
+  // Typography Animations
+  const textOpacity = interpolate(
     frame,
+    [TEXT_APPEAR_START, TEXT_APPEAR_START + 15, TEXT_DISAPPEAR_START, TEXT_DISAPPEAR_START + 15],
+    [0, 1, 1, 0],
+    { extrapolateRight: 'clamp' }
+  );
+
+  const textScale = spring({
+    frame: frame - TEXT_APPEAR_START,
     fps,
-    config: { stiffness: 60, damping: 20 },
+    config: { damping: 12, stiffness: 100 },
   });
 
-  const textOpacity = interpolate(frame, [40, 70], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
-
-  const textSlide = spring({
-    frame: frame - 40,
+  // Snap Animation Progress
+  const snapProgress = spring({
+    frame: frame - SNAP_START_FRAME,
     fps,
-    config: { damping: 12 },
+    config: { damping: 15, stiffness: 60 },
   });
 
-  const subTextOpacity = interpolate(frame, [80, 110], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
+  const shapes = Array.from({ length: SHAPE_COUNT }).map((_, i) => {
+    // Deterministic random values for chaotic phase
+    const seed = i * 543.21;
+    const randomX = ((seed * 1.5) % 1) * width;
+    const randomYStart = -200 - ((seed * 2.5) % 300);
+    const randomYEnd = height * 0.2 + ((seed * 3.5) % (height * 0.6));
+    const randomRotation = (seed * 10) % 360;
+    const driftX = Math.sin(frame / 20 + seed) * 50;
 
-  const containerScale = interpolate(frame, [0, 271], [0.95, 1.05], {
-    extrapolateRight: 'clamp',
-  });
+    // Grid positions
+    const col = i % GRID_COLS;
+    const row = Math.floor(i / GRID_COLS);
+    const gridX = (width / (GRID_COLS + 1)) * (col + 1);
+    const gridY = (height / (GRID_ROWS + 1)) * (row + 1);
 
-  // Exit animation
-  const exitOpacity = interpolate(frame, [250, 271], [1, 0], {
-    extrapolateRight: 'clamp',
-  });
+    // Falling animation (chaotic phase)
+    const fallProgress = interpolate(frame, [0, SNAP_START_FRAME], [0, 1], {
+      extrapolateRight: 'clamp',
+    });
+    
+    const currentChaoticX = randomX + driftX;
+    const currentChaoticY = interpolate(fallProgress, [0, 1], [randomYStart, randomYEnd]);
+    const currentChaoticRot = randomRotation + (frame * ((seed % 5) - 2.5));
 
-  const lineWidth = interpolate(lineExpand, [0, 1], [0, 300]);
-  const textOffset = interpolate(textSlide, [0, 1], [20, 0]);
+    // Interpolate between chaotic and grid
+    const x = interpolate(snapProgress, [0, 1], [currentChaoticX, gridX]);
+    const y = interpolate(snapProgress, [0, 1], [currentChaoticY, gridY]);
+    const rotation = interpolate(snapProgress, [0, 1], [currentChaoticRot, 0]);
+    const size = interpolate(snapProgress, [0, 1], [60 + (seed % 40), 80]);
 
-  return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: secondaryColor,
-        justifyContent: 'center',
-        alignItems: 'center',
-        fontFamily: 'Helvetica, Arial, sans-serif',
-        opacity: exitOpacity,
-      }}
-    >
+    const isTriangle = i % 2 === 0;
+
+    return (
       <div
+        key={i}
         style={{
-          transform: `scale(${containerScale})`,
+          position: 'absolute',
+          left: x,
+          top: y,
+          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+          width: size,
+          height: size,
           display: 'flex',
-          flexDirection: 'column',
+          justifyContent: 'center',
           alignItems: 'center',
         }}
       >
-        {/* Minimalist Top Line */}
-        <div
-          style={{
-            width: lineWidth,
-            height: 1,
-            backgroundColor: primaryColor,
-            marginBottom: 40,
-          }}
-        />
-
-        {/* Brand Name */}
-        <div
-          style={{
-            opacity: textOpacity,
-            transform: `translateY(${textOffset}px)`,
-            color: primaryColor,
-            fontSize: 110,
-            fontWeight: 200,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            lineHeight: 1,
-          }}
-        >
-          Campor
-        </div>
-
-        {/* Thin Decorative Box */}
-        <div
-          style={{
-            marginTop: 40,
-            width: 400,
-            height: 120,
-            border: `1px solid ${primaryColor}`,
-            opacity: subTextOpacity,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative',
-          }}
-        >
+        {isTriangle ? (
+          <svg
+            width={size}
+            height={size}
+            viewBox="0 0 100 100"
+            style={{ overflow: 'visible' }}
+          >
+            <polygon
+              points="50,0 100,100 0,100"
+              fill="#FFFFFF"
+            />
+          </svg>
+        ) : (
           <div
             style={{
-              fontSize: 24,
-              color: primaryColor,
-              letterSpacing: '0.5em',
-              fontWeight: 300,
-              textTransform: 'uppercase',
-              paddingLeft: '0.5em', // Offset for letter spacing centering
+              width: '100%',
+              height: '100%',
+              backgroundColor: '#FFFFFF',
             }}
-          >
-            Ecommerce
-          </div>
-          
-          {/* Corner Accents */}
-          <div style={{ position: 'absolute', top: -5, left: -5, width: 10, height: 10, borderLeft: `1px solid ${primaryColor}`, borderTop: `1px solid ${primaryColor}` }} />
-          <div style={{ position: 'absolute', bottom: -5, right: -5, width: 10, height: 10, borderRight: `1px solid ${primaryColor}`, borderBottom: `1px solid ${primaryColor}` }} />
-        </div>
+          />
+        )}
+      </div>
+    );
+  });
 
-        {/* Bottom Line */}
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#000000', overflow: 'hidden' }}>
+      {/* Clutter/Grid Shapes */}
+      {shapes}
+
+      {/* Central Typography */}
+      <div
+        style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          pointerEvents: 'none',
+        }}
+      >
         <div
           style={{
-            width: lineWidth,
-            height: 1,
-            backgroundColor: primaryColor,
-            marginTop: 40,
+            color: '#FFFFFF',
+            fontSize: 160,
+            fontWeight: 900,
+            fontFamily: 'sans-serif',
+            letterSpacing: '-0.05em',
+            opacity: textOpacity,
+            transform: `scale(${textScale})`,
+            textShadow: '0 0 40px rgba(0,0,0,0.5)',
+            zIndex: 10,
           }}
-        />
+        >
+          CLUTTERED?
+        </div>
       </div>
 
-      {/* Background Minimal Elements */}
+      {/* Brand Overlay (Bottom) */}
       <div
         style={{
           position: 'absolute',
-          top: 100,
-          left: 100,
-          width: 2,
-          height: interpolate(frame, [20, 100], [0, 200], { extrapolateRight: 'clamp' }),
-          backgroundColor: primaryColor,
-          opacity: 0.1,
+          bottom: 60,
+          width: '100%',
+          textAlign: 'center',
+          color: '#FFFFFF',
+          fontSize: 32,
+          fontWeight: 'bold',
+          letterSpacing: 4,
+          opacity: interpolate(frame, [200, 230], [0, 1], { extrapolateLeft: 'clamp' }),
         }}
-      />
-      
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 100,
-          right: 100,
-          width: interpolate(frame, [40, 120], [0, 200], { extrapolateRight: 'clamp' }),
-          height: 2,
-          backgroundColor: primaryColor,
-          opacity: 0.1,
-        }}
-      />
+      >
+        CAMPOR
+      </div>
     </AbsoluteFill>
   );
 };

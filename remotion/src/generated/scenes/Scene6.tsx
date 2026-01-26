@@ -3,103 +3,162 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } fr
 
 export const Scene6: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
 
-  // Animation values for the logo
-  const logoOpacity = interpolate(frame, [0, 25], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
+  // Global zoom-out animation for the entire frame
+  const globalScale = interpolate(
+    frame,
+    [0, 225],
+    [1.1, 1],
+    { extrapolateRight: 'clamp' }
+  );
+
+  // Logo animations
+  const logoOpacity = interpolate(
+    frame,
+    [0, 40],
+    [0, 1],
+    { extrapolateRight: 'clamp' }
+  );
 
   const logoSpring = spring({
     frame,
     fps,
     config: {
-      damping: 20,
+      damping: 15,
       stiffness: 60,
     },
   });
 
-  // Scale is slightly larger (1.2) for the final branding
-  const logoScale = interpolate(logoSpring, [0, 1], [0.95, 1.2]);
+  const logoScale = interpolate(
+    logoSpring,
+    [0, 1],
+    [0.8, 1.2] // Larger and more prominent as requested
+  );
 
-  // Circular path animation for the dot
-  const radius = 24;
-  const angle = interpolate(frame, [0, 225], [0, Math.PI * 6]); // 3 full rotations
-  const dotX = Math.cos(angle) * radius;
-  const dotY = Math.sin(angle) * radius;
+  // URL animations
+  const urlOpacity = interpolate(
+    frame,
+    [60, 120],
+    [0, 1],
+    { extrapolateRight: 'clamp' }
+  );
 
-  const dotOpacity = interpolate(frame, [30, 50], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
+  const urlTranslateY = interpolate(
+    frame,
+    [60, 120],
+    [20, 0],
+    { extrapolateRight: 'clamp' }
+  );
+
+  // Minimalist line animation
+  const lineWidth = interpolate(
+    frame,
+    [80, 140],
+    [0, 120],
+    { extrapolateRight: 'clamp' }
+  );
 
   return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: '#FFFFFF',
-        justifyContent: 'center',
-        alignItems: 'center',
-        fontFamily: 'Helvetica, Arial, sans-serif',
-      }}
-    >
+    <AbsoluteFill style={{ backgroundColor: '#000000', overflow: 'hidden' }}>
       <div
         style={{
+          width: '100%',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
           justifyContent: 'center',
+          alignItems: 'center',
+          transform: `scale(${globalScale})`,
         }}
       >
-        {/* Logo Text */}
+        {/* Brand Logo */}
         <div
           style={{
             opacity: logoOpacity,
             transform: `scale(${logoScale})`,
-            color: '#000000',
+            color: '#FFFFFF',
             fontSize: 110,
-            fontWeight: 900,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            marginBottom: 20,
           }}
         >
           Campor
         </div>
 
-        {/* Circular Loading/Focus Element */}
+        {/* Minimalist Divider Line */}
         <div
           style={{
-            height: 100,
-            width: 100,
-            marginTop: 20,
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            opacity: dotOpacity,
+            width: lineWidth,
+            height: 1,
+            backgroundColor: '#FFFFFF',
+            opacity: 0.3,
+            marginBottom: 40,
+          }}
+        />
+
+        {/* Call to Action URL */}
+        <div
+          style={{
+            opacity: urlOpacity,
+            transform: `translateY(${urlTranslateY}px)`,
+            color: '#FFFFFF',
+            fontSize: 32,
+            fontWeight: 300,
+            letterSpacing: '0.4em',
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            textTransform: 'uppercase',
           }}
         >
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              backgroundColor: '#000000',
-              borderRadius: '50%',
-              position: 'absolute',
-              transform: `translate(${dotX}px, ${dotY}px)`,
-            }}
-          />
+          campor.com
         </div>
       </div>
 
-      {/* Subtle border frame for premium finish */}
+      {/* Subtle corner accents for minimalist aesthetic */}
       <div
         style={{
           position: 'absolute',
-          top: 40,
-          left: 40,
-          right: 40,
-          bottom: 40,
-          border: '1px solid rgba(0,0,0,0.05)',
-          pointerEvents: 'none',
+          top: 60,
+          left: 60,
+          width: 40,
+          height: 1,
+          backgroundColor: '#FFFFFF',
+          opacity: interpolate(frame, [0, 60], [0, 0.2]),
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: 60,
+          left: 60,
+          width: 1,
+          height: 40,
+          backgroundColor: '#FFFFFF',
+          opacity: interpolate(frame, [0, 60], [0, 0.2]),
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 60,
+          right: 60,
+          width: 40,
+          height: 1,
+          backgroundColor: '#FFFFFF',
+          opacity: interpolate(frame, [0, 60], [0, 0.2]),
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 60,
+          right: 60,
+          width: 1,
+          height: 40,
+          backgroundColor: '#FFFFFF',
+          opacity: interpolate(frame, [0, 60], [0, 0.2]),
         }}
       />
     </AbsoluteFill>

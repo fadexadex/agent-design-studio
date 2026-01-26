@@ -17,15 +17,37 @@ Frontend (Vite/React) → Backend (Express) → AI Agent (Gemini) → Remotion R
 ## Run Locally
 
 **Prerequisites:**
-- Node.js (v18+)
-- FFmpeg (required by Remotion for video encoding)
+- **Node.js** (v18+)
+- **FFmpeg** - Required by Remotion for video encoding
+  - macOS: `brew install ffmpeg`
+  - Windows: Download from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
+  - Linux: `sudo apt install ffmpeg`
+- **Chrome/Chromium** - Required by Remotion for rendering
+  - Remotion will attempt to download Chrome Headless Shell automatically on first render
+  - If the download times out (common on slow networks), install Chrome manually and Remotion will detect it
 
 ### 1. Install dependencies
 
 ```bash
 npm install
-cd remotion && npm install && cd ..
 ```
+
+> **Note:** This will automatically install dependencies in the `remotion/` folder via the postinstall script.
+
+#### Troubleshooting: Chrome Headless Shell Download Issues
+
+If you see an error like `"Tried to download file... but the server sent no data"`, you have two options:
+
+1. **Use your existing Chrome installation** - Set this environment variable:
+   ```bash
+   # macOS/Linux
+   export PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+   
+   # Windows (PowerShell)
+   $env:PUPPETEER_EXECUTABLE_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
+   ```
+
+2. **Retry the download** - Sometimes it's just a network timeout, try running the server again.
 
 ### 2. Configure environment
 

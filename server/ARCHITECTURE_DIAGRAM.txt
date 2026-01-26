@@ -1,0 +1,143 @@
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     AGENT DESIGN STUDIO                      │
+│                    Backend Architecture                      │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                      index.ts (Entry Point)                  │
+│  - Loads configuration                                       │
+│  - Creates Express app                                       │
+│  - Starts server                                            │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+        ┌────────────────┴────────────────┐
+        │                                  │
+┌───────▼────────┐              ┌────────▼────────┐
+│   SHARED       │◄─────────────┤   CORE         │
+│   Module       │              │   Module        │
+├────────────────┤              ├─────────────────┤
+│ • Config       │              │ • Agent         │
+│ • Constants    │              │ • Workflow      │
+│ • Types        │              │ • Editor        │
+│ • Utils        │              │ • Controllers   │
+└────────────────┘              │ • Services      │
+        ▲                       │ • Renderer      │
+        │                       └────────┬────────┘
+        │                                │
+        │                       ┌────────▼────────┐
+        └───────────────────────┤   API           │
+                                │   Module        │
+                                ├─────────────────┤
+                                │ • Middleware    │
+                                │ • Routes        │
+                                │ • Server Config │
+                                └─────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                        LAYER DETAILS
+
+┌─────────────────────────────────────────────────────────────┐
+│  API LAYER - HTTP Interface                                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  api/middleware/            api/routes/                     │
+│  ┌─────────────┐           ┌──────────────────┐           │
+│  │ CORS Config │           │ Workflow Routes  │           │
+│  │ Error       │           │ Editor Routes    │           │
+│  │ Handler     │           │ Script Routes    │           │
+│  └─────────────┘           │ Video Routes     │           │
+│                             │ Utility Routes   │           │
+│                             └──────────────────┘           │
+│                                                              │
+│  api/server.ts - Express app configuration                  │
+│  api/index.ts - Barrel export                              │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  CORE LAYER - Business Logic                               │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  core/agent/                 core/workflow/                 │
+│  ┌────────────────┐         ┌──────────────────┐          │
+│  │ Gemini AI      │         │ Orchestrator     │          │
+│  │ Orchestrator   │         │ Phases           │          │
+│  │ Prompt Builder │         │ State Management │          │
+│  │ Rate Limiter   │         │ Iterations       │          │
+│  │ Skills         │         └──────────────────┘          │
+│  └────────────────┘                                         │
+│                              core/editor/                    │
+│  core/controllers/          ┌──────────────────┐          │
+│  ┌────────────────┐         │ Editor Orch.     │          │
+│  │ Script Handler │         │ State Mgmt       │          │
+│  │ Video Handler  │         │ Persistence      │          │
+│  │ Utility Handler│         │ Prompts          │          │
+│  └────────────────┘         └──────────────────┘          │
+│                                                              │
+│  core/services/             core/renderer/                  │
+│  ┌────────────────┐         ┌──────────────────┐          │
+│  │ Script Service │         │ Remotion Engine  │          │
+│  │ Video Service  │         └──────────────────┘          │
+│  │ File Service   │                                         │
+│  └────────────────┘                                         │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  SHARED LAYER - Common Utilities                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────┐  ┌───────────┐  ┌───────┐  ┌──────────┐    │
+│  │ Config   │  │ Constants │  │ Types │  │ Utils    │    │
+│  │          │  │           │  │       │  │          │    │
+│  │ • Env    │  │ • Paths   │  │ • API │  │ • Delay  │    │
+│  │ • Load   │  │ • Limits  │  │ • Job │  │ • Format │    │
+│  │ • Validate│  │ • Defaults│  │       │  │          │    │
+│  └──────────┘  └───────────┘  └───────┘  └──────────┘    │
+└─────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                       REQUEST FLOW
+
+    Client Request
+         │
+         ▼
+    ┌─────────┐
+    │  API    │  1. Routes receive request
+    │  Layer  │  2. Middleware processes
+    └────┬────┘  3. Validates input
+         │
+         ▼
+    ┌─────────┐
+    │  CORE   │  4. Controller handles request
+    │  Layer  │  5. Service executes business logic
+    └────┬────┘  6. Agent/Workflow performs AI tasks
+         │
+         ▼
+    ┌─────────┐
+    │ SHARED  │  7. Uses utilities as needed
+    │  Layer  │  8. Accesses configuration
+    └────┬────┘
+         │
+         ▼
+    Response to Client
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                    MODULE DEPENDENCIES
+
+    ┌─────────────────────────────────────────┐
+    │         Dependency Direction            │
+    │                                         │
+    │    API Layer → CORE Layer → SHARED     │
+    │                                         │
+    │    (Never the opposite direction)       │
+    └─────────────────────────────────────────┘
+
+    • API imports from CORE
+    • CORE imports from SHARED
+    • SHARED has no dependencies (pure utilities)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
