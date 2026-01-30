@@ -11,7 +11,7 @@ export const Scene1: React.FC = () => {
 
   // Animation Timings
   const SNAP_START_FRAME = 120;
-  const TEXT_APPEAR_START = 10;
+  const TEXT_APPEAR_START = 0;
   const TEXT_DISAPPEAR_START = 110;
 
   // Typography Animations
@@ -54,7 +54,7 @@ export const Scene1: React.FC = () => {
     const fallProgress = interpolate(frame, [0, SNAP_START_FRAME], [0, 1], {
       extrapolateRight: 'clamp',
     });
-    
+
     const currentChaoticX = randomX + driftX;
     const currentChaoticY = interpolate(fallProgress, [0, 1], [randomYStart, randomYEnd]);
     const currentChaoticRot = randomRotation + (frame * ((seed % 5) - 2.5));
