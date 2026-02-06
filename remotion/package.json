@@ -21,6 +21,7 @@
     },
     "devDependencies": {
         "@types/react": "18.3.0",
+        "tsconfig-paths-webpack-plugin": "^4.2.0",
         "typescript": "~5.8.2"
     }
 }

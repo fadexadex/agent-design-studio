@@ -150,12 +150,13 @@ You can use EITHER the component library OR raw Remotion code (or mix both):
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, Sequence } from 'remotion';
 import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
-import { BackgroundRig } from '@/components/Global';
+import { Background } from '@/components/Global';
 
 export default function BrandVideo() {
   return (
     <AbsoluteFill>
-      <BackgroundRig type="gradient-mesh" colors={['${brand.colors[0] || '#000000'}', '${brand.colors[1] || '#333333'}']} />
+      <Background preset="deepPurpleAurora" />
+      {/* Or use type/variant: <Background type="gradient-mesh" variant="dark" meshColors={{ primary: '${brand.colors[0] || '#000000'}', secondary: '${brand.colors[1] || '#333333'}' }} /> */}
       <LayoutGrid anchor="center" direction="column" gap={20}>
         <AnimatedText text="${brand.name}" preset="fadeBlurIn" fontSize={72} fontWeight={700} />
         <AnimatedText text="${brand.tagline}" preset="fadeBlurIn" blur={{ delay: 15 }} fontSize={32} />

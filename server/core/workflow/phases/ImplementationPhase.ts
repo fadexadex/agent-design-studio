@@ -547,13 +547,13 @@ export class ImplementationPhase extends BasePhase {
       ? `import React from 'react';
 import { AbsoluteFill, Img, staticFile } from 'remotion';
 import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
-import { BackgroundRig } from '@/components/Global';
+import { Background } from '@/components/Global';
 
 export const Scene1: React.FC = () => {
   return (
     <AbsoluteFill>
-      {/* Animated background */}
-      <BackgroundRig type="gradient-mesh" colors={['#000000', '#1a1a2e']} />
+      {/* Animated background - use variant and meshColors, NOT colors array */}
+      <Background type="gradient-mesh" variant="dark" meshColors={{ primary: '#000000', secondary: '#1a1a2e' }} />
       
       <LayoutGrid anchor="center" direction="column" gap={30}>
         {/* Brand Logo */}
@@ -586,13 +586,13 @@ export const Scene1: React.FC = () => {
       : `import React from 'react';
 import { AbsoluteFill } from 'remotion';
 import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
-import { BackgroundRig } from '@/components/Global';
+import { Background } from '@/components/Global';
 
 export const Scene1: React.FC = () => {
   return (
     <AbsoluteFill>
-      {/* Animated background */}
-      <BackgroundRig type="gradient-mesh" colors={['#000000', '#1a1a2e']} />
+      {/* Animated background - use variant and meshColors, NOT colors array */}
+      <Background type="gradient-mesh" variant="dark" meshColors={{ primary: '#000000', secondary: '#1a1a2e' }} />
       
       <LayoutGrid anchor="center" direction="column" gap={30}>
         {/* Brand Name - animated text with preset */}
@@ -674,7 +674,7 @@ ${rawExampleCode}
 1. Start with: import React from 'react';
 2. **Component library imports** (when using components):
    - \`import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';\`
-   - \`import { BackgroundRig } from '@/components/Global';\`
+   - \`import { Background } from '@/components/Global';\`
    - \`import { MotionContainer } from '@/components/Layout';\`
    - \`import { CameraRig } from '@/components/Camera';\`
    - \`import { MockupFrame } from '@/components/MockupFrame';\`
@@ -685,6 +685,32 @@ ${rawExampleCode}
 7. AbsoluteFill as root element
 8. Use brand colors: primary="${state.brand.colors[0] || '#000000'}", secondary="${state.brand.colors[1] || '#FFFFFF'}"${state.brand.logoPath ? `
 9. LOGO: Use <Img src={staticFile("${state.brand.logoPath}")} /> from 'remotion'` : ''}
+
+## CRITICAL MISTAKES TO AVOID (WILL CAUSE ERRORS)
+
+1. **CSS must use camelCase** - NEVER use kebab-case in style objects:
+   - ❌ WRONG: \`style={{ z-index: 10, background-color: '#000' }}\`
+   - ✅ CORRECT: \`style={{ zIndex: 10, backgroundColor: '#000' }}\`
+
+2. **spring() does NOT have a delay parameter**:
+   - ❌ WRONG: \`spring({ frame, fps, delay: 10 })\`
+   - ✅ CORRECT: \`spring({ frame: frame - 10, fps })\`
+
+3. **Background does NOT have colors, opacity, or speed props**:
+   - ❌ WRONG: \`<Background colors={['#000']} opacity={0.5} speed={1} />\`
+   - ✅ CORRECT: \`<Background variant="dark" meshColors={{ primary: '#000' }} animationSpeed={1} />\`
+
+4. **AnimatedText does NOT have exitPreset or exitStartFrame props**:
+   - ❌ WRONG: \`<AnimatedText exitPreset="fadeOut" exitStartFrame={90} />\`
+   - ✅ CORRECT: \`<AnimatedText exit={{ startFrame: 90, opacity: { from: 1, to: 0 } }} />\`
+
+5. **MotionContainer does NOT have animate or transition props** (those are Framer Motion):
+   - ❌ WRONG: \`<MotionContainer animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>\`
+   - ✅ CORRECT: \`<MotionContainer initial="hidden" delay={15} duration={30}>\`
+
+6. **MotionContainer initial states use full names**:
+   - ❌ WRONG: \`initial="below"\` or \`initial="above"\`
+   - ✅ CORRECT: \`initial="offscreen-bottom"\` or \`initial="offscreen-top"\`
 ${errorContext ? `\n## PREVIOUS ERRORS TO AVOID\n${errorContext}` : ''}
 
 ## OUTPUT
@@ -709,7 +735,7 @@ You have access to a pre-built component library. **Review these components and 
 | **AnimatedText** | \`@/components/AnimatedText\` | Text with 9 animation presets, word/character stagger, positioning |
 | **LayoutGrid** | \`@/components/AnimatedText\` | Flexbox layout for grouping/centering elements |
 | **TextSequence** | \`@/components/AnimatedText\` | Sequential text animations (chain mode) |
-| **BackgroundRig** | \`@/components/Global\` | Animated backgrounds: gradient-mesh, grid-lines, blobs |
+| **Background** | \`@/components/Global\` | Animated backgrounds: gradient-mesh, grid-lines, blobs, presets |
 | **MotionContainer** | \`@/components/Layout\` | Animation wrapper with entrance/exit states |
 | **BentoGrid** | \`@/components/Layout\` | Animated CSS grid with stagger |
 | **CameraRig** | \`@/components/Camera\` | Virtual camera: zoom, pan, rotate |
@@ -744,42 +770,47 @@ import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
 
 **Presets:** fadeBlurIn, slideInUp, slideInDown, slideInLeft, slideInRight, scaleUp, typewriter, glitchReveal, maskSlideUp
 
-**Key Props:** text, preset, delay, fontSize, fontWeight, color, anchor, animationUnit (full/word/character), stagger, exitPreset, exitStartFrame
+**Key Props:** text, preset, delay, fontSize, fontWeight, color, anchor, animationUnit (full/word/character), stagger, exit (object with startFrame, opacity, blur, scale)
 
-### BackgroundRig - Animated Backgrounds
+### Background - Animated Backgrounds
 \`\`\`tsx
-import { BackgroundRig } from '@/components/Global';
+import { Background } from '@/components/Global';
 
-// Gradient mesh with brand colors
-<BackgroundRig type="gradient-mesh" colors={['#1a1a2e', '#16213e']} speed={0.5} />
+// Gradient mesh with brand colors - use meshColors object, NOT colors array
+<Background type="gradient-mesh" variant="dark" meshColors={{ primary: '#1a1a2e', secondary: '#16213e' }} animationSpeed={0.5} />
 
 // Grid lines
-<BackgroundRig type="grid-lines" variant="dark" opacity={0.3} />
+<Background type="grid-lines" variant="dark" />
 
 // Organic blobs
-<BackgroundRig type="blobs" colors={['#ff6b6b', '#4ecdc4']} />
+<Background type="blobs" variant="light" meshColors={{ primary: '#ff6b6b', secondary: '#4ecdc4' }} />
+
+// Using a preset (recommended for consistent styling)
+<Background preset="deepPurpleAurora" />
+<Background preset="midnightOcean" />
+<Background preset="neonDream" />
 \`\`\`
 
 **Types:** gradient-mesh, grid-lines, blobs, solid
-**Key Props:** type, colors, variant (dark/light/brand), speed, opacity, animate
+**Key Props:** type, variant (dark/light/brand), meshColors ({ primary, secondary }), animationSpeed, animated, preset
 
 ### MotionContainer - Animation Wrapper
 \`\`\`tsx
 import { MotionContainer } from '@/components/Layout';
 
-// Slide up entrance
-<MotionContainer initial="below" delay={10} duration={25}>
+// Slide up entrance - use full state names like "offscreen-bottom"
+<MotionContainer initial="offscreen-bottom" delay={10} duration={25}>
   <YourContent />
 </MotionContainer>
 
 // With exit animation
-<MotionContainer initial="scale-down" exit="fade-out" exitStartFrame={120}>
+<MotionContainer initial="scale-zero" exit="fade-out" exitStartFrame={120}>
   <Card />
 </MotionContainer>
 \`\`\`
 
-**Initial States:** hidden, above, below, left, right, scale-down, scale-up
-**Exit States:** fade-out, scale-down, above, below, left, right
+**Initial States:** hidden, offscreen-bottom, offscreen-top, offscreen-left, offscreen-right, scale-zero, blur
+**Exit States:** fade-out, slide-down, slide-up, slide-left, slide-right, scale-down, blur-out
 
 ### CameraRig - Virtual Camera
 \`\`\`tsx
@@ -809,7 +840,7 @@ import { MockupFrame } from '@/components/MockupFrame';
 
 ### Decision Guide
 - **Text animations**: AnimatedText handles most text needs with presets
-- **Backgrounds**: BackgroundRig for gradient/pattern backgrounds
+- **Backgrounds**: Background for gradient/pattern backgrounds (use presets for best results)
 - **Layout/centering**: LayoutGrid for positioning, MotionContainer for entrance/exit
 - **Camera effects**: CameraRig for zoom/pan on any content
 - **Device frames**: MockupFrame for showing screenshots/apps
@@ -839,7 +870,7 @@ import { MockupFrame } from '@/components/MockupFrame';
     return `import React from 'react';
 import { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion';
 import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
-import { BackgroundRig } from '@/components/Global';
+import { Background } from '@/components/Global';
 
 export const Scene${scene.sceneNumber}: React.FC = () => {
   const frame = useCurrentFrame();
@@ -856,10 +887,11 @@ export const Scene${scene.sceneNumber}: React.FC = () => {
   return (
     <AbsoluteFill style={{ opacity: fadeOut }}>
       {/* Animated background using component library */}
-      <BackgroundRig
-        variant="${bgVariant}"
-        colors={['${primaryColor}', '${secondaryColor}']}
-        speed={0.5}
+      <Background
+        type="${bgVariant}"
+        variant="dark"
+        meshColors={{ primary: '${primaryColor}', secondary: '${secondaryColor}' }}
+        animationSpeed={0.5}
       />
 
       {/* Centered content layout */}
@@ -1065,6 +1097,15 @@ registerRoot(RemotionRoot);
     // Fix truncated code by attempting to close unbalanced braces/brackets/parens
     fixedCode = this.attemptToCloseTruncatedCode(fixedCode);
 
+    // Fix CSS kebab-case properties to camelCase
+    fixedCode = this.fixKebabCaseCSSProperties(fixedCode);
+
+    // Fix invalid component props
+    fixedCode = this.fixInvalidComponentProps(fixedCode);
+
+    // Fix spring() delay parameter misuse
+    fixedCode = this.fixSpringDelayParameter(fixedCode);
+
     // Ensure React import
     if (!fixedCode.includes("import React") && !fixedCode.includes("from 'react'")) {
       fixedCode = `import React from 'react';\n${fixedCode}`;
@@ -1084,6 +1125,184 @@ registerRoot(RemotionRoot);
         // Add an export alias at the end
         fixedCode = fixedCode + `\n\nexport const Scene${sceneNumber} = ${componentMatch[1]};`;
       }
+    }
+
+    return fixedCode;
+  }
+
+  /**
+   * CSS property map: kebab-case to camelCase
+   */
+  private static readonly CSS_PROPERTY_MAP: Record<string, string> = {
+    'z-index': 'zIndex',
+    'background-color': 'backgroundColor',
+    'background-image': 'backgroundImage',
+    'background-size': 'backgroundSize',
+    'background-position': 'backgroundPosition',
+    'background-repeat': 'backgroundRepeat',
+    'font-size': 'fontSize',
+    'font-weight': 'fontWeight',
+    'font-family': 'fontFamily',
+    'font-style': 'fontStyle',
+    'line-height': 'lineHeight',
+    'letter-spacing': 'letterSpacing',
+    'text-align': 'textAlign',
+    'text-decoration': 'textDecoration',
+    'text-transform': 'textTransform',
+    'white-space': 'whiteSpace',
+    'word-break': 'wordBreak',
+    'overflow-wrap': 'overflowWrap',
+    'border-radius': 'borderRadius',
+    'border-width': 'borderWidth',
+    'border-color': 'borderColor',
+    'border-style': 'borderStyle',
+    'border-top': 'borderTop',
+    'border-bottom': 'borderBottom',
+    'border-left': 'borderLeft',
+    'border-right': 'borderRight',
+    'box-shadow': 'boxShadow',
+    'box-sizing': 'boxSizing',
+    'flex-direction': 'flexDirection',
+    'flex-wrap': 'flexWrap',
+    'flex-grow': 'flexGrow',
+    'flex-shrink': 'flexShrink',
+    'align-items': 'alignItems',
+    'align-content': 'alignContent',
+    'align-self': 'alignSelf',
+    'justify-content': 'justifyContent',
+    'justify-items': 'justifyItems',
+    'justify-self': 'justifySelf',
+    'grid-template': 'gridTemplate',
+    'grid-template-columns': 'gridTemplateColumns',
+    'grid-template-rows': 'gridTemplateRows',
+    'grid-column': 'gridColumn',
+    'grid-row': 'gridRow',
+    'grid-gap': 'gridGap',
+    'column-gap': 'columnGap',
+    'row-gap': 'rowGap',
+    'max-width': 'maxWidth',
+    'max-height': 'maxHeight',
+    'min-width': 'minWidth',
+    'min-height': 'minHeight',
+    'object-fit': 'objectFit',
+    'object-position': 'objectPosition',
+    'pointer-events': 'pointerEvents',
+    'user-select': 'userSelect',
+    'transform-origin': 'transformOrigin',
+    'transition-duration': 'transitionDuration',
+    'animation-duration': 'animationDuration',
+    'animation-delay': 'animationDelay',
+    'animation-timing-function': 'animationTimingFunction',
+    'backdrop-filter': 'backdropFilter',
+    'mix-blend-mode': 'mixBlendMode',
+    'clip-path': 'clipPath',
+    'stroke-width': 'strokeWidth',
+    'stroke-dasharray': 'strokeDasharray',
+    'stroke-dashoffset': 'strokeDashoffset',
+    'fill-opacity': 'fillOpacity',
+    'stroke-opacity': 'strokeOpacity',
+  };
+
+  /**
+   * Fix CSS kebab-case properties to camelCase in style objects.
+   * Silently converts without failing validation.
+   */
+  private fixKebabCaseCSSProperties(code: string): string {
+    let fixedCode = code;
+    let fixCount = 0;
+
+    for (const [kebab, camel] of Object.entries(ImplementationPhase.CSS_PROPERTY_MAP)) {
+      // Match the kebab-case property in style objects (e.g., `z-index:` or `z-index :`)
+      const regex = new RegExp(`(\\s|{|,)${kebab}(\\s*):`, 'g');
+      if (regex.test(fixedCode)) {
+        fixedCode = fixedCode.replace(regex, `$1${camel}$2:`);
+        fixCount++;
+      }
+    }
+
+    if (fixCount > 0) {
+      console.warn(`[AutoFix] Converted ${fixCount} CSS kebab-case properties to camelCase`);
+    }
+
+    return fixedCode;
+  }
+
+  /**
+   * Fix invalid component props that the AI commonly generates.
+   * Converts patterns to the correct API.
+   */
+  private fixInvalidComponentProps(code: string): string {
+    let fixedCode = code;
+
+    // Fix BackgroundRig: colors={[...]} -> meshColors={{ primary: ..., secondary: ... }}
+    const bgColorsRegex = /<BackgroundRig([^>]*)\scolors=\{\s*\[\s*['"]([^'"]+)['"]\s*(?:,\s*['"]([^'"]+)['"])?\s*\]\s*\}([^>]*)\/?>/g;
+    fixedCode = fixedCode.replace(bgColorsRegex, (match, before, primary, secondary, after) => {
+      const meshColors = secondary 
+        ? `meshColors={{ primary: '${primary}', secondary: '${secondary}' }}`
+        : `meshColors={{ primary: '${primary}' }}`;
+      console.warn(`[AutoFix] Converted BackgroundRig colors prop to meshColors`);
+      return `<BackgroundRig${before} ${meshColors}${after}/>`;
+    });
+
+    // Fix BackgroundRig: speed={...} -> animationSpeed={...}
+    const bgSpeedRegex = /(<BackgroundRig[^>]*)\sspeed=/g;
+    if (bgSpeedRegex.test(fixedCode)) {
+      fixedCode = fixedCode.replace(/(<BackgroundRig[^>]*)\sspeed=/g, '$1 animationSpeed=');
+      console.warn(`[AutoFix] Converted BackgroundRig speed prop to animationSpeed`);
+    }
+
+    // Fix BackgroundRig: opacity={...} -> remove (not a valid prop)
+    const bgOpacityRegex = /(<BackgroundRig[^>]*)\s+opacity=\{[^}]+\}/g;
+    if (bgOpacityRegex.test(fixedCode)) {
+      fixedCode = fixedCode.replace(bgOpacityRegex, '$1');
+      console.warn(`[AutoFix] Removed invalid BackgroundRig opacity prop`);
+    }
+
+    // Fix MotionContainer: initial="below" -> initial="offscreen-bottom"
+    fixedCode = fixedCode.replace(/initial="below"/g, 'initial="offscreen-bottom"');
+    fixedCode = fixedCode.replace(/initial="above"/g, 'initial="offscreen-top"');
+    fixedCode = fixedCode.replace(/initial="left"/g, 'initial="offscreen-left"');
+    fixedCode = fixedCode.replace(/initial="right"/g, 'initial="offscreen-right"');
+
+    // Fix MotionContainer: Remove Framer Motion props (animate, transition)
+    const motionAnimateRegex = /(<MotionContainer[^>]*)\s+animate=\{[^}]+\}/g;
+    if (motionAnimateRegex.test(fixedCode)) {
+      fixedCode = fixedCode.replace(motionAnimateRegex, '$1');
+      console.warn(`[AutoFix] Removed invalid MotionContainer animate prop`);
+    }
+
+    const motionTransitionRegex = /(<MotionContainer[^>]*)\s+transition=\{[^}]+\}/g;
+    if (motionTransitionRegex.test(fixedCode)) {
+      fixedCode = fixedCode.replace(motionTransitionRegex, '$1');
+      console.warn(`[AutoFix] Removed invalid MotionContainer transition prop`);
+    }
+
+    return fixedCode;
+  }
+
+  /**
+   * Fix spring() delay parameter misuse.
+   * spring({ frame, fps, delay: X }) -> spring({ frame: frame - X, fps })
+   */
+  private fixSpringDelayParameter(code: string): string {
+    // Pattern: spring({ frame, fps, delay: NUMBER, ... })
+    // or: spring({ frame, fps, delay: VARIABLE, ... })
+    const springDelayRegex = /spring\(\s*\{\s*frame\s*,\s*fps\s*,\s*delay\s*:\s*(\d+|\w+)\s*,?/g;
+    
+    let fixedCode = code;
+    const matches = [...code.matchAll(springDelayRegex)];
+    
+    if (matches.length > 0) {
+      for (const match of matches) {
+        const delayValue = match[1];
+        const original = match[0];
+        // Replace with frame: frame - delayValue
+        const fixed = original
+          .replace(/frame\s*,/, `frame: frame - ${delayValue},`)
+          .replace(/,\s*delay\s*:\s*(\d+|\w+)\s*,?/, ',');
+        fixedCode = fixedCode.replace(original, fixed);
+      }
+      console.warn(`[AutoFix] Fixed ${matches.length} spring() delay parameter(s)`);
     }
 
     return fixedCode;

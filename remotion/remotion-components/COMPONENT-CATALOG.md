@@ -17,7 +17,7 @@ You have access to a pre-built component library. **Review each component below 
 | Animation Units | `full` (whole text), `word`, `character`, `line` |
 | Stagger | Animate word-by-word or character-by-character with delay between each |
 | Positioning | `anchor` prop: `center`, `top-left`, `top-center`, `bottom-right`, etc. + `offsetX`/`offsetY` |
-| Exit Animations | `exitPreset` for text leaving screen |
+| Exit Animations | `exit` object for text leaving screen |
 | Gradient Text | `gradient={{ colors: ['#ff0000', '#0000ff'], angle: 90 }}` |
 
 ### Key Props
@@ -34,8 +34,13 @@ fontSize?: number;
 fontWeight?: number;
 color?: string;
 gradient?: { colors: string[], angle?: number };
-exitPreset?: ExitPresetType;     // Exit animation
-exitStartFrame?: number;         // When exit begins
+exit?: {                         // Exit animation (NOT exitPreset!)
+  startFrame?: number;           // When exit begins
+  opacity?: { from?: number; to?: number; duration?: number };
+  blur?: { from?: number; to?: number; duration?: number };
+  scale?: { from?: number; to?: number; duration?: number };
+  position?: { fromX?: number; toX?: number; fromY?: number; toY?: number };
+};
 ```
 
 ### Examples
@@ -55,12 +60,15 @@ exitStartFrame?: number;         // When exit begins
 // Typewriter effect
 <AnimatedText text="Typing..." preset="typewriter" anchor="bottom-center" offsetY={-100} />
 
-// With exit animation
+// With exit animation (use exit object, NOT exitPreset)
 <AnimatedText 
   text="Hello" 
   preset="fadeBlurIn" 
-  exitPreset="fadeBlurOut" 
-  exitStartFrame={90} 
+  exit={{
+    startFrame: 90,
+    opacity: { from: 1, to: 0, duration: 20 },
+    blur: { from: 0, to: 10, duration: 20 }
+  }}
 />
 ```
 
@@ -87,11 +95,143 @@ Sequential text animations with `chain` mode:
 
 ---
 
-## 2. BackgroundRig
+## 2. Background
+
+**Purpose:** Composable backgrounds with presets, type/variant API, and full layer control.
+
+**Import:** `import { Background, backgroundPresets, getBackgroundPreset } from "@/components/Global";`
+
+### Three Usage Patterns
+
+| Pattern | Description | Best For |
+|---------|-------------|----------|
+| **Preset** | Named preset: `preset="deepPurpleAurora"` | Quick professional backgrounds |
+| **Type/Variant** | Simple API: `type="gradient-mesh" variant="dark"` | BackgroundRig compatibility |
+| **Layers** | Full control: `layers={[...]}` | Custom compositions |
+
+### Key Props
+```typescript
+// Pattern 1: Preset
+preset?: string;  // Named preset (e.g., "deepPurpleAurora", "midnightOcean", "neonDream")
+
+// Pattern 2: Type/Variant (BackgroundRig compatible)
+type?: 'gradient-mesh' | 'grid-lines' | 'blobs' | 'solid';
+variant?: 'dark' | 'light' | 'brand';
+meshColors?: { primary?: string; secondary?: string };
+
+// Pattern 3: Layers
+layers?: BackgroundLayerConfig[];  // Array of layer configs
+
+// Common
+animated?: boolean;        // Enable animation (default depends on pattern)
+animationSpeed?: number;   // Speed multiplier (default: 1)
+```
+
+### Layer Types
+| Type | Description |
+|------|-------------|
+| `solid` | Solid color fill |
+| `linear` | Linear gradient with rotation |
+| `radial` | Radial gradient with drift |
+| `mesh` | Multi-point mesh gradient |
+| `noise` | SVG noise texture overlay |
+| `blur` | Backdrop blur effect |
+| `vignette` | Edge darkening |
+| `glow` | Soft glow blob |
+| `grid` | Grid lines pattern |
+
+### Presets
+| Category | Presets |
+|----------|---------|
+| Dark & Dramatic | `deepPurpleAurora`, `midnightOcean`, `cosmicNight`, `darkElegance` |
+| Warm Tones | `sunsetBlaze`, `warmEmber` |
+| Cool Tones | `arcticFrost` |
+| Soft / Light | `softLavender`, `frostedGlass` |
+| Neon / Bold | `neonDream` |
+| Mesh / Organic | `pastelMesh`, `oceanMesh` |
+| BackgroundRig-compat | `light-gradient-mesh`, `dark-grid-lines`, etc. |
+
+### Examples
+```tsx
+// Pattern 1: Preset (simplest)
+<Background preset="deepPurpleAurora" />
+<Background preset="neonDream" animationSpeed={0.5} />
+
+// Pattern 2: Type/Variant (BackgroundRig compatible)
+<Background type="gradient-mesh" variant="dark" animated />
+<Background type="grid-lines" variant="light" />
+<Background 
+  type="blobs" 
+  variant="brand"
+  meshColors={{ primary: "rgba(255,100,100,0.3)", secondary: "rgba(100,100,255,0.25)" }}
+/>
+
+// Pattern 3: Layers (full control)
+<Background
+  layers={[
+    { type: "solid", color: "#0a0a1a" },
+    { type: "radial", colors: ["#7c3aed", "#4c1d95", "transparent"], centerX: 50, centerY: 45, radius: 55 },
+    { type: "glow", color: "#06b6d4", x: 70, y: 60, radius: 30, intensity: 0.4 },
+    { type: "noise", opacity: 0.025 },
+    { type: "vignette", intensity: 0.5, radius: 35 },
+  ]}
+  animated
+  animationSpeed={0.5}
+/>
+
+// Grid + glow combo
+<Background
+  layers={[
+    { type: "solid", color: "#0F0F11" },
+    { type: "glow", color: "#3b82f6", x: 50, y: 50, radius: 60, intensity: 0.3 },
+    { type: "grid", color: "rgba(255,255,255,0.05)", size: 60 },
+  ]}
+  animated
+/>
+```
+
+### Critical Mistakes
+```tsx
+// ❌ WRONG - Invalid prop names
+<Background animate={true} speed={0.5} />
+
+// ✅ CORRECT
+<Background animated={true} animationSpeed={0.5} />
+
+// ❌ WRONG - Invalid layer type
+<Background layers={[{ type: "gradient", colors: [...] }]} />
+
+// ✅ CORRECT - Use "linear" or "radial"
+<Background layers={[{ type: "linear", colors: [...] }]} />
+
+// ❌ WRONG - Missing required prop
+<Background layers={[{ type: "glow", x: 50, y: 50 }]} />
+
+// ✅ CORRECT - "color" is required for glow
+<Background layers={[{ type: "glow", color: "#8b5cf6", x: 50, y: 50 }]} />
+```
+
+---
+
+## 3. BackgroundRig (Deprecated)
+
+> **DEPRECATED:** Use `Background` instead. BackgroundRig is kept for backwards compatibility.
 
 **Purpose:** Animated backgrounds - gradient meshes, grids, organic blobs.
 
 **Import:** `import { BackgroundRig } from "@/components/Global";`
+
+### Migration to Background
+```tsx
+// ❌ OLD - BackgroundRig
+<BackgroundRig type="gradient-mesh" variant="dark" animate animationSpeed={0.5} />
+
+// ✅ NEW - Background with same API
+<Background type="gradient-mesh" variant="dark" animated animationSpeed={0.5} />
+
+// ✅ BETTER - Background with preset
+<Background preset="dark-gradient-mesh" />
+```
 
 ### Variants
 | Variant | Description |
@@ -105,27 +245,41 @@ Sequential text animations with `chain` mode:
 ```typescript
 type: 'gradient-mesh' | 'grid-lines' | 'blobs' | 'solid';
 variant?: 'dark' | 'light' | 'brand';  // Color preset
-colors?: string[];                      // Custom colors (overrides variant)
+meshColors?: {                          // Custom colors for mesh/blobs (NOT colors array!)
+  primary?: string;
+  secondary?: string;
+};
 animate?: boolean;                      // Enable/disable animation
-speed?: number;                         // Animation speed multiplier
-opacity?: number;                       // Background opacity
+animationSpeed?: number;                // Animation speed multiplier (NOT speed!)
 ```
 
 ### Examples
 ```tsx
 // Animated gradient mesh with brand colors
-<BackgroundRig type="gradient-mesh" colors={['#1a1a2e', '#16213e', '#0f3460']} speed={0.5} />
+<BackgroundRig 
+  type="gradient-mesh" 
+  variant="dark" 
+  meshColors={{ primary: '#1a1a2e', secondary: '#16213e' }} 
+  animationSpeed={0.5} 
+/>
 
 // Subtle grid background
-<BackgroundRig type="grid-lines" variant="dark" opacity={0.3} />
+<BackgroundRig type="grid-lines" variant="dark" />
 
-// Organic blobs
-<BackgroundRig type="blobs" colors={['#ff6b6b', '#4ecdc4']} />
+// Organic blobs with custom colors
+<BackgroundRig 
+  type="blobs" 
+  variant="light"
+  meshColors={{ primary: '#ff6b6b', secondary: '#4ecdc4' }} 
+/>
+
+// Simple solid background
+<BackgroundRig type="solid" variant="dark" />
 ```
 
 ---
 
-## 3. MockupFrame
+## 4. MockupFrame
 
 **Purpose:** Device mockups (browser, iPhone, cards) with glass effects and 3D animations.
 
@@ -200,7 +354,7 @@ Multiple mockups with staggered entrance:
 
 ---
 
-## 4. CameraRig
+## 5. CameraRig
 
 **Purpose:** Virtual camera for zoom, pan, and rotation effects on wrapped content.
 
@@ -240,7 +394,7 @@ const x = interpolate(frame, [0, 90], [-200, 200]);
 
 ---
 
-## 5. MotionContainer
+## 6. MotionContainer
 
 **Purpose:** Animation wrapper with entrance/exit states - wrap any content for consistent animation.
 
@@ -282,7 +436,7 @@ style?: CSSProperties;
 
 ---
 
-## 6. BentoGrid
+## 7. BentoGrid
 
 **Purpose:** CSS Grid layout with automatic staggered cell animations.
 
@@ -317,7 +471,7 @@ initial?: InitialState;      // Override grid's initial state
 
 ---
 
-## 7. DynamicCursor
+## 8. DynamicCursor
 
 **Purpose:** Animated cursor for UI demos and tutorials.
 
@@ -376,7 +530,7 @@ const frame = useCurrentFrame();
 
 ---
 
-## 8. IrisTransition
+## 9. IrisTransition
 
 **Purpose:** Circular wipe transition (classic cartoon-style).
 
@@ -439,3 +593,74 @@ import { slide } from "@remotion/transitions/slide";
 
 **Combining Both:**
 You can mix components with raw code. Wrap custom animations in `MotionContainer` for consistent entrance/exit, or use `CameraRig` to add camera movement to any scene.
+
+---
+
+## CRITICAL: Common Mistakes to Avoid
+
+### 1. CSS Properties Must Use camelCase
+```tsx
+// ❌ WRONG - kebab-case will cause errors
+style={{ z-index: 10, background-color: '#000', font-size: 24 }}
+
+// ✅ CORRECT - React requires camelCase
+style={{ zIndex: 10, backgroundColor: '#000', fontSize: 24 }}
+```
+
+### 2. spring() Does NOT Have a delay Parameter
+```tsx
+// ❌ WRONG - delay is not a valid parameter
+spring({ frame, fps, delay: 10, config: { damping: 15 } })
+
+// ✅ CORRECT - subtract delay from frame instead
+spring({ frame: frame - 10, fps, config: { damping: 15 } })
+```
+
+### 3. BackgroundRig Does NOT Have colors or opacity Props
+```tsx
+// ❌ WRONG - these props don't exist
+<BackgroundRig type="gradient-mesh" colors={['#000', '#111']} opacity={0.5} speed={1} />
+
+// ✅ CORRECT - use meshColors and animationSpeed
+<BackgroundRig type="gradient-mesh" variant="dark" meshColors={{ primary: '#000', secondary: '#111' }} animationSpeed={1} />
+```
+
+### 4. AnimatedText Does NOT Have exitPreset or exitStartFrame Props
+```tsx
+// ❌ WRONG - these props don't exist
+<AnimatedText text="Hello" exitPreset="fadeOut" exitStartFrame={90} />
+
+// ✅ CORRECT - use the exit object
+<AnimatedText 
+  text="Hello" 
+  exit={{ 
+    startFrame: 90, 
+    opacity: { from: 1, to: 0 },
+    blur: { from: 0, to: 10 }
+  }} 
+/>
+```
+
+### 5. MotionContainer Does NOT Have animate or transition Props
+```tsx
+// ❌ WRONG - these are Framer Motion props, not Remotion
+<MotionContainer animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 1 }}>
+
+// ✅ CORRECT - use initial, delay, duration, exit
+<MotionContainer initial="hidden" delay={15} duration={30} exit="fade-out" exitStartFrame={90}>
+```
+
+### 6. MotionContainer initial States Use Full Names
+```tsx
+// ❌ WRONG - abbreviated names
+<MotionContainer initial="below">
+<MotionContainer initial="above">
+
+// ✅ CORRECT - use full state names
+<MotionContainer initial="offscreen-bottom">
+<MotionContainer initial="offscreen-top">
+```
+
+**Valid initial states:** `hidden`, `offscreen-bottom`, `offscreen-top`, `offscreen-left`, `offscreen-right`, `scale-zero`, `blur`
+
+**Valid exit states:** `fade-out`, `slide-down`, `slide-up`, `slide-left`, `slide-right`, `scale-down`, `blur-out`

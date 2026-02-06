@@ -4,23 +4,50 @@ import path from 'path';
 import fs from 'fs/promises';
 import { VideoConfig } from '../agent/types';
 import type { WebpackOverrideFn } from '@remotion/bundler';
+import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin';
 
 /**
  * Webpack override that resolves @/components to the actual components directory.
  * This is needed so AI-generated code using `import { X } from '@/components/Y'` works.
  */
 const webpackOverride: WebpackOverrideFn = (currentConfiguration) => {
+    const remotionRoot = path.join(process.cwd(), 'remotion');
+    
+    // Get existing aliases but remove any conflicting @/components alias
+    const existingAliases = currentConfiguration.resolve?.alias ?? {};
+    const filteredAliases = Object.fromEntries(
+        Object.entries(existingAliases).filter(([key]) => !key.startsWith('@/components'))
+    );
+    
+    // Get existing plugins or create empty array
+    const existingPlugins = currentConfiguration.resolve?.plugins ?? [];
+    
     return {
         ...currentConfiguration,
         resolve: {
             ...currentConfiguration.resolve,
             alias: {
-                ...(currentConfiguration.resolve?.alias ?? {}),
-                '@/components': path.resolve(process.cwd(), 'remotion', 'src', 'components'),
+                ...filteredAliases,
+                // Explicit alias for @/components - this takes precedence
+                '@/components': path.join(remotionRoot, 'src', 'components'),
             },
+            plugins: [
+                ...existingPlugins,
+                // Use tsconfig-paths-webpack-plugin to properly resolve tsconfig paths
+                new TsconfigPathsPlugin({
+                    configFile: path.join(remotionRoot, 'tsconfig.json'),
+                }),
+            ],
         },
     };
 };
+
+/**
+ * The public directory where static assets (logos, images) are stored.
+ * Files uploaded via /api/upload are saved here in the 'uploads' subfolder.
+ * Use staticFile('uploads/filename.png') in Remotion compositions to reference them.
+ */
+const REMOTION_PUBLIC_DIR = path.join(process.cwd(), 'remotion', 'public');
 
 /**
  * Result of rendering a scene preview
@@ -56,6 +83,7 @@ export class RemotionRenderer {
         const bundled = await bundle({
             entryPoint,
             webpackOverride,
+            publicDir: REMOTION_PUBLIC_DIR,  // Enable staticFile() to find uploaded assets
             onProgress: (progress) => {
                 if (onProgress) {
                     onProgress(progress);
@@ -121,9 +149,11 @@ export class RemotionRenderer {
             console.log(`[RemotionRenderer] Bundling scene ${sceneNumber} preview from ${previewEntryPoint}...`);
 
             // Bundle from the scene preview entry point (not the main Root.tsx)
+            // IMPORTANT: publicDir must be set so staticFile() can find uploaded assets (logos, images)
             const bundled = await bundle({
                 entryPoint: previewEntryPoint,
                 webpackOverride,
+                publicDir: REMOTION_PUBLIC_DIR,  // Enable staticFile() to find uploaded assets
                 onProgress: (progress) => {
                     onProgress(progress * 0.3);
                 },

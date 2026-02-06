@@ -6,7 +6,7 @@ import { LivePreview } from './LivePreview';
 import { ThoughtStream } from './ThoughtStream';
 import { FeedbackControls } from './FeedbackControls';
 import { SceneNodeData } from './SceneNode';
-import { Check, ChevronRight, AlertCircle, Loader2, Pencil, Download } from 'lucide-react';
+import { Check, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
 
 interface WorkflowDashboardProps {
     jobId: string;
@@ -90,12 +90,17 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
         currentPhase === WorkflowPhase.QUERY_ENHANCEMENT ||
         (currentPhase === WorkflowPhase.AWAITING_FEEDBACK && (!state?.rounds || state.rounds.length === 0));
 
+    // Check if any scene is actively being generated or rendered
+    const isActivelyRendering = currentPhase === WorkflowPhase.RENDERING || 
+        state?.sceneStatuses?.some(s => s.status === 'generating' || s.status === 'rendering');
+
     const isRefining = !isPlanning && [
         WorkflowPhase.IMPLEMENTATION,
         WorkflowPhase.AWAITING_FEEDBACK,
         WorkflowPhase.ITERATION_DECISION,
         WorkflowPhase.EVALUATION,
-        WorkflowPhase.RENDERING
+        WorkflowPhase.RENDERING,
+        WorkflowPhase.COMPLETE  // Keep showing LivePreview in complete phase to avoid view flash
     ].includes(currentPhase);
 
     const handleFeedbackSubmit = async (text: string) => {
@@ -258,39 +263,14 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                                 activeSceneId={activeSceneId}
                                 onSceneSelect={setActiveSceneId}
                                 renderProgress={renderProgress}
+                                onNavigateToEditor={onNavigateToEditor ? () => onNavigateToEditor(jobId) : undefined}
+                                isComplete={currentPhase === WorkflowPhase.COMPLETE}
                             />
                         ) : (
-                            // Final or Initialization
+                            // Error or Initialization states only (COMPLETE is now handled by isRefining -> LivePreview)
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center space-y-4">
-                                    {currentPhase === WorkflowPhase.COMPLETE ? (
-                                        <>
-                                            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Production Complete</h2>
-                                            <p className="text-zinc-400 mb-6">Your video is ready for download or further editing.</p>
-                                            {videoUrl && <LivePreview videoUrl={videoUrl} scenes={activeScenes} activeSceneId="" onSceneSelect={() => { }} />}
-                                            <div className="mt-6 flex items-center justify-center gap-4">
-                                                {videoUrl && (
-                                                    <a
-                                                        href={videoUrl}
-                                                        download
-                                                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-900/30 transition-all duration-300 hover:scale-105"
-                                                    >
-                                                        <Download size={20} />
-                                                        Download Video
-                                                    </a>
-                                                )}
-                                                {onNavigateToEditor && (
-                                                    <button
-                                                        onClick={() => onNavigateToEditor(jobId)}
-                                                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl shadow-lg shadow-purple-900/30 transition-all duration-300 hover:scale-105"
-                                                    >
-                                                        <Pencil size={20} />
-                                                        Edit Video
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : currentPhase === WorkflowPhase.ERROR ? (
+                                    {currentPhase === WorkflowPhase.ERROR ? (
                                         <div className="space-y-4">
                                             <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
                                             <p className="text-red-400 font-mono text-sm uppercase">Workflow Error</p>
@@ -319,20 +299,18 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                             </div>
                         )}
 
-                        {/* Feedback Controls - Only show when editing a scene (planning) or during refinement phase */}
-                        {(currentPhase === WorkflowPhase.AWAITING_FEEDBACK || currentPhase === WorkflowPhase.EVALUATION) &&
-                         (isPlanning ? isEditingScene : true) && (
+                        {/* Feedback Controls - Only show during PLANNING phase when editing a scene */}
+                        {isPlanning && isEditingScene && currentPhase === WorkflowPhase.AWAITING_FEEDBACK && (
                             <div
-                                className={`absolute z-50 transition-all duration-500 ease-out ${activeSceneId ? 'bottom-4 right-4' : 'bottom-6 right-6 w-full max-w-2xl'}`}
+                                className="absolute z-50 transition-all duration-500 ease-out bottom-4 right-4"
                                 onMouseDown={(e) => e.stopPropagation()}
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <FeedbackControls
                                     status={state?.progress?.subStep === 'processing_feedback' ? 'processing' : 'idle'}
-                                    targetLabel={activeSceneId ? `Scene ${activeScenes.find(s => s.id === activeSceneId)?.index! + 1}` : 'Global Project'}
+                                    targetLabel={`Scene ${activeScenes.find(s => s.id === activeSceneId)?.index! + 1}`}
                                     onSubmit={handleFeedbackSubmit}
-                                    onApprove={!isPlanning && !activeSceneId ? handleApprove : undefined}
-                                    compact={!!activeSceneId}
+                                    compact={true}
                                 />
                             </div>
                         )}

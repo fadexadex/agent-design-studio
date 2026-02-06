@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill } from "remotion";
 import { BentoGrid } from "./BentoGrid";
-import { BackgroundRig } from "../Global/BackgroundRig";
+import { Background } from "../Global/Background";
 
 const Card = ({ title, color }: { title: string; color: string }) => (
     <div
@@ -27,8 +27,8 @@ const Card = ({ title, color }: { title: string; color: string }) => (
 export const LayoutTest: React.FC = () => {
     return (
         <AbsoluteFill style={{ backgroundColor: "white" }}>
-            <BackgroundRig type="grid-lines" variant="light" />
-            <BackgroundRig type="gradient-mesh" animate={true} />
+            <Background type="grid-lines" variant="light" />
+            <Background type="gradient-mesh" variant="light" animated />
 
             <AbsoluteFill style={{ padding: 60, display: "flex", justifyContent: "center", alignItems: "center" }}>
                 <BentoGrid columns={3} gap={20} staggerDelay={5} initialDelay={10}>

@@ -497,8 +497,29 @@ interface TextSequenceItemProps {
 2. **Prefer anchor positioning** - Avoid manual x/y pixel values; anchors are responsive
 3. **Use LayoutGrid for groups** - Don't manually position related text elements
 4. **Keep stagger values small** - 3-8 frames per unit usually looks best
-5. **Match exit to entrance** - If using `slideInUp`, consider `slideOutDown` for exit
+5. **Match exit to entrance** - If using `slideInUp`, consider slide-out for exit
 6. **Use spring for bouncy effects** - `{ type: "spring", damping: 12 }` gives nice bounce
+
+## CRITICAL: Common Mistakes
+
+```tsx
+// ❌ WRONG - exitPreset and exitStartFrame DO NOT EXIST
+<AnimatedText 
+  text="Hello"
+  exitPreset="fadeOut"      // ❌ This prop doesn't exist
+  exitStartFrame={90}       // ❌ This prop doesn't exist
+/>
+
+// ✅ CORRECT - use the exit object
+<AnimatedText 
+  text="Hello"
+  exit={{
+    startFrame: 90,
+    opacity: { from: 1, to: 0, duration: 20 },
+    blur: { from: 0, to: 10, duration: 20 }
+  }}
+/>
+```
 
 ## See Also
 

@@ -13,7 +13,7 @@ import { AnimatedText, LayoutGrid } from "@/components/AnimatedText";
 import { MockupFrame, FrameSequence } from "@/components/MockupFrame";
 import { CameraRig } from "@/components/Camera";
 import { MotionContainer } from "@/components/Layout";
-import { BackgroundRig } from "@/components/Global";
+import { Background } from "@/components/Global";
 import { IrisTransition } from "@/components/Transitions";
 
 /**
@@ -37,7 +37,7 @@ export const ProductLaunchScene = () => {
   return (
     <AbsoluteFill>
       {/* Layer 1: Animated Background */}
-      <BackgroundRig
+      <Background
         type="gradient-mesh"
         variant="light"
         animationSpeed={0.7}
@@ -336,7 +336,7 @@ export const FeatureShowcaseScene = () => {
 export const TutorialDemoScene = () => {
   return (
     <AbsoluteFill>
-      <BackgroundRig type="grid-lines" variant="dark" />
+      <Background type="grid-lines" variant="dark" />
 
       {/* Header instruction */}
       <Sequence from={0}>

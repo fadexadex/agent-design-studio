@@ -24,7 +24,8 @@ When generating Remotion code, **ALWAYS check if a component below can achieve t
 | **BentoItem** | `@/components/Layout` | Grid cell with `colSpan`/`rowSpan` |
 | **DynamicCursor** | `@/components/DynamicCursor` | Animated cursor for demos |
 | **CursorPath** | `@/components/DynamicCursor` | Cursor following a path |
-| **BackgroundRig** | `@/components/Global` | Animated backgrounds: `gradient-mesh`, `grid-lines`, `blobs` |
+| **Background** | `@/components/Global` | Composable backgrounds: presets, type/variant, layers |
+| BackgroundRig | `@/components/Global` | *(Deprecated)* Use Background instead |
 | **IrisTransition** | `@/components/Transitions` | Circular wipe transition |
 | **TransitionSeries** | `@/components/Transitions` | Scene transition container |
 
@@ -46,7 +47,10 @@ import { MotionContainer, BentoGrid, BentoItem } from "@/components/Layout";
 // Cursor
 import { DynamicCursor, CursorPath } from "@/components/DynamicCursor";
 
-// Background
+// Background (recommended)
+import { Background, backgroundPresets } from "@/components/Global";
+
+// BackgroundRig (deprecated)
 import { BackgroundRig } from "@/components/Global";
 
 // Transitions

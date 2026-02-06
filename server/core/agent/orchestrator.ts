@@ -587,6 +587,15 @@ export class AgentOrchestrator {
         // Fix truncated code by attempting to close unbalanced braces/brackets/parens
         fixedCode = this.attemptToCloseTruncatedCode(fixedCode);
 
+        // Fix CSS kebab-case properties to camelCase
+        fixedCode = this.fixKebabCaseCSSProperties(fixedCode);
+
+        // Fix invalid component props
+        fixedCode = this.fixInvalidComponentProps(fixedCode);
+
+        // Fix spring() delay parameter misuse
+        fixedCode = this.fixSpringDelayParameter(fixedCode);
+
         // Fix missing Remotion import
         if (!fixedCode.includes("from 'remotion'") && !fixedCode.includes('from "remotion"')) {
             fixedCode = `import React from 'react';
@@ -633,6 +642,187 @@ ${fixedCode}`;
             /from\s+['"]@\/component\//g,
             "from '@/components/"
         );
+
+        return fixedCode;
+    }
+
+    /**
+     * CSS property map: kebab-case to camelCase
+     */
+    private static readonly CSS_PROPERTY_MAP: Record<string, string> = {
+        'z-index': 'zIndex',
+        'background-color': 'backgroundColor',
+        'background-image': 'backgroundImage',
+        'background-size': 'backgroundSize',
+        'background-position': 'backgroundPosition',
+        'background-repeat': 'backgroundRepeat',
+        'font-size': 'fontSize',
+        'font-weight': 'fontWeight',
+        'font-family': 'fontFamily',
+        'font-style': 'fontStyle',
+        'line-height': 'lineHeight',
+        'letter-spacing': 'letterSpacing',
+        'text-align': 'textAlign',
+        'text-decoration': 'textDecoration',
+        'text-transform': 'textTransform',
+        'white-space': 'whiteSpace',
+        'word-break': 'wordBreak',
+        'overflow-wrap': 'overflowWrap',
+        'border-radius': 'borderRadius',
+        'border-width': 'borderWidth',
+        'border-color': 'borderColor',
+        'border-style': 'borderStyle',
+        'border-top': 'borderTop',
+        'border-bottom': 'borderBottom',
+        'border-left': 'borderLeft',
+        'border-right': 'borderRight',
+        'box-shadow': 'boxShadow',
+        'box-sizing': 'boxSizing',
+        'flex-direction': 'flexDirection',
+        'flex-wrap': 'flexWrap',
+        'flex-grow': 'flexGrow',
+        'flex-shrink': 'flexShrink',
+        'align-items': 'alignItems',
+        'align-content': 'alignContent',
+        'align-self': 'alignSelf',
+        'justify-content': 'justifyContent',
+        'justify-items': 'justifyItems',
+        'justify-self': 'justifySelf',
+        'grid-template': 'gridTemplate',
+        'grid-template-columns': 'gridTemplateColumns',
+        'grid-template-rows': 'gridTemplateRows',
+        'grid-column': 'gridColumn',
+        'grid-row': 'gridRow',
+        'grid-gap': 'gridGap',
+        'column-gap': 'columnGap',
+        'row-gap': 'rowGap',
+        'max-width': 'maxWidth',
+        'max-height': 'maxHeight',
+        'min-width': 'minWidth',
+        'min-height': 'minHeight',
+        'object-fit': 'objectFit',
+        'object-position': 'objectPosition',
+        'pointer-events': 'pointerEvents',
+        'user-select': 'userSelect',
+        'transform-origin': 'transformOrigin',
+        'transition-duration': 'transitionDuration',
+        'animation-duration': 'animationDuration',
+        'animation-delay': 'animationDelay',
+        'animation-timing-function': 'animationTimingFunction',
+        'backdrop-filter': 'backdropFilter',
+        'mix-blend-mode': 'mixBlendMode',
+        'clip-path': 'clipPath',
+        'stroke-width': 'strokeWidth',
+        'stroke-dasharray': 'strokeDasharray',
+        'stroke-dashoffset': 'strokeDashoffset',
+        'fill-opacity': 'fillOpacity',
+        'stroke-opacity': 'strokeOpacity',
+    };
+
+    /**
+     * Fix CSS kebab-case properties to camelCase in style objects.
+     */
+    private fixKebabCaseCSSProperties(code: string): string {
+        let fixedCode = code;
+        let fixCount = 0;
+
+        for (const [kebab, camel] of Object.entries(AgentOrchestrator.CSS_PROPERTY_MAP)) {
+            const regex = new RegExp(`(\\s|{|,)${kebab}(\\s*):`, 'g');
+            if (regex.test(fixedCode)) {
+                fixedCode = fixedCode.replace(regex, `$1${camel}$2:`);
+                fixCount++;
+            }
+        }
+
+        if (fixCount > 0) {
+            console.warn(`[AutoFix] Converted ${fixCount} CSS kebab-case properties to camelCase`);
+        }
+
+        return fixedCode;
+    }
+
+    /**
+     * Fix invalid component props that the AI commonly generates.
+     */
+    private fixInvalidComponentProps(code: string): string {
+        let fixedCode = code;
+
+        // Fix Background/BackgroundRig: colors={[...]} -> meshColors={{ primary: ..., secondary: ... }}
+        const bgColorsRegex = /<(Background|BackgroundRig)([^>]*)\scolors=\{\s*\[\s*['"]([^'"]+)['"]\s*(?:,\s*['"]([^'"]+)['"])?\s*\]\s*\}([^>]*)\/?>/g;
+        fixedCode = fixedCode.replace(bgColorsRegex, (match, component, before, primary, secondary, after) => {
+            const meshColors = secondary 
+                ? `meshColors={{ primary: '${primary}', secondary: '${secondary}' }}`
+                : `meshColors={{ primary: '${primary}' }}`;
+            console.warn(`[AutoFix] Converted ${component} colors prop to meshColors`);
+            return `<${component}${before} ${meshColors}${after}/>`;
+        });
+
+        // Fix Background/BackgroundRig: speed={...} -> animationSpeed={...}
+        const bgSpeedRegex = /(<(?:Background|BackgroundRig)[^>]*)\sspeed=/g;
+        if (bgSpeedRegex.test(fixedCode)) {
+            fixedCode = fixedCode.replace(/(<(?:Background|BackgroundRig)[^>]*)\sspeed=/g, '$1 animationSpeed=');
+            console.warn(`[AutoFix] Converted Background speed prop to animationSpeed`);
+        }
+
+        // Fix Background/BackgroundRig: opacity={...} -> remove
+        const bgOpacityRegex = /(<(?:Background|BackgroundRig)[^>]*)\s+opacity=\{[^}]+\}/g;
+        if (bgOpacityRegex.test(fixedCode)) {
+            fixedCode = fixedCode.replace(bgOpacityRegex, '$1');
+            console.warn(`[AutoFix] Removed invalid Background opacity prop`);
+        }
+
+        // Convert BackgroundRig import to Background (recommended)
+        fixedCode = fixedCode.replace(
+            /import\s*\{\s*BackgroundRig\s*\}\s*from\s*['"]@\/components\/Global['"]/g,
+            "import { Background } from '@/components/Global'"
+        );
+        fixedCode = fixedCode.replace(/<BackgroundRig\s/g, '<Background ');
+        fixedCode = fixedCode.replace(/<\/BackgroundRig>/g, '</Background>');
+        fixedCode = fixedCode.replace(/<BackgroundRig\/>/g, '<Background/>');
+
+        // Fix MotionContainer: initial="below" -> initial="offscreen-bottom"
+        fixedCode = fixedCode.replace(/initial="below"/g, 'initial="offscreen-bottom"');
+        fixedCode = fixedCode.replace(/initial="above"/g, 'initial="offscreen-top"');
+        fixedCode = fixedCode.replace(/initial="left"/g, 'initial="offscreen-left"');
+        fixedCode = fixedCode.replace(/initial="right"/g, 'initial="offscreen-right"');
+
+        // Fix MotionContainer: Remove Framer Motion props (animate, transition)
+        const motionAnimateRegex = /(<MotionContainer[^>]*)\s+animate=\{[^}]+\}/g;
+        if (motionAnimateRegex.test(fixedCode)) {
+            fixedCode = fixedCode.replace(motionAnimateRegex, '$1');
+            console.warn(`[AutoFix] Removed invalid MotionContainer animate prop`);
+        }
+
+        const motionTransitionRegex = /(<MotionContainer[^>]*)\s+transition=\{[^}]+\}/g;
+        if (motionTransitionRegex.test(fixedCode)) {
+            fixedCode = fixedCode.replace(motionTransitionRegex, '$1');
+            console.warn(`[AutoFix] Removed invalid MotionContainer transition prop`);
+        }
+
+        return fixedCode;
+    }
+
+    /**
+     * Fix spring() delay parameter misuse.
+     * spring({ frame, fps, delay: X }) -> spring({ frame: frame - X, fps })
+     */
+    private fixSpringDelayParameter(code: string): string {
+        const springDelayRegex = /spring\(\s*\{\s*frame\s*,\s*fps\s*,\s*delay\s*:\s*(\d+|\w+)\s*,?/g;
+        
+        let fixedCode = code;
+        const matches = [...code.matchAll(springDelayRegex)];
+        
+        if (matches.length > 0) {
+            for (const match of matches) {
+                const delayValue = match[1];
+                const original = match[0];
+                const fixed = original
+                    .replace(/frame\s*,/, `frame: frame - ${delayValue},`)
+                    .replace(/,\s*delay\s*:\s*(\d+|\w+)\s*,?/, ',');
+                fixedCode = fixedCode.replace(original, fixed);
+            }
+            console.warn(`[AutoFix] Fixed ${matches.length} spring() delay parameter(s)`);
+        }
 
         return fixedCode;
     }

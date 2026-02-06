@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Layers, Check, AlertCircle, Sparkles, Film, Play, X, Maximize2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Layers, Check, AlertCircle, Sparkles, Film, Play, X, Maximize2, Download, Pencil, PlayCircle, Pause } from 'lucide-react';
 import { SceneNodeData } from './SceneNode';
 import { SceneRenderStatus } from '../../types';
 
@@ -10,6 +10,8 @@ interface LivePreviewProps {
     activeSceneId?: string;
     onSceneSelect: (id: string) => void;
     renderProgress?: number;
+    onNavigateToEditor?: () => void;
+    isComplete?: boolean;
 }
 
 /**
@@ -224,6 +226,101 @@ const ExpandedPreviewModal: React.FC<ExpandedPreviewModalProps> = ({
 };
 
 /**
+ * SequentialPlayer - Plays all scene videos in sequence
+ */
+interface SequentialPlayerProps {
+    scenes: SceneNodeData[];
+    sceneStatuses: SceneRenderStatus[];
+    currentIndex: number;
+    onIndexChange: (index: number) => void;
+    onComplete: () => void;
+}
+
+const SequentialPlayer: React.FC<SequentialPlayerProps> = ({
+    scenes,
+    sceneStatuses,
+    currentIndex,
+    onIndexChange,
+    onComplete
+}) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    
+    // Get scenes with preview URLs in order
+    const playableScenes = scenes
+        .map((scene, idx) => {
+            const status = sceneStatuses.find(ss => ss.sceneId === scene.id || ss.sceneNumber === (idx + 1));
+            return { scene, status, index: idx };
+        })
+        .filter(item => item.status?.previewUrl);
+
+    const currentScene = playableScenes[currentIndex];
+
+    useEffect(() => {
+        if (videoRef.current && currentScene?.status?.previewUrl) {
+            videoRef.current.src = currentScene.status.previewUrl;
+            videoRef.current.play().catch(() => {});
+        }
+    }, [currentIndex, currentScene?.status?.previewUrl]);
+
+    const handleVideoEnded = () => {
+        if (currentIndex < playableScenes.length - 1) {
+            onIndexChange(currentIndex + 1);
+        } else {
+            // Loop back to beginning or stop
+            onIndexChange(0);
+        }
+    };
+
+    if (!currentScene) {
+        return (
+            <div className="aspect-video flex items-center justify-center text-zinc-500">
+                <p>No scenes available to play</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="relative">
+            {/* Scene indicator */}
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/30 text-[10px] font-bold text-purple-300">
+                    {currentScene.index + 1}
+                </span>
+                <span className="text-xs text-white font-medium">{currentScene.scene.title}</span>
+                <span className="text-[10px] text-zinc-400">
+                    ({currentIndex + 1}/{playableScenes.length})
+                </span>
+            </div>
+            
+            {/* Progress dots */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                {playableScenes.map((_, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => onIndexChange(idx)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                            idx === currentIndex 
+                                ? 'bg-purple-500 w-4' 
+                                : idx < currentIndex 
+                                    ? 'bg-green-500' 
+                                    : 'bg-zinc-600 hover:bg-zinc-500'
+                        }`}
+                    />
+                ))}
+            </div>
+
+            <video
+                ref={videoRef}
+                className="w-full aspect-video object-contain"
+                onEnded={handleVideoEnded}
+                controls
+                autoPlay
+            />
+        </div>
+    );
+};
+
+/**
  * LivePreview - Video preview component with scene status visualization
  * Shows a grid of scene preview cards with individual video players
  */
@@ -233,9 +330,14 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     sceneStatuses = [],
     activeSceneId,
     onSceneSelect,
-    renderProgress = 0
+    renderProgress = 0,
+    onNavigateToEditor,
+    isComplete = false
 }) => {
     const [expandedScene, setExpandedScene] = useState<{ scene: SceneNodeData; status: SceneRenderStatus } | null>(null);
+    const [isPlayingAll, setIsPlayingAll] = useState(false);
+    const [currentPlayingIndex, setCurrentPlayingIndex] = useState(0);
+    const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
     // Get status for a specific scene
     const getSceneStatus = (sceneId: string): SceneRenderStatus | undefined => {
@@ -372,26 +474,51 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                 {/* Final Video Section */}
                 {(videoUrl || (allComplete && renderProgress > 0)) && (
                     <div className="mt-4 border-t border-zinc-800 pt-4">
-                        <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">
-                            <Film size={14} />
-                            Final Rendered Video
-                            {renderProgress > 0 && renderProgress < 100 && (
-                                <span className="text-blue-400 normal-case font-medium">
-                                    Rendering: {renderProgress}%
-                                </span>
-                            )}
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                                <Film size={14} />
+                                {videoUrl ? 'Your Complete Video' : 'Final Rendered Video'}
+                                {renderProgress > 0 && renderProgress < 100 && (
+                                    <span className="text-blue-400 normal-case font-medium">
+                                        Rendering: {renderProgress}%
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {videoUrl ? (
-                            <div className="rounded-lg overflow-hidden border border-zinc-800 bg-black">
-                                <video
-                                    src={videoUrl}
-                                    controls
-                                    autoPlay
-                                    loop
-                                    className="w-full max-h-[400px] object-contain"
-                                />
-                            </div>
+                            <>
+                                <div className="rounded-lg overflow-hidden border border-green-500/30 bg-black shadow-lg shadow-green-900/10">
+                                    <video
+                                        src={videoUrl}
+                                        controls
+                                        autoPlay
+                                        loop
+                                        className="w-full max-h-[400px] object-contain"
+                                    />
+                                </div>
+                                
+                                {/* Action Buttons - Show when final video is ready */}
+                                <div className="mt-4 flex items-center justify-center gap-4">
+                                    <a
+                                        href={videoUrl}
+                                        download
+                                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-900/30 transition-all duration-300 hover:scale-105"
+                                    >
+                                        <Download size={20} />
+                                        Download Video
+                                    </a>
+                                    {onNavigateToEditor && (
+                                        <button
+                                            onClick={onNavigateToEditor}
+                                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl shadow-lg shadow-purple-900/30 transition-all duration-300 hover:scale-105"
+                                        >
+                                            <Pencil size={20} />
+                                            Proceed to Edit
+                                        </button>
+                                    )}
+                                </div>
+                            </>
                         ) : (
                             <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-8 flex flex-col items-center gap-4">
                                 <div className="relative w-16 h-16">
@@ -410,6 +537,44 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
                                         style={{ width: `${renderProgress}%` }}
                                     />
                                 </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Play All Preview - Show when all scenes are complete but final video isn't ready yet */}
+                {allComplete && !videoUrl && hasAnyPreviews && renderProgress === 0 && (
+                    <div className="mt-4 border-t border-zinc-800 pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                                <PlayCircle size={14} />
+                                Preview All Scenes
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setIsPlayingAll(!isPlayingAll);
+                                    setCurrentPlayingIndex(0);
+                                }}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                    isPlayingAll 
+                                        ? 'bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30' 
+                                        : 'bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30'
+                                }`}
+                            >
+                                {isPlayingAll ? <Pause size={14} /> : <PlayCircle size={14} />}
+                                {isPlayingAll ? 'Stop' : 'Play All'}
+                            </button>
+                        </div>
+                        
+                        {isPlayingAll && (
+                            <div className="rounded-lg border border-purple-500/30 bg-black overflow-hidden">
+                                <SequentialPlayer
+                                    scenes={scenes}
+                                    sceneStatuses={sceneStatuses}
+                                    currentIndex={currentPlayingIndex}
+                                    onIndexChange={setCurrentPlayingIndex}
+                                    onComplete={() => setIsPlayingAll(false)}
+                                />
                             </div>
                         )}
                     </div>

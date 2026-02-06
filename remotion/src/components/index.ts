@@ -7,6 +7,7 @@
  * Note: For detailed type imports, import directly from specific modules:
  * - `@/components/AnimatedText` for text animation types
  * - `@/components/MockupFrame` for frame/mockup types
+ * - `@/components/Global` for background types
  * - `@/components/shared` for shared utility types
  *
  * @example
@@ -16,7 +17,7 @@
  *   MockupFrame,
  *   DynamicCursor,
  *   CameraRig,
- *   BackgroundRig,
+ *   Background,
  *   MotionContainer,
  *   BentoGrid,
  *   TransitionSeries,
@@ -117,12 +118,58 @@ export type { CameraRigProps } from "./Camera";
 // ============================================
 // Global - Background and scene components
 // ============================================
-export { BackgroundRig } from "./Global";
+// New Background system (recommended)
+export {
+  Background,
+  backgroundPresets,
+  getBackgroundPreset,
+  getRandomBackgroundPreset,
+  listBackgroundPresets,
+  getTypeVariantLayers,
+  useAnimationEngine,
+  // Individual layers
+  SolidLayer,
+  LinearGradientLayer,
+  RadialGradientLayer,
+  MeshGradientLayer,
+  NoiseLayer,
+  BlurLayer,
+  VignetteLayer,
+  GlowLayer,
+  GridLayer,
+  // Layer defaults
+  SOLID_DEFAULTS,
+  LINEAR_DEFAULTS,
+  RADIAL_DEFAULTS,
+  MESH_DEFAULTS,
+  NOISE_DEFAULTS,
+  BLUR_DEFAULTS,
+  VIGNETTE_DEFAULTS,
+  GLOW_DEFAULTS,
+  GRID_DEFAULTS,
+} from "./Global";
+
 export type {
-  BackgroundRigProps,
+  BackgroundProps,
+  BackgroundPreset,
+  BackgroundLayerConfig,
+  BaseLayerConfig,
+  SolidLayerConfig,
+  LinearGradientLayerConfig,
+  RadialGradientLayerConfig,
+  MeshGradientLayerConfig,
+  NoiseLayerConfig,
+  BlurLayerConfig,
+  VignetteLayerConfig,
+  GlowLayerConfig,
+  GridLayerConfig,
   BackgroundType,
   BackgroundVariant,
 } from "./Global";
+
+// Legacy BackgroundRig (deprecated - use Background instead)
+export { BackgroundRig } from "./Global";
+export type { BackgroundRigProps } from "./Global";
 
 // ============================================
 // Layout - Motion containers and grids

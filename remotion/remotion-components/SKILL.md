@@ -46,7 +46,8 @@ Use this skill when:
 | BentoItem        | `@/components/Layout`        | Grid cell with span control                           |
 | DynamicCursor    | `@/components/DynamicCursor` | Animated cursor with variants                         |
 | CursorPath       | `@/components/DynamicCursor` | Cursor movement along a path                          |
-| BackgroundRig    | `@/components/Global`        | Animated backgrounds (mesh, grid, blobs)              |
+| **Background**   | `@/components/Global`        | Composable backgrounds with presets, layers, effects  |
+| BackgroundRig    | `@/components/Global`        | *(Deprecated)* Use Background instead                 |
 | IrisTransition   | `@/components/Transitions`   | Circular wipe transition                              |
 | TransitionSeries | `@/components/Transitions`   | Re-export from @remotion/transitions                  |
 
@@ -72,7 +73,10 @@ import { MotionContainer, BentoGrid, BentoItem } from "@/components/Layout";
 // Cursor
 import { DynamicCursor, CursorPath } from "@/components/DynamicCursor";
 
-// Background
+// Background (recommended)
+import { Background, backgroundPresets, getBackgroundPreset } from "@/components/Global";
+
+// BackgroundRig (deprecated - use Background instead)
 import { BackgroundRig } from "@/components/Global";
 
 // Transitions
@@ -93,7 +97,8 @@ Read these rule files for detailed documentation on each component:
 - [Layout](rules/layout.md) - MotionContainer and BentoGrid for animated layouts
 - [Transitions](rules/transitions.md) - Scene transitions (IrisTransition, TransitionSeries)
 - [DynamicCursor](rules/dynamic-cursor.md) - Cursor animations and path following
-- [BackgroundRig](rules/background-rig.md) - Animated background effects
+- [Background](rules/background.md) - Composable backgrounds with presets, layers, and effects
+- [BackgroundRig](rules/background-rig.md) - *(Deprecated)* Use Background instead
 
 ## Quick Examples
 

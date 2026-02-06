@@ -1,11 +1,40 @@
 ---
 name: background-rig
-description: BackgroundRig component for animated backgrounds including gradient mesh, grid lines, blobs, and solid colors
+description: (DEPRECATED) BackgroundRig component - use Background instead for animated backgrounds
 metadata:
-  tags: background, gradient, mesh, grid, animation, blobs
+  tags: background, gradient, mesh, grid, animation, blobs, deprecated
 ---
 
-## Overview
+> **DEPRECATED:** This component is deprecated. Use the new `Background` component instead, which provides the same functionality plus presets, layer-based composition, and more effects.
+>
+> See [Background](background.md) for the recommended replacement.
+
+## Migration Guide
+
+```tsx
+// ❌ OLD - BackgroundRig
+<BackgroundRig type="gradient-mesh" variant="dark" animate animationSpeed={0.5} />
+
+// ✅ NEW - Background (same API works!)
+<Background type="gradient-mesh" variant="dark" animated animationSpeed={0.5} />
+
+// ✅ BETTER - Background with preset
+<Background preset="dark-gradient-mesh" />
+
+// ✅ BEST - Background with full layer control
+<Background
+  layers={[
+    { type: "solid", color: "#0F0F11" },
+    { type: "glow", color: "#6366F1", x: 30, y: 30, radius: 50, intensity: 0.8 },
+    { type: "glow", color: "#EC4899", x: 70, y: 70, radius: 45, intensity: 0.7 },
+  ]}
+  animated
+/>
+```
+
+---
+
+## Overview (Legacy Documentation)
 
 BackgroundRig provides animated background effects for Remotion compositions:
 
@@ -349,6 +378,26 @@ const LayeredBackground = () => {
 4. **Layer carefully** - BackgroundRig should be the first child in AbsoluteFill
 5. **Test rendering** - Complex backgrounds may affect render performance
 
+## CRITICAL: Common Mistakes
+
+```tsx
+// ❌ WRONG - these props DO NOT EXIST
+<BackgroundRig 
+  type="gradient-mesh" 
+  colors={['#000', '#111']}    // ❌ No "colors" prop
+  opacity={0.5}                 // ❌ No "opacity" prop  
+  speed={1}                     // ❌ No "speed" prop
+/>
+
+// ✅ CORRECT - use the actual props
+<BackgroundRig 
+  type="gradient-mesh" 
+  variant="dark"                          // Use variant for color presets
+  meshColors={{ primary: '#000', secondary: '#111' }}  // Use meshColors for custom colors
+  animationSpeed={1}                      // Use animationSpeed, not speed
+/>
+```
+
 ## When to Use What
 
 | Scenario               | Type            | Variant                      |
@@ -361,6 +410,7 @@ const LayeredBackground = () => {
 
 ## See Also
 
+- [Background](background.md) - **Recommended replacement** with presets, layers, and more effects
 - [AnimatedText](animated-text.md) - Text to overlay on backgrounds
 - [MockupFrame](mockup-frame.md) - Device frames to showcase on backgrounds
 - [Layout](layout.md) - Animated layouts for content over backgrounds

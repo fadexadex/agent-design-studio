@@ -91,6 +91,24 @@ interface MotionContainerProps {
 | `scale-down`  | Scales down + fades  |
 | `blur-out`    | Blurs out + fades    |
 
+### CRITICAL: Common Mistakes
+
+```tsx
+// ❌ WRONG - abbreviated state names don't exist
+<MotionContainer initial="below">
+<MotionContainer initial="above">
+
+// ✅ CORRECT - use full state names
+<MotionContainer initial="offscreen-bottom">
+<MotionContainer initial="offscreen-top">
+
+// ❌ WRONG - Framer Motion props (animate, transition) don't work here
+<MotionContainer animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+
+// ✅ CORRECT - use Remotion-style props
+<MotionContainer initial="hidden" delay={15} duration={30}>
+```
+
 ### Usage Examples
 
 #### Basic Fade In

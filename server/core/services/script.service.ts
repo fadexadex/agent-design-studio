@@ -220,7 +220,7 @@ IMPORTANT: Return ONLY valid JSON, no additional text, no markdown code blocks, 
         console.error('[Script Generation] Some scenes have invalid descriptions');
         throw new Error('AI generated incomplete scene descriptions. Please try again.');
     }
-
+    console.log('[Script Generation] Script data:', scriptData);    
     console.log('[Script Generation] Successfully generated', scriptData.scenes.length, 'scenes');
 
     return scriptData;
