@@ -9,7 +9,15 @@
     "react",
     "@remotion/transitions",
     "@remotion/shapes",
-    "@remotion/media"
+    "@remotion/media",
+    "@/components",
+    "@/components/AnimatedText",
+    "@/components/MockupFrame",
+    "@/components/Camera",
+    "@/components/Layout",
+    "@/components/DynamicCursor",
+    "@/components/Global",
+    "@/components/Transitions"
   ],
   "maxFeatureRules": 5,
   "featureRules": [

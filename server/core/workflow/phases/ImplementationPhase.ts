@@ -839,6 +839,9 @@ registerRoot(RemotionRoot);
   private autoFixSceneCode(code: string, sceneNumber: number): string {
     let fixedCode = code;
 
+    // Fix truncated code by attempting to close unbalanced braces/brackets/parens
+    fixedCode = this.attemptToCloseTruncatedCode(fixedCode);
+
     // Ensure React import
     if (!fixedCode.includes("import React") && !fixedCode.includes("from 'react'")) {
       fixedCode = `import React from 'react';\n${fixedCode}`;
@@ -864,11 +867,187 @@ registerRoot(RemotionRoot);
   }
 
   /**
+   * Attempt to close truncated code by balancing braces, brackets, and parentheses.
+   * This is a best-effort fix for LLM output that got cut off.
+   */
+  private attemptToCloseTruncatedCode(code: string): string {
+    let fixedCode = code.trim();
+    
+    // Remove trailing incomplete statements that can't be salvaged
+    const incompletePatterns = [
+      /,\s*$/,           // trailing comma
+      /=\s*$/,           // incomplete assignment
+      /:\s*$/,           // incomplete ternary or object
+      /\+\s*$/,          // incomplete addition
+      /-\s*$/,           // incomplete subtraction
+      /\*\s*$/,          // incomplete multiplication
+      /&&\s*$/,          // incomplete logical AND
+      /\|\|\s*$/,        // incomplete logical OR
+      /\?\s*$/,          // incomplete ternary
+      /=>\s*$/,          // incomplete arrow function
+      /const\s+\w+\s*$/, // incomplete const declaration
+      /let\s+\w+\s*$/,   // incomplete let declaration
+    ];
+    
+    for (const pattern of incompletePatterns) {
+      if (pattern.test(fixedCode)) {
+        // Find the last complete line and trim there
+        const lines = fixedCode.split('\n');
+        while (lines.length > 0) {
+          const lastLine = lines[lines.length - 1].trim();
+          let isIncomplete = false;
+          for (const p of incompletePatterns) {
+            if (p.test(lastLine)) {
+              isIncomplete = true;
+              break;
+            }
+          }
+          if (isIncomplete) {
+            lines.pop();
+          } else {
+            break;
+          }
+        }
+        fixedCode = lines.join('\n');
+        console.warn('[AutoFix] Removed incomplete trailing statements');
+      }
+    }
+    
+    // Now balance the delimiters
+    const openBraces = (fixedCode.match(/{/g) || []).length;
+    const closeBraces = (fixedCode.match(/}/g) || []).length;
+    const missingBraces = openBraces - closeBraces;
+    
+    const openParens = (fixedCode.match(/\(/g) || []).length;
+    const closeParens = (fixedCode.match(/\)/g) || []).length;
+    const missingParens = openParens - closeParens;
+    
+    const openBrackets = (fixedCode.match(/\[/g) || []).length;
+    const closeBrackets = (fixedCode.match(/\]/g) || []).length;
+    const missingBrackets = openBrackets - closeBrackets;
+    
+    // Build closing sequence
+    let closingSequence = '';
+    
+    if (missingParens > 0) {
+      closingSequence += ')'.repeat(missingParens);
+      console.warn(`[AutoFix] Adding ${missingParens} closing parentheses`);
+    }
+    
+    if (missingBrackets > 0) {
+      closingSequence += ']'.repeat(missingBrackets);
+      console.warn(`[AutoFix] Adding ${missingBrackets} closing brackets`);
+    }
+    
+    if (missingBraces > 0) {
+      if (!/[;{}]\s*$/.test(fixedCode)) {
+        closingSequence = ';' + closingSequence;
+      }
+      closingSequence += '\n' + '}'.repeat(missingBraces);
+      console.warn(`[AutoFix] Adding ${missingBraces} closing braces`);
+    }
+    
+    if (closingSequence) {
+      fixedCode = fixedCode + closingSequence;
+    }
+    
+    return fixedCode;
+  }
+
+  /**
+   * Check if code appears to be truncated or incomplete.
+   * This catches cases where AI output was cut off mid-generation.
+   */
+  private isCodeTruncated(code: string): { truncated: boolean; reason?: string } {
+    const trimmed = code.trim();
+    
+    // Check 1: Count braces - must be balanced
+    const openBraces = (code.match(/{/g) || []).length;
+    const closeBraces = (code.match(/}/g) || []).length;
+    if (openBraces !== closeBraces) {
+      return { 
+        truncated: true, 
+        reason: `Unbalanced braces: ${openBraces} opening, ${closeBraces} closing` 
+      };
+    }
+    
+    // Check 2: Count parentheses - must be balanced
+    const openParens = (code.match(/\(/g) || []).length;
+    const closeParens = (code.match(/\)/g) || []).length;
+    if (openParens !== closeParens) {
+      return { 
+        truncated: true, 
+        reason: `Unbalanced parentheses: ${openParens} opening, ${closeParens} closing` 
+      };
+    }
+    
+    // Check 3: Count brackets - must be balanced
+    const openBrackets = (code.match(/\[/g) || []).length;
+    const closeBrackets = (code.match(/\]/g) || []).length;
+    if (openBrackets !== closeBrackets) {
+      return { 
+        truncated: true, 
+        reason: `Unbalanced brackets: ${openBrackets} opening, ${closeBrackets} closing` 
+      };
+    }
+    
+    // Check 4: Code ends mid-statement (common truncation patterns)
+    const truncationPatterns = [
+      { pattern: /,\s*$/, reason: 'Code ends with trailing comma' },
+      { pattern: /\(\s*$/, reason: 'Code ends with unclosed parenthesis' },
+      { pattern: /{\s*$/, reason: 'Code ends with unclosed brace' },
+      { pattern: /\[\s*$/, reason: 'Code ends with unclosed bracket' },
+      { pattern: /=\s*$/, reason: 'Code ends mid-assignment' },
+      { pattern: /:\s*$/, reason: 'Code ends after colon' },
+      { pattern: /\+\s*$/, reason: 'Code ends mid-expression' },
+      { pattern: /-\s*$/, reason: 'Code ends mid-expression' },
+      { pattern: /\*\s*$/, reason: 'Code ends mid-expression' },
+      { pattern: /&&\s*$/, reason: 'Code ends mid-expression' },
+      { pattern: /\|\|\s*$/, reason: 'Code ends mid-expression' },
+      { pattern: /\?\s*$/, reason: 'Code ends mid-ternary' },
+      { pattern: /=>\s*$/, reason: 'Code ends after arrow' },
+      { pattern: /const\s+\w+\s*$/, reason: 'Code ends with incomplete declaration' },
+      { pattern: /let\s+\w+\s*$/, reason: 'Code ends with incomplete declaration' },
+      { pattern: /import\s+[^;]*$/, reason: 'Code ends with incomplete import' },
+    ];
+    
+    for (const { pattern, reason } of truncationPatterns) {
+      if (pattern.test(trimmed)) {
+        return { truncated: true, reason };
+      }
+    }
+    
+    // Check 5: Must have a return statement in the component (React requirement)
+    if (!code.includes('return')) {
+      return { 
+        truncated: true, 
+        reason: 'No return statement found - component is incomplete' 
+      };
+    }
+    
+    // Check 6: Minimum code length (a valid Remotion scene is at least ~200 chars)
+    if (code.length < 200) {
+      return { 
+        truncated: true, 
+        reason: `Code too short (${code.length} chars) - likely truncated` 
+      };
+    }
+    
+    return { truncated: false };
+  }
+
+  /**
    * Validate scene code.
    */
   private validateSceneCode(code: string, sceneNumber: number): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
+
+    // Check for truncated/incomplete code FIRST
+    const truncationCheck = this.isCodeTruncated(code);
+    if (truncationCheck.truncated) {
+      errors.push(`Code appears truncated: ${truncationCheck.reason}`);
+    }
 
     // Check for Remotion import
     if (!code.includes("from 'remotion'") && !code.includes('from "remotion"')) {

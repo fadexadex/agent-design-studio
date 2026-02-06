@@ -8,23 +8,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { SkillsIndex, SkillRule, SkillsContext, RouterOptions } from './skillsIndex';
-
-// Approximate tokens per character (conservative estimate for code)
-const CHARS_PER_TOKEN = 3.5;
-
-// Stop words to filter out during tokenization
-const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-  'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-  'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought',
-  'used', 'it', 'its', 'this', 'that', 'these', 'those', 'i', 'you', 'he',
-  'she', 'we', 'they', 'what', 'which', 'who', 'whom', 'where', 'when',
-  'why', 'how', 'all', 'each', 'every', 'both', 'few', 'more', 'most',
-  'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same',
-  'so', 'than', 'too', 'very', 'just', 'also', 'now', 'here', 'there',
-  'make', 'want', 'create', 'use', 'using', 'video', 'animation', 'brand'
-]);
+import { CHARS_PER_TOKEN, tokenize, scoreTokenAgainstKeywords, stripFrontmatter, estimateTokens } from './routerUtils';
 
 export class SkillsRouter {
   private index: SkillsIndex;
@@ -34,7 +18,7 @@ export class SkillsRouter {
   private initialized: boolean = false;
 
   constructor(skillsDir?: string) {
-    this.skillsDir = skillsDir || path.join(process.cwd(), 'server', 'agent', 'skills');
+    this.skillsDir = skillsDir || path.join(process.cwd(), 'server', 'core', 'agent', 'skills');
     this.index = { coreRules: [], availablePackages: [], featureRules: [] };
   }
 
@@ -104,9 +88,7 @@ export class SkillsRouter {
     const filePath = path.join(rulesDir, `${skillId}.md`);
     try {
       const content = await fs.promises.readFile(filePath, 'utf-8');
-      // Strip YAML frontmatter if present
-      const stripped = content.replace(/^---[\s\S]*?---\n*/m, '');
-      this.skillContents.set(skillId, stripped.trim());
+      this.skillContents.set(skillId, stripFrontmatter(content));
     } catch {
       console.warn(`[SkillsRouter] Could not load skill: ${skillId}`);
     }
@@ -130,7 +112,7 @@ export class SkillsRouter {
     } = options;
 
     // 1. Tokenize the prompt and style
-    const tokens = this.tokenize(`${userPrompt} ${style}`);
+    const tokens = tokenize(`${userPrompt} ${style}`);
 
     // 2. Score and match skills
     const scoredSkills = this.scoreSkills(tokens, forceInclude, forceExclude);
@@ -155,21 +137,6 @@ export class SkillsRouter {
   }
 
   /**
-   * Tokenize a string into searchable keywords
-   */
-  private tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, ' ')
-      .split(/\s+/)
-      .filter(word => word.length > 2 && !STOP_WORDS.has(word))
-      .reduce((unique, word) => {
-        if (!unique.includes(word)) unique.push(word);
-        return unique;
-      }, [] as string[]);
-  }
-
-  /**
    * Score skills based on keyword matches
    */
   private scoreSkills(
@@ -180,10 +147,8 @@ export class SkillsRouter {
     const results: Array<{ rule: SkillRule; score: number }> = [];
 
     for (const rule of this.index.featureRules) {
-      // Skip excluded rules
       if (forceExclude.includes(rule.id)) continue;
 
-      // Force-included rules get max score
       if (forceInclude.includes(rule.id)) {
         results.push({ rule, score: 1000 });
         continue;
@@ -191,55 +156,16 @@ export class SkillsRouter {
 
       let score = 0;
       for (const token of tokens) {
-        for (const keyword of rule.keywords) {
-          // Exact match: high score
-          if (keyword === token) {
-            score += 5;
-          }
-          // Keyword contains token (e.g., "transitions" contains "transition")
-          else if (keyword.includes(token) && token.length >= 4) {
-            score += 3;
-          }
-          // Token contains keyword (e.g., "bouncy" contains "bounce")
-          else if (token.includes(keyword) && keyword.length >= 4) {
-            score += 2;
-          }
-          // Partial overlap with edit distance consideration
-          else if (this.fuzzyMatch(token, keyword)) {
-            score += 1;
-          }
-        }
+        score += scoreTokenAgainstKeywords(token, rule.keywords);
       }
 
-      // Add priority as tiebreaker
       if (score > 0) {
         score += rule.priority * 0.1;
         results.push({ rule, score });
       }
     }
 
-    // Sort by score descending
     return results.sort((a, b) => b.score - a.score);
-  }
-
-  /**
-   * Simple fuzzy matching for near-matches
-   */
-  private fuzzyMatch(a: string, b: string): boolean {
-    if (Math.abs(a.length - b.length) > 2) return false;
-    const shorter = a.length < b.length ? a : b;
-    const longer = a.length < b.length ? b : a;
-    
-    // Check if shorter is a substantial substring of longer
-    if (longer.includes(shorter) && shorter.length >= 4) return true;
-    
-    // Check common prefix (at least 4 chars)
-    let commonPrefix = 0;
-    for (let i = 0; i < Math.min(a.length, b.length); i++) {
-      if (a[i] === b[i]) commonPrefix++;
-      else break;
-    }
-    return commonPrefix >= 4;
   }
 
   /**
@@ -361,13 +287,13 @@ export class SkillsRouter {
     sections.push('\n**DO NOT** import from any other packages - they will cause errors.');
 
     const content = sections.join('\n');
-    const estimatedTokens = Math.ceil(content.length / CHARS_PER_TOKEN);
+    const tokenCount = estimateTokens(content);
 
     return {
       content,
       includedSkills,
       allowedPackages: this.index.availablePackages,
-      estimatedTokens
+      estimatedTokens: tokenCount
     };
   }
 

@@ -1,0 +1,97 @@
+{
+  "coreRule": "remotion-components-overview",
+  "coreRuleFile": "SKILL-COMPACT.md",
+  "componentsDir": "../../../../../remotion/remotion-components",
+  "maxComponentRules": 3,
+  "componentRules": [
+    {
+      "id": "animated-text",
+      "file": "rules/animated-text.md",
+      "keywords": [
+        "text", "title", "headline", "caption", "tagline", "typewriter",
+        "typing", "word", "letter", "character", "gradient", "hero",
+        "quote", "subtitle", "stagger", "typography", "heading", "label",
+        "name", "sentence", "paragraph", "reveal", "fade", "blur"
+      ],
+      "priority": 10,
+      "examples": ["rules/assets/animated-text-examples.tsx"],
+      "components": ["AnimatedText", "LayoutGrid", "TextSequence"],
+      "description": "Text animations with 9 presets, stagger, positioning API, and gradient support"
+    },
+    {
+      "id": "mockup-frame",
+      "file": "rules/mockup-frame.md",
+      "keywords": [
+        "mockup", "device", "browser", "iphone", "phone", "mobile",
+        "card", "frame", "screenshot", "app", "interface", "ui",
+        "showcase", "window", "display", "screen", "preview", "demo",
+        "product", "glass", "3d", "rotate"
+      ],
+      "priority": 9,
+      "examples": ["rules/assets/mockup-frame-examples.tsx"],
+      "components": ["MockupFrame", "FrameSequence", "BrowserFrame", "IPhoneFrame", "CardFrame"],
+      "description": "Device mockups with glass effects, glare, and 3D rotation animations"
+    },
+    {
+      "id": "layout",
+      "file": "rules/layout.md",
+      "keywords": [
+        "layout", "container", "grid", "bento", "motion", "entrance",
+        "exit", "wrapper", "group", "stagger", "panel", "card",
+        "box", "section", "arrange", "organize", "dashboard"
+      ],
+      "priority": 9,
+      "examples": ["rules/assets/layout-examples.tsx"],
+      "components": ["MotionContainer", "BentoGrid", "BentoItem"],
+      "description": "Animated layout containers and CSS grid with stagger effects"
+    },
+    {
+      "id": "camera-rig",
+      "file": "rules/camera-rig.md",
+      "keywords": [
+        "camera", "zoom", "pan", "rotate", "dolly", "virtual",
+        "movement", "cinematic", "perspective", "focus", "track",
+        "orbit", "scale", "view", "angle"
+      ],
+      "priority": 8,
+      "components": ["CameraRig"],
+      "description": "Virtual camera for zoom, pan, rotate, and cinematic effects"
+    },
+    {
+      "id": "dynamic-cursor",
+      "file": "rules/dynamic-cursor.md",
+      "keywords": [
+        "cursor", "pointer", "mouse", "click", "path", "follow",
+        "trail", "interaction", "demo", "tutorial", "guide",
+        "highlight", "point", "indicate"
+      ],
+      "priority": 7,
+      "components": ["DynamicCursor", "CursorPath"],
+      "description": "Animated cursor with variants and path following for demos"
+    },
+    {
+      "id": "background-rig",
+      "file": "rules/background-rig.md",
+      "keywords": [
+        "background", "gradient", "mesh", "blob", "grid", "pattern",
+        "ambient", "scene", "backdrop", "bg", "fill", "noise",
+        "dots", "lines", "abstract"
+      ],
+      "priority": 7,
+      "components": ["BackgroundRig"],
+      "description": "Animated backgrounds - mesh gradients, grids, blobs, patterns"
+    },
+    {
+      "id": "component-transitions",
+      "file": "rules/transitions.md",
+      "keywords": [
+        "iris", "wipe", "circular", "reveal", "scene", "cut",
+        "transition", "switch", "change", "morph", "between"
+      ],
+      "priority": 8,
+      "components": ["IrisTransition", "TransitionSeries"],
+      "description": "Scene transitions - iris wipe and transition series"
+    }
+  ],
+  "generatedComponentsFile": "generated-registry.json"
+}

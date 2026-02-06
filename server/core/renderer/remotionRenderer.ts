@@ -3,6 +3,24 @@ import { renderMedia, selectComposition } from '@remotion/renderer';
 import path from 'path';
 import fs from 'fs/promises';
 import { VideoConfig } from '../agent/types';
+import type { WebpackOverrideFn } from '@remotion/bundler';
+
+/**
+ * Webpack override that resolves @/components to the actual components directory.
+ * This is needed so AI-generated code using `import { X } from '@/components/Y'` works.
+ */
+const webpackOverride: WebpackOverrideFn = (currentConfiguration) => {
+    return {
+        ...currentConfiguration,
+        resolve: {
+            ...currentConfiguration.resolve,
+            alias: {
+                ...(currentConfiguration.resolve?.alias ?? {}),
+                '@/components': path.resolve(process.cwd(), 'remotion', 'src', 'components'),
+            },
+        },
+    };
+};
 
 /**
  * Result of rendering a scene preview
@@ -37,6 +55,7 @@ export class RemotionRenderer {
         console.log('[RemotionRenderer] Bundling Remotion project...');
         const bundled = await bundle({
             entryPoint,
+            webpackOverride,
             onProgress: (progress) => {
                 if (onProgress) {
                     onProgress(progress);
@@ -104,6 +123,7 @@ export class RemotionRenderer {
             // Bundle from the scene preview entry point (not the main Root.tsx)
             const bundled = await bundle({
                 entryPoint: previewEntryPoint,
+                webpackOverride,
                 onProgress: (progress) => {
                     onProgress(progress * 0.3);
                 },
