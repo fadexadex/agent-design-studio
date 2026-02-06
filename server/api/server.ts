@@ -11,6 +11,7 @@ import {
     editorRoutes,
     scriptRoutes,
     videoRoutes,
+    uploadRoutes,
     utilityRoutes,
     orchestratorMap,
     initEditorRoutes
@@ -39,6 +40,7 @@ export const createApp = (): express.Application => {
     app.use('/api/editor', initEditorRoutes(orchestratorMap));
     app.use('/api/script', scriptRoutes);
     app.use('/api/video', videoRoutes);
+    app.use('/api/upload', uploadRoutes);
 
     // === Legacy Routes (backward compatibility) ===
     // These match the old API endpoints the frontend expects

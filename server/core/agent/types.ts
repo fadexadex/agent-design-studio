@@ -5,6 +5,11 @@ export interface BrandContext {
     industry: string;
     colors: string[];
     logoBase64?: string;
+    /**
+     * Path to the logo file in the Remotion public folder (e.g., "uploads/logo-abc123.png").
+     * Use this with staticFile() in Remotion compositions: <Img src={staticFile("uploads/logo-abc123.png")} />
+     */
+    logoPath?: string;
     tagline: string;
 }
 

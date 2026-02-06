@@ -525,6 +525,7 @@ export class ImplementationPhase extends BasePhase {
   /**
    * Build the prompt for generating a scene file.
    * Uses a proven template structure with explicit examples for high success rate.
+   * Includes pre-built component library documentation to encourage reuse.
    */
   private buildScenePrompt(
     state: WorkflowState,
@@ -535,27 +536,101 @@ export class ImplementationPhase extends BasePhase {
     const fps = 30;
     const durationSeconds = Math.round(frameCount / fps * 10) / 10;
 
-    // Provide a working example to ensure consistent output
-    const exampleCode = `import React from 'react';
+    // Provide a working example - include logo if available
+    const hasLogo = !!state.brand.logoPath;
+    
+    // Component library documentation - teach the AI about pre-built components
+    const componentLibraryDocs = this.getComponentLibraryDocs();
+    
+    // Example using components (preferred approach)
+    const componentExampleCode = hasLogo 
+      ? `import React from 'react';
+import { AbsoluteFill, Img, staticFile } from 'remotion';
+import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
+import { BackgroundRig } from '@/components/Global';
+
+export const Scene1: React.FC = () => {
+  return (
+    <AbsoluteFill>
+      {/* Animated background */}
+      <BackgroundRig type="gradient-mesh" colors={['#000000', '#1a1a2e']} />
+      
+      <LayoutGrid anchor="center" direction="column" gap={30}>
+        {/* Brand Logo */}
+        <Img 
+          src={staticFile("${state.brand.logoPath}")}
+          style={{ width: 150, height: 'auto' }}
+        />
+        
+        {/* Brand Name - animated text with preset */}
+        <AnimatedText 
+          text="Brand Name"
+          preset="fadeBlurIn"
+          fontSize={72}
+          fontWeight={700}
+          color="#FFFFFF"
+        />
+        
+        {/* Tagline - staggered entrance */}
+        <AnimatedText 
+          text="Your tagline here"
+          preset="slideInUp"
+          delay={20}
+          fontSize={28}
+          color="#CCCCCC"
+        />
+      </LayoutGrid>
+    </AbsoluteFill>
+  );
+};`
+      : `import React from 'react';
+import { AbsoluteFill } from 'remotion';
+import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
+import { BackgroundRig } from '@/components/Global';
+
+export const Scene1: React.FC = () => {
+  return (
+    <AbsoluteFill>
+      {/* Animated background */}
+      <BackgroundRig type="gradient-mesh" colors={['#000000', '#1a1a2e']} />
+      
+      <LayoutGrid anchor="center" direction="column" gap={30}>
+        {/* Brand Name - animated text with preset */}
+        <AnimatedText 
+          text="Brand Name"
+          preset="fadeBlurIn"
+          fontSize={72}
+          fontWeight={700}
+          color="#FFFFFF"
+        />
+        
+        {/* Tagline - staggered entrance */}
+        <AnimatedText 
+          text="Your tagline here"
+          preset="slideInUp"
+          delay={20}
+          fontSize={28}
+          color="#CCCCCC"
+        />
+      </LayoutGrid>
+    </AbsoluteFill>
+  );
+};`;
+
+    // Alternative raw Remotion example (for custom effects)
+    const rawExampleCode = `import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
 
 export const Scene1: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Animation values
   const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
   const scale = spring({ frame, fps, config: { damping: 15, stiffness: 100 } });
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' }}>
-      <div style={{
-        opacity,
-        transform: \`scale(\${scale})\`,
-        color: '#FFFFFF',
-        fontSize: 64,
-        fontWeight: 'bold',
-      }}>
+      <div style={{ opacity, transform: \`scale(\${scale})\`, color: '#FFFFFF', fontSize: 64 }}>
         Brand Name
       </div>
     </AbsoluteFill>
@@ -578,24 +653,38 @@ Create Scene${scene.sceneNumber}.tsx - a self-contained Remotion scene component
 - **Tagline**: "${state.brand.tagline || ''}"
 - **Primary Color**: ${state.brand.colors[0] || '#000000'}
 - **Secondary Color**: ${state.brand.colors[1] || '#FFFFFF'}
+${state.brand.logoPath ? `- **Logo**: Available at "${state.brand.logoPath}" - USE staticFile("${state.brand.logoPath}") with <Img> component from 'remotion'` : '- **Logo**: Not provided'}
 
 ## STYLE: ${state.config.style.toUpperCase()}
 ${this.getStyleGuidelines(state.config.style)}
 
-## WORKING EXAMPLE (follow this structure exactly)
+${componentLibraryDocs}
+
+## EXAMPLE: USING COMPONENT LIBRARY (PREFERRED)
 \`\`\`tsx
-${exampleCode}
+${componentExampleCode}
+\`\`\`
+
+## EXAMPLE: RAW REMOTION CODE (for custom effects only)
+\`\`\`tsx
+${rawExampleCode}
 \`\`\`
 
 ## REQUIREMENTS (MUST FOLLOW)
 1. Start with: import React from 'react';
-2. Import from 'remotion': AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring
-3. Export as: export const Scene${scene.sceneNumber}: React.FC = () => { ... }
-4. Use useCurrentFrame() for frame-based animations (0 to ${frameCount - 1})
-5. Use interpolate() with extrapolateRight: 'clamp' for smooth animations
-6. Use spring() for physics-based motion
-7. AbsoluteFill as root with backgroundColor set
-8. Hardcode brand colors: primary="${state.brand.colors[0] || '#000000'}", secondary="${state.brand.colors[1] || '#FFFFFF'}"
+2. **Component library imports** (when using components):
+   - \`import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';\`
+   - \`import { BackgroundRig } from '@/components/Global';\`
+   - \`import { MotionContainer } from '@/components/Layout';\`
+   - \`import { CameraRig } from '@/components/Camera';\`
+   - \`import { MockupFrame } from '@/components/MockupFrame';\`
+3. Use raw Remotion (interpolate, spring) for custom effects not covered by components
+4. Export as: export const Scene${scene.sceneNumber}: React.FC = () => { ... }
+5. For frame-based custom animations, use useCurrentFrame() (0 to ${frameCount - 1})
+6. Always use extrapolateRight: 'clamp' with interpolate()
+7. AbsoluteFill as root element
+8. Use brand colors: primary="${state.brand.colors[0] || '#000000'}", secondary="${state.brand.colors[1] || '#FFFFFF'}"${state.brand.logoPath ? `
+9. LOGO: Use <Img src={staticFile("${state.brand.logoPath}")} /> from 'remotion'` : ''}
 ${errorContext ? `\n## PREVIOUS ERRORS TO AVOID\n${errorContext}` : ''}
 
 ## OUTPUT
@@ -604,84 +693,218 @@ The code must compile without errors.`;
   }
 
   /**
+   * Get component library documentation for the AI prompt.
+   * Provides the full catalog so the AI can evaluate and select components
+   * that fit its creative vision.
+   */
+  private getComponentLibraryDocs(): string {
+    return `## COMPONENT LIBRARY
+
+You have access to a pre-built component library. **Review these components and use the ones that help achieve your creative vision.** Use raw Remotion code when you need effects not covered here.
+
+### Available Components & Import Paths
+
+| Component | Import | What It Does |
+|-----------|--------|--------------|
+| **AnimatedText** | \`@/components/AnimatedText\` | Text with 9 animation presets, word/character stagger, positioning |
+| **LayoutGrid** | \`@/components/AnimatedText\` | Flexbox layout for grouping/centering elements |
+| **TextSequence** | \`@/components/AnimatedText\` | Sequential text animations (chain mode) |
+| **BackgroundRig** | \`@/components/Global\` | Animated backgrounds: gradient-mesh, grid-lines, blobs |
+| **MotionContainer** | \`@/components/Layout\` | Animation wrapper with entrance/exit states |
+| **BentoGrid** | \`@/components/Layout\` | Animated CSS grid with stagger |
+| **CameraRig** | \`@/components/Camera\` | Virtual camera: zoom, pan, rotate |
+| **MockupFrame** | \`@/components/MockupFrame\` | Device mockups: browser, iphone15, card |
+| **DynamicCursor** | \`@/components/DynamicCursor\` | Animated cursor for UI demos |
+| **IrisTransition** | \`@/components/Transitions\` | Circular wipe transition |
+
+### AnimatedText - Text Animations
+\`\`\`tsx
+import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
+
+// Simple headline with blur-fade
+<AnimatedText text="Welcome" preset="fadeBlurIn" fontSize={72} anchor="center" />
+
+// Word-by-word animation
+<AnimatedText 
+  text="Each word animates" 
+  preset="slideInUp" 
+  animationUnit="word" 
+  stagger={5} 
+/>
+
+// Typewriter effect
+<AnimatedText text="Typing..." preset="typewriter" />
+
+// Grouped text with layout
+<LayoutGrid anchor="center" direction="column" gap={20}>
+  <AnimatedText text="Title" preset="fadeBlurIn" fontSize={64} />
+  <AnimatedText text="Subtitle" preset="fadeBlurIn" delay={15} fontSize={32} />
+</LayoutGrid>
+\`\`\`
+
+**Presets:** fadeBlurIn, slideInUp, slideInDown, slideInLeft, slideInRight, scaleUp, typewriter, glitchReveal, maskSlideUp
+
+**Key Props:** text, preset, delay, fontSize, fontWeight, color, anchor, animationUnit (full/word/character), stagger, exitPreset, exitStartFrame
+
+### BackgroundRig - Animated Backgrounds
+\`\`\`tsx
+import { BackgroundRig } from '@/components/Global';
+
+// Gradient mesh with brand colors
+<BackgroundRig type="gradient-mesh" colors={['#1a1a2e', '#16213e']} speed={0.5} />
+
+// Grid lines
+<BackgroundRig type="grid-lines" variant="dark" opacity={0.3} />
+
+// Organic blobs
+<BackgroundRig type="blobs" colors={['#ff6b6b', '#4ecdc4']} />
+\`\`\`
+
+**Types:** gradient-mesh, grid-lines, blobs, solid
+**Key Props:** type, colors, variant (dark/light/brand), speed, opacity, animate
+
+### MotionContainer - Animation Wrapper
+\`\`\`tsx
+import { MotionContainer } from '@/components/Layout';
+
+// Slide up entrance
+<MotionContainer initial="below" delay={10} duration={25}>
+  <YourContent />
+</MotionContainer>
+
+// With exit animation
+<MotionContainer initial="scale-down" exit="fade-out" exitStartFrame={120}>
+  <Card />
+</MotionContainer>
+\`\`\`
+
+**Initial States:** hidden, above, below, left, right, scale-down, scale-up
+**Exit States:** fade-out, scale-down, above, below, left, right
+
+### CameraRig - Virtual Camera
+\`\`\`tsx
+import { CameraRig } from '@/components/Camera';
+
+const zoom = interpolate(frame, [0, 60], [1, 1.5], { extrapolateRight: 'clamp' });
+<CameraRig zoom={zoom}>
+  <YourScene />
+</CameraRig>
+\`\`\`
+
+**Key Props:** zoom, x, y, rotation, focusPoint
+
+### MockupFrame - Device Mockups
+\`\`\`tsx
+import { MockupFrame } from '@/components/MockupFrame';
+
+// Browser window
+<MockupFrame type="browser" src="/screenshot.png" preset="springIn" glass />
+
+// iPhone
+<MockupFrame type="iphone15" src="/app.png" rotate={{ startAngle: { y: -20 }, endAngle: { y: 0 } }} />
+\`\`\`
+
+**Types:** browser, iphone15, iphone-notch, card, plain
+**Key Props:** type, src, preset, glass, glare, rotate, theme
+
+### Decision Guide
+- **Text animations**: AnimatedText handles most text needs with presets
+- **Backgrounds**: BackgroundRig for gradient/pattern backgrounds
+- **Layout/centering**: LayoutGrid for positioning, MotionContainer for entrance/exit
+- **Camera effects**: CameraRig for zoom/pan on any content
+- **Device frames**: MockupFrame for showing screenshots/apps
+- **Custom effects**: Use raw interpolate()/spring() when components don't cover your need`;
+  }
+
+  /**
    * Generate a fallback scene when AI generation fails.
    * This ensures the workflow can continue even if the AI doesn't cooperate.
+   * Uses the component library for consistent, polished output.
    */
   private generateFallbackScene(state: WorkflowState, scene: SceneDescription): string {
     const frameCount = scene.frameRange.end - scene.frameRange.start + 1;
     const primaryColor = state.brand.colors[0] || '#000000';
     const secondaryColor = state.brand.colors[1] || '#FFFFFF';
+    const brandName = state.brand.name || 'Brand';
+    const tagline = state.brand.tagline || '';
+
+    // Choose background variant based on scene number for variety
+    const bgVariants = ['gradient-mesh', 'grid-lines', 'blobs'] as const;
+    const bgVariant = bgVariants[(scene.sceneNumber - 1) % bgVariants.length];
+
+    // Choose text animation preset based on scene number for variety
+    const textPresets = ['fade-up', 'scale-in', 'blur-in', 'slide-right'] as const;
+    const textPreset = textPresets[(scene.sceneNumber - 1) % textPresets.length];
 
     return `import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion';
+import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
+import { BackgroundRig } from '@/components/Global';
 
 export const Scene${scene.sceneNumber}: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const totalFrames = ${frameCount};
 
-  // Smooth fade in
-  const opacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
-
-  // Scale animation with spring physics
-  const scale = spring({
-    frame,
-    fps,
-    config: { damping: 12, stiffness: 80 },
-  });
-
-  // Slide in from bottom
-  const translateY = interpolate(
-    frame,
-    [0, 30],
-    [50, 0],
-    { extrapolateRight: 'clamp' }
-  );
-
-  // Fade out at the end
+  // Fade out at the end of the scene
   const fadeOut = interpolate(
     frame,
-    [${frameCount - 30}, ${frameCount}],
+    [totalFrames - 30, totalFrames],
     [1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
 
   return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: '${primaryColor}',
-        justifyContent: 'center',
-        alignItems: 'center',
-        opacity: opacity * fadeOut,
-      }}
-    >
-      <div
+    <AbsoluteFill style={{ opacity: fadeOut }}>
+      {/* Animated background using component library */}
+      <BackgroundRig
+        variant="${bgVariant}"
+        colors={['${primaryColor}', '${secondaryColor}']}
+        speed={0.5}
+      />
+
+      {/* Centered content layout */}
+      <LayoutGrid
+        columns={1}
+        rows={${tagline ? 2 : 1}}
+        gap={24}
         style={{
-          transform: \`scale(\${scale}) translateY(\${translateY}px)\`,
-          textAlign: 'center',
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 40,
         }}
       >
-        <div
+        {/* Brand name with animation */}
+        <AnimatedText
+          text="${brandName}"
+          preset="${textPreset}"
+          startFrame={5}
           style={{
             color: '${secondaryColor}',
-            fontSize: Math.min(width, height) * 0.08,
+            fontSize: 72,
             fontWeight: 'bold',
-            marginBottom: 20,
+            textAlign: 'center',
             fontFamily: 'system-ui, sans-serif',
           }}
-        >
-          ${state.brand.name}
-        </div>
-        <div
+        />${tagline ? `
+
+        {/* Tagline with staggered animation */}
+        <AnimatedText
+          text="${tagline}"
+          preset="fade-up"
+          startFrame={20}
           style={{
             color: '${secondaryColor}',
-            fontSize: Math.min(width, height) * 0.03,
-            opacity: 0.8,
+            fontSize: 28,
+            opacity: 0.85,
+            textAlign: 'center',
             fontFamily: 'system-ui, sans-serif',
           }}
-        >
-          Scene ${scene.sceneNumber}
-        </div>
-      </div>
+        />` : ''}
+      </LayoutGrid>
     </AbsoluteFill>
   );
 };

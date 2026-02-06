@@ -2,7 +2,7 @@
 name: assets
 description: Importing images, videos, audio, and fonts into Remotion
 metadata:
-  tags: assets, staticFile, images, fonts, public
+  tags: assets, staticFile, images, fonts, public, uploads, logo
 ---
 
 # Importing assets in Remotion
@@ -10,6 +10,17 @@ metadata:
 ## The public folder
 
 Place assets in the `public/` folder at your project root.
+
+```
+remotion/
+├─ public/
+│  ├─ logo.png
+│  ├─ uploads/           <- Uploaded brand assets (logos, images)
+│  │  └─ logo-abc123.png
+│  ├─ fonts/
+│  └─ videos/
+├─ src/
+```
 
 ## Using staticFile()
 
@@ -25,6 +36,20 @@ export const MyComposition = () => {
 
 The function returns an encoded URL that works correctly when deploying to subdirectories.
 
+## Using uploaded brand assets
+
+Brand assets (like logos) are uploaded to `public/uploads/` with unique filenames.
+The path provided includes the `uploads/` folder:
+
+```tsx
+import {Img, staticFile} from 'remotion';
+
+// If the brand context provides logoPath = "uploads/logo-abc123.png"
+export const BrandLogo: React.FC = () => {
+  return <Img src={staticFile("uploads/logo-abc123.png")} />;
+};
+```
+
 ## Using with components
 
 **Images:**
@@ -33,6 +58,7 @@ The function returns an encoded URL that works correctly when deploying to subdi
 import {Img, staticFile} from 'remotion';
 
 <Img src={staticFile('photo.png')} />;
+<Img src={staticFile('uploads/logo-abc123.png')} />; // Uploaded asset
 ```
 
 **Videos:**
@@ -76,3 +102,4 @@ Remote URLs can be used directly without `staticFile()`:
 
 - Remotion components (`<Img>`, `<Video>`, `<Audio>`) ensure assets are fully loaded before rendering
 - Special characters in filenames (`#`, `?`, `&`) are automatically encoded
+- Uploaded assets are in the `uploads/` subfolder - always include this in the path

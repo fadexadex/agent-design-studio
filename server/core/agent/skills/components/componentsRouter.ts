@@ -502,6 +502,61 @@ export class ComponentsRouter {
       (c) => c.toLowerCase() === componentName.toLowerCase()
     );
   }
+
+  /**
+   * Get the full component catalog for model-driven selection.
+   * 
+   * Unlike getContextForPrompt() which uses keyword matching, this method
+   * loads the comprehensive COMPONENT-CATALOG.md which contains all component
+   * documentation in a format optimized for AI decision-making.
+   * 
+   * The model reads the entire catalog and decides which components
+   * are useful for its creative vision, rather than relying on pattern matching.
+   */
+  async getFullCatalog(): Promise<ComponentsContext> {
+    await this.initialize();
+
+    // Try to load the comprehensive catalog
+    const componentsDir = path.resolve(
+      this.skillsDir,
+      "components",
+      this.index.componentsDir
+    );
+    const catalogPath = path.join(componentsDir, "COMPONENT-CATALOG.md");
+    
+    let catalogContent = "";
+    try {
+      catalogContent = await fs.promises.readFile(catalogPath, "utf-8");
+      catalogContent = stripFrontmatter(catalogContent);
+    } catch {
+      // Fallback to overview if catalog doesn't exist
+      console.warn("[ComponentsRouter] COMPONENT-CATALOG.md not found, using overview");
+      catalogContent = this.overviewContent;
+    }
+
+    // Collect all component names for reference
+    const allComponents = this.getAllComponents();
+
+    const sections: string[] = [];
+    sections.push("=".repeat(60));
+    sections.push("COMPONENT LIBRARY - EVALUATE AND USE AS NEEDED");
+    sections.push("=".repeat(60));
+    sections.push("");
+    sections.push(catalogContent);
+
+    const fullContent = sections.join("\n");
+    const tokenCount = estimateTokens(fullContent);
+
+    console.log(`[ComponentsRouter] Full catalog loaded (~${tokenCount} tokens, ${allComponents.length} components)`);
+
+    return {
+      overview: catalogContent,
+      relevantDocs: fullContent,
+      matchedComponents: allComponents, // All components are "available" for model to choose
+      includedRules: this.index.componentRules.map(r => r.id),
+      estimatedTokens: tokenCount,
+    };
+  }
 }
 
 // ============================================

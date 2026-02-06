@@ -15,6 +15,8 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
     colors: ['#000000', '#FFFFFF'],
     tagline: '',
   });
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
 
   const [config, setConfig] = useState<VideoConfig>({
     style: 'minimalist',
@@ -39,15 +41,50 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
     { id: 5, title: 'Script', icon: <FileText size={18} /> },
   ];
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBrand(prev => ({ ...prev, logoBase64: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    
+    setIsUploadingLogo(true);
+    setLogoUploadError(null);
+    
+    // First, read the file as base64 for preview
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Data = reader.result as string;
+      
+      // Update preview immediately
+      setBrand(prev => ({ ...prev, logoBase64: base64Data }));
+      
+      try {
+        // Upload to server to save in remotion/public/uploads
+        const response = await fetch('/api/upload/logo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base64: base64Data,
+            originalName: file.name
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.logoPath) {
+          // Store the path for use with staticFile() in Remotion
+          setBrand(prev => ({ ...prev, logoPath: result.logoPath }));
+          console.log('[BrandWizard] Logo uploaded to:', result.logoPath);
+        } else {
+          throw new Error(result.error || 'Failed to upload logo');
+        }
+      } catch (error: any) {
+        console.error('[BrandWizard] Logo upload error:', error);
+        setLogoUploadError(error.message || 'Failed to upload logo to server');
+        // Keep the base64 preview but note that the server path failed
+      } finally {
+        setIsUploadingLogo(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const nextStep = () => setStep(s => Math.min(s + 1, steps.length));
@@ -227,10 +264,28 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
                     onChange={handleLogoUpload}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                     accept="image/*"
+                    disabled={isUploadingLogo}
                   />
-                  <div className="h-40 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-3 group-hover:border-zinc-500 transition-colors bg-zinc-900/50">
-                    {brand.logoBase64 ? (
-                      <img src={brand.logoBase64} alt="Preview" className="h-20 object-contain" />
+                  <div className={`h-40 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 transition-colors bg-zinc-900/50 ${
+                    logoUploadError ? 'border-red-500/50' : 
+                    brand.logoPath ? 'border-green-500/50' : 
+                    'border-zinc-800 group-hover:border-zinc-500'
+                  }`}>
+                    {isUploadingLogo ? (
+                      <>
+                        <Loader2 className="text-zinc-400 animate-spin" />
+                        <span className="text-sm text-zinc-400">Uploading...</span>
+                      </>
+                    ) : brand.logoBase64 ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <img src={brand.logoBase64} alt="Preview" className="h-16 object-contain" />
+                        {brand.logoPath && (
+                          <span className="text-xs text-green-400">Ready for video</span>
+                        )}
+                        {logoUploadError && (
+                          <span className="text-xs text-red-400">{logoUploadError}</span>
+                        )}
+                      </div>
                     ) : (
                       <>
                         <Upload className="text-zinc-500" />
@@ -239,6 +294,11 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
                     )}
                   </div>
                 </div>
+                {brand.logoPath && (
+                  <p className="text-xs text-zinc-600">
+                    Path: <code className="bg-zinc-800 px-1 rounded">{brand.logoPath}</code>
+                  </p>
+                )}
               </div>
               <div className="space-y-4">
                 <label className="text-xs uppercase tracking-widest text-zinc-500 font-semibold block">Brand Palette</label>

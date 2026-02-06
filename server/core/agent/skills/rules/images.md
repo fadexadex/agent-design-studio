@@ -2,7 +2,7 @@
 name: images
 description: Embedding images in Remotion using the <Img> component
 metadata:
-  tags: images, img, staticFile, png, jpg, svg, webp
+  tags: images, img, staticFile, png, jpg, svg, webp, logo, brand, uploads
 ---
 
 # Using images in Remotion
@@ -37,6 +37,8 @@ Place images in the `public/` folder and use `staticFile()` to reference them:
 my-video/
 ├─ public/
 │  ├─ logo.png
+│  ├─ uploads/           <- Uploaded brand assets go here
+│  │  └─ logo-abc123.png
 │  ├─ avatar.jpg
 │  └─ icon.svg
 ├─ src/
@@ -47,6 +49,37 @@ my-video/
 import { Img, staticFile } from "remotion";
 
 <Img src={staticFile("logo.png")} />
+```
+
+## Using uploaded brand assets
+
+When a brand logo is uploaded, it's saved to `public/uploads/` with a unique filename.
+The path is provided in the brand context (e.g., `uploads/logo-abc123.png`).
+
+**IMPORTANT:** Use the exact path provided - it includes the `uploads/` folder:
+
+```tsx
+import { Img, staticFile } from "remotion";
+
+// If logoPath is "uploads/logo-abc123.png"
+export const BrandScene: React.FC<{ logoPath: string }> = ({ logoPath }) => {
+  return (
+    <Img 
+      src={staticFile(logoPath)} 
+      style={{ width: 200, height: 'auto' }}
+    />
+  );
+};
+
+// Or with hardcoded path from brand context
+export const Scene1: React.FC = () => {
+  return (
+    <Img 
+      src={staticFile("uploads/logo-abc123.png")} 
+      style={{ width: 200, height: 'auto' }}
+    />
+  );
+};
 ```
 
 ## Remote images
@@ -96,6 +129,9 @@ const frame = useCurrentFrame();
 
 // Conditional images
 <Img src={staticFile(`icons/${isActive ? "active" : "inactive"}.svg`)} />
+
+// Using brand logo path from props
+<Img src={staticFile(props.logoPath)} />
 ```
 
 This pattern is useful for:
@@ -104,6 +140,35 @@ This pattern is useful for:
 - User-specific avatars or profile images
 - Theme-based icons
 - State-dependent graphics
+- Brand logos from uploaded assets
+
+## Animating images
+
+Combine with Remotion's animation helpers for animated logos:
+
+```tsx
+import { Img, staticFile, useCurrentFrame, interpolate, spring, useVideoConfig } from "remotion";
+
+export const AnimatedLogo: React.FC<{ logoPath: string }> = ({ logoPath }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  
+  const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+  const scale = spring({ frame, fps, config: { damping: 12, stiffness: 80 } });
+  
+  return (
+    <Img 
+      src={staticFile(logoPath)}
+      style={{
+        width: 200,
+        height: 'auto',
+        opacity,
+        transform: `scale(${scale})`,
+      }}
+    />
+  );
+};
+```
 
 ## Getting image dimensions
 

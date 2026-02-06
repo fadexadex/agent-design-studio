@@ -6,6 +6,7 @@
  * - Editor routes
  * - Script routes
  * - Video routes
+ * - Upload routes (for media assets used in Remotion compositions)
  * - Utility routes
  */
 
@@ -13,4 +14,5 @@ export { default as workflowRoutes, orchestratorMap } from './workflow.routes';
 export { default as editorRoutes, initEditorRoutes } from './editor.routes';
 export { default as scriptRoutes } from './script.routes';
 export { default as videoRoutes } from './video.routes';
+export { default as uploadRoutes } from './upload.routes';
 export { default as utilityRoutes } from './utility.routes';

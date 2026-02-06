@@ -11,7 +11,8 @@
         "text", "title", "headline", "caption", "tagline", "typewriter",
         "typing", "word", "letter", "character", "gradient", "hero",
         "quote", "subtitle", "stagger", "typography", "heading", "label",
-        "name", "sentence", "paragraph", "reveal", "fade", "blur"
+        "name", "sentence", "paragraph", "reveal", "fade", "blur",
+        "brand", "logo", "intro", "outro", "slogan", "message", "announce"
       ],
       "priority": 10,
       "examples": ["rules/assets/animated-text-examples.tsx"],
@@ -38,7 +39,8 @@
       "keywords": [
         "layout", "container", "grid", "bento", "motion", "entrance",
         "exit", "wrapper", "group", "stagger", "panel", "card",
-        "box", "section", "arrange", "organize", "dashboard"
+        "box", "section", "arrange", "organize", "dashboard",
+        "center", "align", "position", "stack", "flex"
       ],
       "priority": 9,
       "examples": ["rules/assets/layout-examples.tsx"],
@@ -75,7 +77,8 @@
       "keywords": [
         "background", "gradient", "mesh", "blob", "grid", "pattern",
         "ambient", "scene", "backdrop", "bg", "fill", "noise",
-        "dots", "lines", "abstract"
+        "dots", "lines", "abstract", "brand", "intro", "outro",
+        "corporate", "professional", "elegant", "modern"
       ],
       "priority": 7,
       "components": ["BackgroundRig"],
@@ -86,7 +89,8 @@
       "file": "rules/transitions.md",
       "keywords": [
         "iris", "wipe", "circular", "reveal", "scene", "cut",
-        "transition", "switch", "change", "morph", "between"
+        "transition", "switch", "change", "morph", "between",
+        "intro", "outro", "sequence", "flow", "segment"
       ],
       "priority": 8,
       "components": ["IrisTransition", "TransitionSeries"],

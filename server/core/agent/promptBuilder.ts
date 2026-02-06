@@ -69,25 +69,27 @@ async function getSkillsContext(prompt: string, style: string): Promise<SkillsCo
 
 /**
  * Get components context for the given prompt and style.
- * Uses caching to avoid redundant computation.
+ * 
+ * Uses model-driven selection: the AI receives the full component catalog
+ * and decides which components are useful for its creative vision,
+ * rather than relying on keyword pattern matching.
  */
 async function getComponentsContext(prompt: string, style: string): Promise<ComponentsContext> {
-  const cacheKey = `components:${prompt}:${style}`;
+  // Cache key is just "fullcatalog" since we're not filtering by prompt
+  const cacheKey = `components:fullcatalog`;
   
   if (cachedComponentsContext && cachedComponentsKey === cacheKey) {
     return cachedComponentsContext;
   }
 
   const router = getComponentsRouter();
-  const context = await router.getContextForPrompt(prompt, style, {
-    maxTokens: 4000,
-    maxRules: 3
-  });
+  // Use full catalog for model-driven selection instead of keyword matching
+  const context = await router.getFullCatalog();
 
   cachedComponentsContext = context;
   cachedComponentsKey = cacheKey;
 
-  console.log(`[PromptBuilder] Components context: ${context.matchedComponents.join(', ')} (~${context.estimatedTokens} tokens)`);
+  console.log(`[PromptBuilder] Components catalog: ${context.matchedComponents.length} components available (~${context.estimatedTokens} tokens)`);
   
   return context;
 }
@@ -122,10 +124,7 @@ ${componentsContext.relevantDocs}
 ## YOUR TASK
 Create a React component that renders an animated brand video using Remotion.
 
-**IMPORTANT**: Check if the Component Library above has components that can achieve the effects you need.
-${componentsContext.matchedComponents.length > 0 
-  ? `For this request, consider using: **${componentsContext.matchedComponents.join(', ')}**` 
-  : 'Use raw Remotion code if no component fits the need.'}
+**COMPONENT SELECTION**: Review the Component Library above and decide which components (if any) help achieve your creative vision. Use components when they fit naturally, use raw Remotion code when you need custom effects.
 
 ## BRAND INFORMATION
 - Company: "${brand.name}"
@@ -201,13 +200,11 @@ export default function BrandVideo() {
    - Large typography (fontSize: 48-80px)
    - Animated entrance matching ${config.style}
    - Color: '${brand.colors[1] || '#ffffff'}' on '${brand.colors[0] || '#000000'}' background
-   ${componentsContext.matchedComponents.includes('AnimatedText') ? '- **USE AnimatedText component** with appropriate preset' : ''}
 
 3. **Tagline (frames 60-120)**: Show "${brand.tagline}":
    - Smaller text (fontSize: 20-32px)
    - Staggered entrance after brand name
    - letterSpacing for elegance
-   ${componentsContext.matchedComponents.includes('AnimatedText') ? '- **USE AnimatedText** with stagger or delayed blur/opacity' : ''}
 
 4. **Closing (frames 100-150)**: Memorable outro with all elements converging.
 
