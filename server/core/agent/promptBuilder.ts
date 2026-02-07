@@ -209,6 +209,17 @@ export default function BrandVideo() {
 
 4. **Closing (frames 100-150)**: Memorable outro with all elements converging.
 
+## AVAILABLE FONTS (Pre-loaded - use by name)
+Use these fonts directly in fontFamily props - they are globally pre-loaded:
+
+**Sans-serif (clean, modern):** "DM Sans", "Inter", "Roboto", "Montserrat", "Poppins", "Space Grotesk", "Sora", "Manrope"
+**Display (bold headlines):** "Oswald", "Bebas Neue"
+**Serif (elegant):** "Instrument Serif", "Playfair Display", "Lora"
+**Mono (technical):** "Roboto Mono"
+
+Example: \`<AnimatedText text="Hello" fontFamily="Bebas Neue" />\` or \`style={{ fontFamily: "DM Sans" }}\`
+DO NOT import from @remotion/google-fonts - fonts are already loaded globally.
+
 ## CRITICAL RULES (Follow the MANDATORY RULES from skills above!)
 - Use inline styles only (style={{ }})
 - NO CSS animations or Tailwind animate-* classes
@@ -286,6 +297,7 @@ export default function BrandVideo() {
 5. Have 150 frames of animation (5 seconds at 30fps)
 6. Follow ALL the MANDATORY RULES from the skills reference above
 7. **PREFER components** from the library when fixing - they handle animations correctly
+8. Use pre-loaded fonts: "DM Sans", "Inter", "Roboto", "Montserrat", "Poppins", "Space Grotesk", "Sora", "Manrope", "Oswald", "Bebas Neue", "Instrument Serif", "Playfair Display", "Lora", "Roboto Mono"
 
 ## OUTPUT
 Return ONLY the corrected TSX code in a single code block. No explanations.`;

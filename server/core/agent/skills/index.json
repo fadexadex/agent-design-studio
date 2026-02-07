@@ -10,6 +10,7 @@
     "@remotion/transitions",
     "@remotion/shapes",
     "@remotion/media",
+    "@remotion/google-fonts",
     "@/components",
     "@/components/AnimatedText",
     "@/components/MockupFrame",
@@ -17,7 +18,8 @@
     "@/components/Layout",
     "@/components/DynamicCursor",
     "@/components/Global",
-    "@/components/Transitions"
+    "@/components/Transitions",
+    "@/styles/fonts"
   ],
   "maxFeatureRules": 5,
   "featureRules": [
@@ -86,11 +88,14 @@
       "file": "rules/fonts.md",
       "keywords": [
         "font", "google", "custom", "load", "family", "weight",
-        "typography", "text", "inter", "roboto", "montserrat",
-        "poppins", "bold", "italic"
+        "typography", "text", "bold", "italic",
+        "inter", "roboto", "montserrat", "poppins", "oswald",
+        "dm sans", "space grotesk", "sora", "manrope",
+        "bebas neue", "playfair display", "instrument serif", "lora",
+        "roboto mono", "sans-serif", "serif", "monospace", "headline"
       ],
       "priority": 7,
-      "description": "Loading Google Fonts and custom fonts"
+      "description": "Pre-loaded Google Fonts available for motion design"
     },
     {
       "id": "images",

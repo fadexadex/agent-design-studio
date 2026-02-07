@@ -1,152 +1,153 @@
 ---
 name: fonts
-description: Loading Google Fonts and local fonts in Remotion
+description: Pre-loaded Google Fonts available for motion design
 metadata:
-  tags: fonts, google-fonts, typography, text
+  tags: fonts, google-fonts, typography, text, pre-loaded
 ---
 
-# Using fonts in Remotion
+# Using Fonts in Remotion
 
-## Google Fonts with @remotion/google-fonts
+## Pre-loaded Fonts (Ready to Use)
 
-The recommended way to use Google Fonts. It's type-safe and automatically blocks rendering until the font is ready.
+All fonts below are **pre-loaded globally** and can be used immediately by passing the font name as a string to `fontFamily` props. **DO NOT import from @remotion/google-fonts** - fonts are already loaded.
 
-### Prerequisites
+### Sans-serif (Modern/Clean)
 
-First, the @remotion/google-fonts package needs to be installed.
-If it is not installed, use the following command:
+| Font | Best For |
+|------|----------|
+| `"DM Sans"` | Primary brand font, friendly geometric, excellent for UI and body text |
+| `"Inter"` | Highly legible, variable weights, versatile for all uses |
+| `"Roboto"` | Industry standard, clean and professional |
+| `"Montserrat"` | Bold geometric, excellent for headlines and titles |
+| `"Poppins"` | Rounded geometric, friendly and modern |
+| `"Space Grotesk"` | Technical, futuristic feel, great for tech brands |
+| `"Sora"` | Contemporary, distinctive character |
+| `"Manrope"` | Open and friendly, good for startups |
 
-```bash
-npx remotion add @remotion/google-fonts # If project uses npm
-bunx remotion add @remotion/google-fonts # If project uses bun
-yarn remotion add @remotion/google-fonts # If project uses yarn
-pnpm exec remotion add @remotion/google-fonts # If project uses pnpm
-```
+### Display (Bold/Impactful Headlines)
 
-```tsx
-import { loadFont } from "@remotion/google-fonts/Lobster";
+| Font | Best For |
+|------|----------|
+| `"Oswald"` | Condensed, bold impact, sports/news style |
+| `"Bebas Neue"` | ALL CAPS display, very bold, classic motion design |
 
-const { fontFamily } = loadFont();
+### Serif (Elegant/Editorial)
 
-export const MyComposition = () => {
-  return <div style={{ fontFamily }}>Hello World</div>;
-};
-```
+| Font | Best For |
+|------|----------|
+| `"Instrument Serif"` | Refined editorial, luxury brands |
+| `"Playfair Display"` | High contrast, elegant headlines |
+| `"Lora"` | Balanced serif, good for body text |
 
-Preferrably, specify only needed weights and subsets to reduce file size:
+### Monospace (Technical/Code)
 
-```tsx
-import { loadFont } from "@remotion/google-fonts/Roboto";
+| Font | Best For |
+|------|----------|
+| `"Roboto Mono"` | Code snippets, technical content, retro aesthetics |
 
-const { fontFamily } = loadFont("normal", {
-  weights: ["400", "700"],
-  subsets: ["latin"],
-});
-```
+## Usage Examples
 
-### Waiting for font to load
-
-Use `waitUntilDone()` if you need to know when the font is ready:
-
-```tsx
-import { loadFont } from "@remotion/google-fonts/Lobster";
-
-const { fontFamily, waitUntilDone } = loadFont();
-
-await waitUntilDone();
-```
-
-## Local fonts with @remotion/fonts
-
-For local font files, use the `@remotion/fonts` package.
-
-### Prerequisites
-
-First, install @remotion/fonts:
-
-```bash
-npx remotion add @remotion/fonts # If project uses npm
-bunx remotion add @remotion/fonts # If project uses bun
-yarn remotion add @remotion/fonts # If project uses yarn
-pnpm exec remotion add @remotion/fonts # If project uses pnpm
-```
-
-### Loading a local font
-
-Place your font file in the `public/` folder and use `loadFont()`:
+### With AnimatedText Component
 
 ```tsx
-import { loadFont } from "@remotion/fonts";
-import { staticFile } from "remotion";
+import { AnimatedText } from "@/components/AnimatedText";
 
-await loadFont({
-  family: "MyFont",
-  url: staticFile("MyFont-Regular.woff2"),
-});
+// Simply pass the font name as a string
+<AnimatedText
+  text="Welcome to the Future"
+  fontFamily="Bebas Neue"
+  fontSize={120}
+  fontWeight={700}
+  animation="fadeUp"
+/>
 
-export const MyComposition = () => {
-  return <div style={{ fontFamily: "MyFont" }}>Hello World</div>;
-};
+<AnimatedText
+  text="Elegant typography for your brand"
+  fontFamily="Instrument Serif"
+  fontSize={48}
+  animation="typewriter"
+/>
 ```
 
-### Loading multiple weights
-
-Load each weight separately with the same family name:
+### With Inline Styles
 
 ```tsx
-import { loadFont } from "@remotion/fonts";
-import { staticFile } from "remotion";
+<div style={{ fontFamily: "DM Sans", fontSize: 24 }}>
+  Clean body text with DM Sans
+</div>
 
-await Promise.all([
-  loadFont({
-    family: "Inter",
-    url: staticFile("Inter-Regular.woff2"),
-    weight: "400",
-  }),
-  loadFont({
-    family: "Inter",
-    url: staticFile("Inter-Bold.woff2"),
-    weight: "700",
-  }),
-]);
+<h1 style={{ fontFamily: "Montserrat", fontWeight: 800, fontSize: 72 }}>
+  BOLD HEADLINE
+</h1>
 ```
 
-### Available options
+### Combining Fonts (Font Pairing)
 
 ```tsx
-loadFont({
-  family: "MyFont", // Required: name to use in CSS
-  url: staticFile("font.woff2"), // Required: font file URL
-  format: "woff2", // Optional: auto-detected from extension
-  weight: "400", // Optional: font weight
-  style: "normal", // Optional: normal or italic
-  display: "block", // Optional: font-display behavior
-});
+// Bold headline + clean body
+<div>
+  <h1 style={{ fontFamily: "Bebas Neue", fontSize: 96 }}>
+    MAIN HEADLINE
+  </h1>
+  <p style={{ fontFamily: "DM Sans", fontSize: 24 }}>
+    Supporting body text with a clean, readable font.
+  </p>
+</div>
+
+// Elegant editorial style
+<div>
+  <h1 style={{ fontFamily: "Playfair Display", fontSize: 72 }}>
+    Elegant Title
+  </h1>
+  <p style={{ fontFamily: "Inter", fontSize: 20 }}>
+    Body text using Inter for readability.
+  </p>
+</div>
+
+// Tech/Modern style
+<div>
+  <h1 style={{ fontFamily: "Space Grotesk", fontSize: 64 }}>
+    Future Tech
+  </h1>
+  <code style={{ fontFamily: "Roboto Mono", fontSize: 18 }}>
+    const future = await loadTech();
+  </code>
+</div>
 ```
 
-## Using in components
+## Recommended Font Pairings
 
-Call `loadFont()` at the top level of your component or in a separate file that's imported early:
+| Style | Headline Font | Body Font |
+|-------|---------------|-----------|
+| **Bold/Impact** | Bebas Neue | DM Sans |
+| **Elegant/Editorial** | Playfair Display | Inter |
+| **Tech/Modern** | Space Grotesk | Roboto Mono |
+| **Corporate** | Montserrat | Roboto |
+| **Friendly** | Poppins | DM Sans |
+| **Minimal** | Inter | Inter |
 
-```tsx
-import { loadFont } from "@remotion/google-fonts/Montserrat";
+## Important Notes
 
-const { fontFamily } = loadFont("normal", {
-  weights: ["400", "700"],
-  subsets: ["latin"],
-});
+1. **DO NOT import from @remotion/google-fonts** - all fonts are pre-loaded globally via `@/styles/fonts`
 
-export const Title: React.FC<{ text: string }> = ({ text }) => {
-  return (
-    <h1
-      style={{
-        fontFamily,
-        fontSize: 80,
-        fontWeight: "bold",
-      }}
-    >
-      {text}
-    </h1>
-  );
-};
-```
+2. **Use exact font names** - Font names are case-sensitive. Use exactly as shown (e.g., `"DM Sans"`, not `"dm sans"`)
+
+3. **Fallback behavior** - If a font name is not recognized, it will silently fall back to `system-ui, sans-serif`
+
+4. **Font weights** - All fonts support common weights (400, 500, 600, 700). Display fonts like Bebas Neue work best at their default weight.
+
+5. **Available fonts list**:
+   - DM Sans
+   - Inter
+   - Roboto
+   - Montserrat
+   - Poppins
+   - Space Grotesk
+   - Sora
+   - Manrope
+   - Oswald
+   - Bebas Neue
+   - Instrument Serif
+   - Playfair Display
+   - Lora
+   - Roboto Mono
