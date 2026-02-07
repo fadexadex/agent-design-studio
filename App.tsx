@@ -5,9 +5,12 @@ import { BrandWizard } from './components/BrandWizard';
 import { MotionPreview } from './components/MotionPreview';
 import { WorkflowDashboard } from './components/workflow/WorkflowDashboard';
 import { SceneEditor } from './components/editor/SceneEditor';
-import { BrandContext, VideoConfig, GenerationState, VideoScript } from './types';
+import { HistorySidebar } from './components/history/HistorySidebar';
+import { HistoryProvider, useHistory } from './contexts/HistoryContext';
+import { BrandContext, VideoConfig, GenerationState, VideoScript, WorkflowPhase } from './types';
 import { startWorkflow, AgentProgress, AgentThought } from './services/geminiService';
-import { AlertCircle, Brain, Zap, Eye, Wrench, Film } from 'lucide-react';
+import { AlertCircle, Brain, Zap, Eye, Wrench, Film, History } from 'lucide-react';
+import type { HistorySession, HistoryScene, WorkflowSnapshot } from './types/history';
 
 const WORKFLOW_JOB_ID_KEY = 'agent_design_studio_workflow_job_id';
 
@@ -39,10 +42,71 @@ interface ExtendedGenerationState extends GenerationState {
 }
 
 /**
+ * Create initial history session from workflow start
+ */
+function createInitialHistorySession(
+  jobId: string,
+  brand: BrandContext,
+  config: VideoConfig,
+  script?: VideoScript
+): HistorySession {
+  const now = new Date().toISOString();
+  
+  // Convert script scenes to history scenes
+  const scenes: HistoryScene[] = script?.scenes?.map(scene => ({
+    id: scene.id,
+    sceneNumber: scene.sceneNumber,
+    title: `Scene ${scene.sceneNumber}`,
+    description: scene.description,
+    frameRange: scene.frameRange,
+    keyElements: scene.keyElements,
+    status: 'pending' as const,
+  })) || [];
+  
+  // Calculate duration from scenes
+  const totalFrames = scenes.reduce((max, s) => Math.max(max, s.frameRange.end), 0);
+  const durationSeconds = Math.round(totalFrames / 30); // 30fps
+  
+  const workflow: WorkflowSnapshot = {
+    currentPhase: WorkflowPhase.INITIALIZATION,
+    rounds: [],
+    currentRound: 0,
+    maxRounds: 3,
+    progress: {
+      currentPhase: WorkflowPhase.INITIALIZATION,
+      phaseProgress: 0,
+      currentMessage: 'Starting workflow...',
+    },
+    checkpoints: [],
+  };
+  
+  return {
+    id: jobId,
+    createdAt: now,
+    updatedAt: now,
+    status: 'in_progress',
+    summary: {
+      brandName: brand.name,
+      style: config.style,
+      aspectRatio: config.aspectRatio,
+      sceneCount: scenes.length,
+      duration: `${durationSeconds} seconds`,
+    },
+    brand,
+    config,
+    script,
+    workflow,
+    scenes,
+    thoughts: [],
+  };
+}
+
+/**
  * Home page component - handles brand wizard and workflow initiation
  */
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { saveSession, isSidebarOpen, toggleSidebar } = useHistory();
   const [brand, setBrand] = useState<BrandContext | null>(null);
   const [config, setConfig] = useState<VideoConfig | null>(null);
   // Initialize from sessionStorage to persist across page reloads/HMR
@@ -83,6 +147,11 @@ const HomePage: React.FC = () => {
     try {
       // Use the new Workflow Streaming API with required script
       const jobId = await startWorkflow(brandData, configData, script);
+      
+      // Create and save initial history session
+      const historySession = createInitialHistorySession(jobId, brandData, configData, script);
+      saveSession(historySession);
+      
       setWorkflowJobId(jobId);
     } catch (error: any) {
       console.error(error);
@@ -113,7 +182,21 @@ const HomePage: React.FC = () => {
 
   // If we have a workflow job ID, render the WorkflowDashboard
   if (workflowJobId) {
-    return <WorkflowDashboard jobId={workflowJobId} onNavigateToEditor={(jobId) => navigate(`/editor/${jobId}`)} />;
+    return (
+      <div className="flex min-h-screen">
+        <HistorySidebar />
+        <div className="flex-1 relative">
+          <button
+            onClick={toggleSidebar}
+            className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            title="Open History"
+          >
+            <History size={20} className="text-zinc-400" />
+          </button>
+          <WorkflowDashboard jobId={workflowJobId} onNavigateToEditor={(jobId) => navigate(`/editor/${jobId}`)} />
+        </div>
+      </div>
+    );
   }
 
   const currentStage = generation.agentProgress?.stage || 'reasoning';
@@ -121,45 +204,57 @@ const HomePage: React.FC = () => {
   const latestThoughts = thoughts.slice(-5); // Show last 5 thoughts
 
   return (
-    <Layout>
-      {/* Subtle Utility Header */}
-      <div className="mb-12 flex justify-between items-center opacity-60">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-            <div className="w-3 h-3 bg-black rounded-sm transform rotate-45"></div>
-          </div>
-          <span className="heading-font font-bold text-sm uppercase tracking-widest">Agent Design Studio</span>
-        </div>
-        <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">
-          <span className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${generation.isGenerating ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`}></div>
-            {generation.isGenerating ? 'Agent Active' : 'Ready for Synthesis'}
-          </span>
-        </div>
-      </div>
-
-      {generation.isGenerating ? (
-        <div className="max-w-3xl mx-auto flex flex-col items-center justify-center py-8 space-y-6 text-center animate-in fade-in duration-500">
-          {/* Legacy loader here just in case, though workflowJobId should take over immediately */}
-          <div className="animate-pulse flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-2 border-purple-500 border-t-white rounded-full animate-spin"></div>
-            <p className="text-zinc-400 text-sm">Transferring to Workflow Engine...</p>
-          </div>
-        </div>
-      ) : generation.videoUrl ? (
-        <MotionPreview videoUrl={generation.videoUrl} onReset={reset} />
-      ) : (
-        <>
-          {generation.error && (
-            <div className="mb-8 p-4 bg-red-950/20 border border-red-900/30 rounded-lg flex items-center gap-3 text-red-400 text-xs animate-in slide-in-from-top-2">
-              <AlertCircle size={14} />
-              {generation.error}
+    <div className="flex min-h-screen">
+      <HistorySidebar />
+      <div className="flex-1 relative">
+        <button
+          onClick={toggleSidebar}
+          className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          title="Open History"
+        >
+          <History size={20} className="text-zinc-400" />
+        </button>
+        <Layout>
+          {/* Subtle Utility Header */}
+          <div className="mb-12 flex justify-between items-center opacity-60">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                <div className="w-3 h-3 bg-black rounded-sm transform rotate-45"></div>
+              </div>
+              <span className="heading-font font-bold text-sm uppercase tracking-widest">Agent Design Studio</span>
             </div>
+            <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">
+              <span className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${generation.isGenerating ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`}></div>
+                {generation.isGenerating ? 'Agent Active' : 'Ready for Synthesis'}
+              </span>
+            </div>
+          </div>
+
+          {generation.isGenerating ? (
+            <div className="max-w-3xl mx-auto flex flex-col items-center justify-center py-8 space-y-6 text-center animate-in fade-in duration-500">
+              {/* Legacy loader here just in case, though workflowJobId should take over immediately */}
+              <div className="animate-pulse flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-2 border-purple-500 border-t-white rounded-full animate-spin"></div>
+                <p className="text-zinc-400 text-sm">Transferring to Workflow Engine...</p>
+              </div>
+            </div>
+          ) : generation.videoUrl ? (
+            <MotionPreview videoUrl={generation.videoUrl} onReset={reset} />
+          ) : (
+            <>
+              {generation.error && (
+                <div className="mb-8 p-4 bg-red-950/20 border border-red-900/30 rounded-lg flex items-center gap-3 text-red-400 text-xs animate-in slide-in-from-top-2">
+                  <AlertCircle size={14} />
+                  {generation.error}
+                </div>
+              )}
+              <BrandWizard onComplete={startGeneration} />
+            </>
           )}
-          <BrandWizard onComplete={startGeneration} />
-        </>
-      )}
-    </Layout>
+        </Layout>
+      </div>
+    </div>
   );
 };
 
@@ -169,6 +264,7 @@ const HomePage: React.FC = () => {
 const WorkflowPage: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const { isSidebarOpen, toggleSidebar } = useHistory();
   
   if (!jobId) {
     return (
@@ -182,7 +278,21 @@ const WorkflowPage: React.FC = () => {
     );
   }
 
-  return <WorkflowDashboard jobId={jobId} onNavigateToEditor={(id) => navigate(`/editor/${id}`)} />;
+  return (
+    <div className="flex min-h-screen">
+      <HistorySidebar />
+      <div className="flex-1 relative">
+        <button
+          onClick={toggleSidebar}
+          className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          title="Open History"
+        >
+          <History size={20} className="text-zinc-400" />
+        </button>
+        <WorkflowDashboard jobId={jobId} onNavigateToEditor={(id) => navigate(`/editor/${id}`)} />
+      </div>
+    </div>
+  );
 };
 
 /**
@@ -191,6 +301,7 @@ const WorkflowPage: React.FC = () => {
 const EditorPage: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const { isSidebarOpen, toggleSidebar } = useHistory();
   
   if (!jobId) {
     return (
@@ -204,7 +315,21 @@ const EditorPage: React.FC = () => {
     );
   }
 
-  return <SceneEditor jobId={jobId} onBack={() => navigate(`/workflow/${jobId}`)} />;
+  return (
+    <div className="flex min-h-screen">
+      <HistorySidebar />
+      <div className="flex-1 relative">
+        <button
+          onClick={toggleSidebar}
+          className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          title="Open History"
+        >
+          <History size={20} className="text-zinc-400" />
+        </button>
+        <SceneEditor jobId={jobId} onBack={() => navigate(`/workflow/${jobId}`)} />
+      </div>
+    </div>
+  );
 };
 
 /**
@@ -213,11 +338,13 @@ const EditorPage: React.FC = () => {
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/workflow/:jobId" element={<WorkflowPage />} />
-        <Route path="/editor/:jobId" element={<EditorPage />} />
-      </Routes>
+      <HistoryProvider>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/workflow/:jobId" element={<WorkflowPage />} />
+          <Route path="/editor/:jobId" element={<EditorPage />} />
+        </Routes>
+      </HistoryProvider>
     </BrowserRouter>
   );
 };

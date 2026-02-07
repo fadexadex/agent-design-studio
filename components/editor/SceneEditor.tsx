@@ -7,6 +7,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { useEditorStream } from '../../hooks/useEditorStream';
+import { useEditorHistorySync } from '../../hooks/useEditorHistorySync';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import {
   editScenes,
@@ -49,6 +50,9 @@ export const SceneEditor: React.FC<SceneEditorProps> = ({ jobId, onBack }) => {
     refreshState,
     setSelectedScenes,
   } = useEditorStream(jobId);
+
+  // Sync editor state to history localStorage
+  useEditorHistorySync(jobId, state, { debounceMs: 3000 });
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);

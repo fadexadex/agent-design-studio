@@ -145,42 +145,14 @@ export async function generateScriptFromAI(
 ## TARGET DURATION
 - Total Duration: ${targetDuration} seconds
 - FPS: 30 (so ${targetDuration * 30} total frames)
-- Create exactly 5-8 distinct scenes
-
-## PACING STRATEGY (CRITICAL)
-You are creating a motion design video, NOT a PowerPoint presentation.
-Professional motion graphics use **variable pacing** to create narrative flow:
-
-- **Hook** (0-15%): High energy, kinetic typography, 2-3 seconds
-- **Problem/Context** (15-35%): Medium pace, establishes "Why", 4-5 seconds
-- **Solution/Reveal** (35-45%): Impactful transition, 3-4 seconds
-- **Demo/Features** (45-80%): Smooth flowing, 6-10 seconds
-- **Outro/CTA** (80-100%): Punchy memorable close, 2-3 seconds
-
-**DO NOT** make all scenes equal duration. Vary pacing to create rhythm.
-
-## VISUAL STYLE DEFINITIONS
-- **kinetic_typography**: Animated text, word reveals, typewriter effects
-- **app_demo**: UI mockups, device frames, screen interactions
-- **abstract_shape**: Geometric patterns, morphing shapes, particle systems
-- **logo_reveal**: Brand logo animation, clean lockup
-- **3d_product_showcase**: Product renders, 3D rotation effects
-- **abstract_ui**: Futuristic interfaces, holographic effects
-- **3d_grid_view**: Floating grid of elements in 3D space
-
-## ENERGY LEVEL GUIDE
-- **high**: Fast animations, quick cuts, spring damping 80-120
-- **medium**: Balanced pacing, smooth transitions, spring damping 100-150
-- **low**: Slow reveals, cinematic easing, spring damping 150-200
+- Create exactly 5-6 distinct scenes
 
 ## REQUIREMENTS
-Create a detailed video script broken into 5-8 scenes. Each scene should:
+Create a detailed video script broken into 5-6 scenes. Each scene should:
 1. Have a clear visual description of what's happening
-2. Specify any text/typography that should appear (use textOverlay array)
-3. Describe the motion/animation style with a visualStyle category
-4. Include an energyLevel based on the scene's purpose
-5. Suggest a duration in seconds (will be normalized to fit total)
-6. Optionally describe camera movement
+2. Specify any text/typography that should appear
+3. Describe the motion/animation style
+4. Indicate how it transitions to the next scene
 
 ## OUTPUT FORMAT
 Return your response as a JSON object with this exact structure:
@@ -188,16 +160,11 @@ Return your response as a JSON object with this exact structure:
   "script": "Full narrative script as a single text block describing the entire video",
   "scenes": [
     {
-      "id": "scene-01-hook",
+      "id": "scene-1",
       "sceneNumber": 1,
-      "visualStyle": "kinetic_typography",
-      "energyLevel": "high",
-      "suggestedDuration": 3.0,
       "description": "Detailed description of what happens in this scene, including visuals, text, and motion",
-      "textOverlay": ["Text Line 1", "Text Line 2"],
-      "cameraMovement": "Static camera with zoom",
-      "keyElements": ["element1", "element2", "element3"],
-      "assets": ["optional_asset_reference"]
+      "frameRange": { "start": 0, "end": 270 },
+      "keyElements": ["element1", "element2", "element3"]
     }
   ]
 }
@@ -291,7 +258,7 @@ IMPORTANT: Return ONLY valid JSON, no additional text, no markdown code blocks, 
         console.error('[Script Generation] Some scenes have invalid descriptions');
         throw new Error('AI generated incomplete scene descriptions. Please try again.');
     }
-    console.log('[Script Generation] Script data:', scriptData);    
+    console.log('[Script Generation] Script data:', JSON.stringify(scriptData, null, 2));
     console.log('[Script Generation] Successfully generated', scriptData.scenes.length, 'scenes');
 
     return scriptData;

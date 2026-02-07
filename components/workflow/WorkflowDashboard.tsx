@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useWorkflowStream } from '../../hooks/useWorkflowStream';
+import { useHistorySync } from '../../hooks/useHistorySync';
 import { WorkflowPhase, AgentThought } from '../../types';
 import { ScriptEditor } from './ScriptEditor';
 import { LivePreview } from './LivePreview';
@@ -22,6 +23,10 @@ const PHASES = [
 
 export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onNavigateToEditor }) => {
     const { state, isConnected, isError, renderProgress } = useWorkflowStream(jobId);
+    
+    // Sync workflow state to history localStorage
+    useHistorySync(jobId, state, { debounceMs: 2000 });
+    
     const [activeSceneId, setActiveSceneId] = useState<string>('');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     // Track if user is actively editing a scene (clicked on a scene node)
