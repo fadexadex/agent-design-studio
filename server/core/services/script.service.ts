@@ -14,9 +14,6 @@ function getStyleDescription(style: string): string {
     return descriptions[style] || 'Modern motion design';
 }
 
-/**
- * Attempt to repair common JSON issues from AI-generated responses
- */
 function repairJSON(jsonString: string): string {
     let repaired = jsonString;
 
@@ -67,12 +64,49 @@ function repairJSON(jsonString: string): string {
     return repaired;
 }
 
+/**
+ * Calculate frame ranges based on AI-suggested durations.
+ * Normalizes total suggested time to fit the target video duration.
+ */
+function calculateFrameRanges(
+    scenes: ScriptScene[],
+    targetDurationSec: number,
+    fps: number = 30
+): ScriptScene[] {
+    const totalTargetFrames = targetDurationSec * fps;
+    const totalSuggestedDuration = scenes.reduce(
+        (sum, scene) => sum + (scene.suggestedDuration || 5),
+        0
+    );
+
+    let currentFrame = 0;
+
+    return scenes.map((scene, index) => {
+        const weight = (scene.suggestedDuration || 5) / totalSuggestedDuration;
+        const sceneFrames = Math.floor(totalTargetFrames * weight);
+        const start = currentFrame;
+        const end = index === scenes.length - 1
+            ? totalTargetFrames - 1
+            : start + sceneFrames - 1;
+        currentFrame = end + 1;
+        return { ...scene, frameRange: { start, end } };
+    });
+}
+
 export interface ScriptScene {
     id: string;
     sceneNumber: number;
     description: string;
     frameRange: { start: number; end: number };
     keyElements: string[];
+
+    // Timeline architecture fields
+    visualStyle: 'kinetic_typography' | 'app_demo' | 'abstract_shape' | 'logo_reveal' | '3d_product_showcase' | 'abstract_ui' | '3d_grid_view';
+    energyLevel: 'high' | 'medium' | 'low';
+    suggestedDuration: number; // in seconds (AI-suggested, normalized later)
+    textOverlay?: string[];    // text to display on screen
+    cameraMovement?: string;   // e.g., "Zoom in", "Pan left"
+    assets?: string[];         // referenced assets
 }
 
 export interface ScriptData {
@@ -111,14 +145,42 @@ export async function generateScriptFromAI(
 ## TARGET DURATION
 - Total Duration: ${targetDuration} seconds
 - FPS: 30 (so ${targetDuration * 30} total frames)
-- Create exactly 5-6 distinct scenes
+- Create exactly 5-8 distinct scenes
+
+## PACING STRATEGY (CRITICAL)
+You are creating a motion design video, NOT a PowerPoint presentation.
+Professional motion graphics use **variable pacing** to create narrative flow:
+
+- **Hook** (0-15%): High energy, kinetic typography, 2-3 seconds
+- **Problem/Context** (15-35%): Medium pace, establishes "Why", 4-5 seconds
+- **Solution/Reveal** (35-45%): Impactful transition, 3-4 seconds
+- **Demo/Features** (45-80%): Smooth flowing, 6-10 seconds
+- **Outro/CTA** (80-100%): Punchy memorable close, 2-3 seconds
+
+**DO NOT** make all scenes equal duration. Vary pacing to create rhythm.
+
+## VISUAL STYLE DEFINITIONS
+- **kinetic_typography**: Animated text, word reveals, typewriter effects
+- **app_demo**: UI mockups, device frames, screen interactions
+- **abstract_shape**: Geometric patterns, morphing shapes, particle systems
+- **logo_reveal**: Brand logo animation, clean lockup
+- **3d_product_showcase**: Product renders, 3D rotation effects
+- **abstract_ui**: Futuristic interfaces, holographic effects
+- **3d_grid_view**: Floating grid of elements in 3D space
+
+## ENERGY LEVEL GUIDE
+- **high**: Fast animations, quick cuts, spring damping 80-120
+- **medium**: Balanced pacing, smooth transitions, spring damping 100-150
+- **low**: Slow reveals, cinematic easing, spring damping 150-200
 
 ## REQUIREMENTS
-Create a detailed video script broken into 5-6 scenes. Each scene should:
+Create a detailed video script broken into 5-8 scenes. Each scene should:
 1. Have a clear visual description of what's happening
-2. Specify any text/typography that should appear
-3. Describe the motion/animation style
-4. Indicate how it transitions to the next scene
+2. Specify any text/typography that should appear (use textOverlay array)
+3. Describe the motion/animation style with a visualStyle category
+4. Include an energyLevel based on the scene's purpose
+5. Suggest a duration in seconds (will be normalized to fit total)
+6. Optionally describe camera movement
 
 ## OUTPUT FORMAT
 Return your response as a JSON object with this exact structure:
@@ -126,11 +188,16 @@ Return your response as a JSON object with this exact structure:
   "script": "Full narrative script as a single text block describing the entire video",
   "scenes": [
     {
-      "id": "scene-1",
+      "id": "scene-01-hook",
       "sceneNumber": 1,
+      "visualStyle": "kinetic_typography",
+      "energyLevel": "high",
+      "suggestedDuration": 3.0,
       "description": "Detailed description of what happens in this scene, including visuals, text, and motion",
-      "frameRange": { "start": 0, "end": 270 },
-      "keyElements": ["element1", "element2", "element3"]
+      "textOverlay": ["Text Line 1", "Text Line 2"],
+      "cameraMovement": "Static camera with zoom",
+      "keyElements": ["element1", "element2", "element3"],
+      "assets": ["optional_asset_reference"]
     }
   ]
 }
@@ -199,20 +266,24 @@ IMPORTANT: Return ONLY valid JSON, no additional text, no markdown code blocks, 
         throw new Error('AI did not generate valid scenes. Please try again.');
     }
 
-    // Ensure proper frame ranges and structure
-    const totalFrames = targetDuration * 30;
-    const framesPerScene = Math.floor(totalFrames / scriptData.scenes.length);
-
-    scriptData.scenes = scriptData.scenes.map((scene: any, idx: number) => ({
+    // Normalize scenes: preserve timeline metadata and ensure required fields
+    scriptData.scenes = scriptData.scenes.map((scene: any, idx: number): ScriptScene => ({
         id: scene.id || `scene-${idx + 1}`,
         sceneNumber: scene.sceneNumber || idx + 1,
         description: scene.description || '',
-        frameRange: scene.frameRange || {
-            start: idx * framesPerScene,
-            end: Math.min((idx + 1) * framesPerScene, totalFrames)
-        },
-        keyElements: scene.keyElements || []
+        frameRange: { start: 0, end: 0 }, // Will be calculated below
+        keyElements: scene.keyElements || [],
+        // Timeline architecture fields
+        visualStyle: scene.visualStyle || 'abstract_shape',
+        energyLevel: scene.energyLevel || 'medium',
+        suggestedDuration: scene.suggestedDuration || (targetDuration / scriptData.scenes.length),
+        textOverlay: scene.textOverlay,
+        cameraMovement: scene.cameraMovement,
+        assets: scene.assets
     }));
+
+    // Calculate frame ranges based on AI-suggested durations (Timeline architecture)
+    scriptData.scenes = calculateFrameRanges(scriptData.scenes, targetDuration, 30);
 
     // Validate each scene has a description
     const invalidScenes = scriptData.scenes.filter((s: any) => !s.description || s.description.length < 10);

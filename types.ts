@@ -72,6 +72,14 @@ export interface SceneDescription {
   description: string;
   frameRange: { start: number; end: number };
   keyElements: string[];
+
+  // Timeline architecture fields (optional for backward compatibility)
+  visualStyle?: 'kinetic_typography' | 'app_demo' | 'abstract_shape' | 'logo_reveal' | '3d_product_showcase' | 'abstract_ui' | '3d_grid_view';
+  energyLevel?: 'high' | 'medium' | 'low';
+  suggestedDuration?: number; // in seconds (AI-suggested, normalized later)
+  textOverlay?: string[];    // text to display on screen
+  cameraMovement?: string;   // e.g., "Zoom in", "Pan left"
+  assets?: string[];         // referenced assets
 }
 
 /**

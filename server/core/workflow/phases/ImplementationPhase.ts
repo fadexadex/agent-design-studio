@@ -647,6 +647,14 @@ Create Scene${scene.sceneNumber}.tsx - a self-contained Remotion scene component
 - **Duration**: ${frameCount} frames (${durationSeconds} seconds at ${fps}fps)
 - **Key Elements**: ${scene.keyElements.join(', ')}
 
+## SCENE PACING METADATA (Timeline Architecture)
+- **Visual Style**: ${scene.visualStyle || 'abstract_shape'} - ${this.getVisualStyleHint(scene.visualStyle)}
+- **Energy Level**: ${scene.energyLevel || 'medium'} - ${this.getEnergyLevelHint(scene.energyLevel)}
+- **Duration Context**: ${this.getDurationHint(durationSeconds)}
+${scene.textOverlay && scene.textOverlay.length > 0 ? `- **Text Overlay**: ${scene.textOverlay.map(t => `"${t}"`).join(', ')}` : ''}
+${scene.cameraMovement ? `- **Camera Movement**: ${scene.cameraMovement}` : ''}
+${scene.assets && scene.assets.length > 0 ? `- **Referenced Assets**: ${scene.assets.join(', ')}` : ''}
+
 ## BRAND
 - **Name**: "${state.brand.name}"
 - **Industry**: ${state.brand.industry}
@@ -1605,5 +1613,48 @@ registerRoot(RemotionRoot);
     return updateState(state, {
       sceneStatuses: updatedStatuses
     });
+  }
+
+  /**
+   * Get visual style guidance for the AI prompt based on Timeline architecture.
+   */
+  private getVisualStyleHint(style?: string): string {
+    const hints: Record<string, string> = {
+      'kinetic_typography': 'Focus on animated text, word reveals, typewriter effects. Use AnimatedText with presets like "fadeBlurIn", "slideInUp", "typewriter". Keep layout minimal to let text shine.',
+      'app_demo': 'Use MockupFrame for device frames (browser, iphone15). Include DynamicCursor for UI interactions. Show screen content with realistic mockups.',
+      'abstract_shape': 'Create geometric patterns, morphing shapes, particle effects. Use raw interpolate() and spring() for custom shape animations. Leverage CSS transforms.',
+      'logo_reveal': 'Clean, elegant brand reveal. Center the logo, add subtle animations. Use Background with soft gradient. Keep focus on the brand mark.',
+      '3d_product_showcase': 'Simulate 3D with transforms (rotateY, rotateX, perspective). Use CameraRig for zoom/pan. Create depth with layered elements.',
+      'abstract_ui': 'Futuristic interface design. Grid layouts, glowing elements, holographic effects. Use Background with grid-lines or gradient-mesh.',
+      '3d_grid_view': 'Create floating grid of elements in 3D perspective. Use CSS grid with transform: perspective(). Add parallax scrolling effect.'
+    };
+    return hints[style || 'abstract_shape'] || hints['abstract_shape'];
+  }
+
+  /**
+   * Get energy level guidance for spring configs and animation timing.
+   */
+  private getEnergyLevelHint(energy?: string): string {
+    const hints: Record<string, string> = {
+      'high': 'Fast, punchy animations. Use spring({ config: { damping: 80, stiffness: 200 } }). Quick cuts, rapid transitions. Animation durations 10-20 frames.',
+      'medium': 'Balanced, smooth animations. Use spring({ config: { damping: 120, stiffness: 100 } }). Standard easing. Animation durations 20-40 frames.',
+      'low': 'Slow, cinematic reveals. Use spring({ config: { damping: 180, stiffness: 50 } }). Long easing curves. Animation durations 40-60 frames.'
+    };
+    return hints[energy || 'medium'] || hints['medium'];
+  }
+
+  /**
+   * Get complexity guidance based on scene duration.
+   */
+  private getDurationHint(durationSeconds: number): string {
+    if (durationSeconds <= 2) {
+      return 'VERY SHORT scene - Keep it simple! One main animation, minimal elements. Perfect for a quick title or transition.';
+    } else if (durationSeconds <= 4) {
+      return 'SHORT scene - Focus on 1-2 key animations. Don\'t overcomplicate. Good for hooks and reveals.';
+    } else if (durationSeconds <= 6) {
+      return 'MEDIUM scene - Room for 2-3 sequential animations. Can include entrance, main content, and exit.';
+    } else {
+      return 'LONGER scene - Can support complex sequences. Consider multiple phases: intro, main content, outro. Use Sequence for timing.';
+    }
   }
 }

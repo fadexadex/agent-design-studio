@@ -164,7 +164,14 @@ export class WorkflowOrchestrator extends EventEmitter {
       sceneNumber: scene.sceneNumber || idx + 1,
       description: scene.description,
       frameRange: scene.frameRange,
-      keyElements: scene.keyElements || []
+      keyElements: scene.keyElements || [],
+      // Timeline architecture fields
+      visualStyle: (scene as any).visualStyle || 'abstract_shape',
+      energyLevel: (scene as any).energyLevel || 'medium',
+      suggestedDuration: (scene as any).suggestedDuration || 5,
+      textOverlay: (scene as any).textOverlay,
+      cameraMovement: (scene as any).cameraMovement,
+      assets: (scene as any).assets
     }));
 
     // Create the implementation plan from the provided script
