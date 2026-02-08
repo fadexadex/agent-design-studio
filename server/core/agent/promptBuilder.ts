@@ -594,3 +594,79 @@ export function clearPromptCaches(): void {
   resetComponentsRouter();
   console.log('[PromptBuilder] Caches cleared');
 }
+
+// ============================================
+// Render Error Correction Prompt
+// ============================================
+
+export interface SceneContext {
+  sceneNumber: number;
+  description: string;
+}
+
+/**
+ * Build a prompt for correcting scene code that failed during Remotion bundling/rendering.
+ * This is more targeted than general correction - it focuses on syntax/structural issues.
+ */
+export async function buildRenderErrorCorrectionPrompt(
+  brokenCode: string,
+  errorMessage: string,
+  brand: BrandContext,
+  config: VideoConfig,
+  scene: SceneContext
+): Promise<string> {
+  // Parse error for specifics
+  const lineMatch = errorMessage.match(/:(\d+):(\d+):\s*ERROR:\s*(.+)/);
+  const errorLine = lineMatch ? parseInt(lineMatch[1], 10) : null;
+  const errorColumn = lineMatch ? parseInt(lineMatch[2], 10) : null;
+  const errorType = lineMatch ? lineMatch[3] : errorMessage;
+  
+  // Get context around the error line
+  let errorContext = '';
+  if (errorLine) {
+    const lines = brokenCode.split('\n');
+    const start = Math.max(0, errorLine - 3);
+    const end = Math.min(lines.length, errorLine + 2);
+    errorContext = lines.slice(start, end)
+      .map((line, i) => {
+        const lineNum = start + i + 1;
+        const marker = lineNum === errorLine ? ' >>> ' : '     ';
+        return `${marker}${lineNum}: ${line}`;
+      })
+      .join('\n');
+  }
+  
+  return `You are fixing a Remotion scene that failed to compile. The bundler reported an error.
+
+## THE ERROR
+**Type**: ${errorType}
+${errorLine ? `**Location**: Line ${errorLine}, Column ${errorColumn}` : ''}
+
+## ERROR CONTEXT
+${errorContext || 'No specific line context available'}
+
+## THE BROKEN CODE
+\`\`\`tsx
+${brokenCode}
+\`\`\`
+
+## YOUR TASK
+Fix ONLY the syntax/structural error. Do NOT change the animation logic or visual design.
+
+Common fixes needed:
+- Remove trailing \`\`\` markdown code fences (these are NOT valid TypeScript)
+- Close unclosed braces, brackets, or parentheses
+- Fix unterminated string literals
+- Remove stray backticks
+- Fix malformed JSX
+- Fix CSS kebab-case properties (use camelCase: backgroundColor not background-color)
+
+## SCENE CONTEXT
+- Scene ${scene.sceneNumber}: "${scene.description}"
+- Brand: "${brand.name}"
+- Style: ${config.style}
+
+## OUTPUT
+Return ONLY the fixed TSX code. No markdown fences, no explanations.
+The code must be valid TypeScript/React that compiles without errors.`;
+}

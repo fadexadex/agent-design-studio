@@ -220,26 +220,89 @@ export class ImplementationPhase extends BasePhase {
             }
             currentState = this.updateSceneStatus(currentState, renderingStatus);
 
-            // Render the scene preview
-            try {
-              const sceneDuration = scene.frameRange.end - scene.frameRange.start + 1;
-              const previewResult = await this.renderer.renderScenePreview(
-                scene.sceneNumber,
-                sceneDuration,
-                currentState.config,
-                (progress) => {
-                  const updatedProgress: SceneRenderStatus = {
-                    ...renderingStatus,
-                    progress: Math.round(progress * 100),
-                    message: `Rendering Scene ${scene.sceneNumber}: ${Math.round(progress * 100)}%`
+            // Render the scene preview with self-correction loop
+            const MAX_RENDER_CORRECTION_ATTEMPTS = 3;
+            let renderAttempt = 0;
+            let lastRenderError: string | null = null;
+            let previewResult: { sceneNumber: number; videoPath: string; durationInFrames: number } | null = null;
+            const sceneDuration = scene.frameRange.end - scene.frameRange.start + 1;
+
+            while (renderAttempt < MAX_RENDER_CORRECTION_ATTEMPTS) {
+              try {
+                previewResult = await this.renderer.renderScenePreview(
+                  scene.sceneNumber,
+                  sceneDuration,
+                  currentState.config,
+                  (progress) => {
+                    const updatedProgress: SceneRenderStatus = {
+                      ...renderingStatus,
+                      progress: Math.round(progress * 100),
+                      message: `Rendering Scene ${scene.sceneNumber}: ${Math.round(progress * 100)}%`
+                    };
+                    if (context.onSceneProgress) {
+                      context.onSceneProgress(updatedProgress);
+                    }
+                  }
+                );
+                // Success - break out of retry loop
+                break;
+              } catch (renderError) {
+                renderAttempt++;
+                lastRenderError = renderError instanceof Error ? renderError.message : String(renderError);
+                
+                console.warn(`[ImplementationPhase] Scene ${scene.sceneNumber} render attempt ${renderAttempt} failed: ${lastRenderError}`);
+                
+                if (renderAttempt < MAX_RENDER_CORRECTION_ATTEMPTS) {
+                  // Emit "correcting" status
+                  const correctingStatus: SceneRenderStatus = {
+                    sceneNumber: scene.sceneNumber,
+                    sceneId: scene.id,
+                    status: 'generating',
+                    progress: 50,
+                    message: `Fixing Scene ${scene.sceneNumber} (attempt ${renderAttempt + 1}/${MAX_RENDER_CORRECTION_ATTEMPTS})...`
                   };
                   if (context.onSceneProgress) {
-                    context.onSceneProgress(updatedProgress);
+                    context.onSceneProgress(correctingStatus);
+                  }
+                  currentState = this.updateSceneStatus(currentState, correctingStatus);
+                  
+                  // Attempt correction
+                  const correction = await this.attemptRenderErrorCorrection(
+                    currentState,
+                    scene,
+                    sceneFile.filePath,
+                    lastRenderError,
+                    renderAttempt,
+                    context
+                  );
+                  
+                  if (correction.corrected && correction.code) {
+                    // Save corrected code and retry
+                    await fs.writeFile(sceneFile.filePath, correction.code, 'utf-8');
+                    
+                    // Regenerate preview wrapper too (in case imports changed)
+                    const updatedPreviewWrapper = this.generateScenePreviewWrapper(scene, state);
+                    await fs.writeFile(updatedPreviewWrapper.filePath, updatedPreviewWrapper.content, 'utf-8');
+                    
+                    console.log(`[ImplementationPhase] Scene ${scene.sceneNumber} corrected, retrying render...`);
+                  } else {
+                    // Correction failed - try fallback template on last attempt
+                    if (renderAttempt === MAX_RENDER_CORRECTION_ATTEMPTS - 1) {
+                      console.warn(`[ImplementationPhase] Using fallback template for Scene ${scene.sceneNumber}`);
+                      const fallbackCode = this.generateFallbackScene(currentState, scene);
+                      await fs.writeFile(sceneFile.filePath, fallbackCode, 'utf-8');
+                      
+                      const fallbackPreviewWrapper = this.generateScenePreviewWrapper(scene, state);
+                      await fs.writeFile(fallbackPreviewWrapper.filePath, fallbackPreviewWrapper.content, 'utf-8');
+                    }
                   }
                 }
-              );
+              }
+            }
 
-              // Get preview URL and update status to complete
+            // Handle final result
+            if (previewResult) {
+              // Success - update status with preview URL
               const previewUrl = this.renderer.getScenePreviewUrl(previewResult.videoPath);
               const completeStatus: SceneRenderStatus = {
                 sceneNumber: scene.sceneNumber,
@@ -253,15 +316,15 @@ export class ImplementationPhase extends BasePhase {
                 context.onSceneProgress(completeStatus);
               }
               currentState = this.updateSceneStatus(currentState, completeStatus);
-            } catch (renderError) {
-              // Preview rendering failed, but scene code is valid - mark complete without preview
-              console.warn(`[ImplementationPhase] Scene ${scene.sceneNumber} preview rendering failed:`, renderError);
+            } else {
+              // All attempts failed - mark complete without preview
+              console.error(`[ImplementationPhase] Scene ${scene.sceneNumber} failed after ${MAX_RENDER_CORRECTION_ATTEMPTS} attempts: ${lastRenderError}`);
               const completeStatus: SceneRenderStatus = {
                 sceneNumber: scene.sceneNumber,
                 sceneId: scene.id,
                 status: 'complete',
                 progress: 100,
-                message: `Scene ${scene.sceneNumber} generated (preview unavailable)`
+                message: `Scene ${scene.sceneNumber} generated (preview failed after ${MAX_RENDER_CORRECTION_ATTEMPTS} attempts)`
               };
               if (context.onSceneProgress) {
                 context.onSceneProgress(completeStatus);
@@ -1904,5 +1967,154 @@ registerRoot(RemotionRoot);
     };
     
     return hints[exit.type] || `Animate exit with ${exit.type} effect over ${durationFrames} frames`;
+  }
+
+  // ============================================
+  // Render Error Self-Correction System
+  // ============================================
+
+  /**
+   * Auto-fix common issues that cause bundler/render failures.
+   * These are syntax errors that can be fixed without AI.
+   */
+  private autoFixRenderErrors(code: string, errorMessage: string): string {
+    let fixedCode = code;
+    
+    // Fix 1: Remove trailing markdown code fences (common AI output artifact)
+    // Matches ``` or ```tsx or ```typescript at the end of the file
+    const trailingFencesBefore = fixedCode;
+    fixedCode = fixedCode.replace(/\n*```(?:tsx?|javascript|typescript)?\s*$/g, '');
+    if (fixedCode !== trailingFencesBefore) {
+      console.log('[AutoFixRender] Removed trailing markdown code fences');
+    }
+    
+    // Also remove leading code fences if present
+    const leadingFencesBefore = fixedCode;
+    fixedCode = fixedCode.replace(/^```(?:tsx?|javascript|typescript)?\n*/g, '');
+    if (fixedCode !== leadingFencesBefore) {
+      console.log('[AutoFixRender] Removed leading markdown code fences');
+    }
+    
+    // Fix 2: Remove any stray backticks that might cause "Unterminated string literal"
+    // Only remove isolated backticks at line starts/ends, not template literals
+    const strayBackticksBefore = fixedCode;
+    fixedCode = fixedCode.replace(/^`{1,3}\s*$/gm, '');
+    if (fixedCode !== strayBackticksBefore) {
+      console.log('[AutoFixRender] Removed stray backticks');
+    }
+    
+    // Fix 3: If error mentions specific line, try to fix that line
+    const lineMatch = errorMessage.match(/:(\d+):\d+:\s*ERROR:/);
+    if (lineMatch) {
+      const errorLine = parseInt(lineMatch[1], 10);
+      const lines = fixedCode.split('\n');
+      
+      if (errorLine > 0 && errorLine <= lines.length) {
+        const problematicLine = lines[errorLine - 1];
+        
+        // Check for common issues on this specific line
+        // Unterminated string: might have unmatched quotes or backticks
+        if (errorMessage.includes('Unterminated string')) {
+          // Remove the problematic line if it's just garbage (like ```)
+          if (/^[`'"]+$/.test(problematicLine.trim())) {
+            console.log(`[AutoFixRender] Removing garbage line ${errorLine}: "${problematicLine.trim()}"`);
+            lines.splice(errorLine - 1, 1);
+            fixedCode = lines.join('\n');
+          }
+        }
+      }
+    }
+    
+    // Fix 4: Apply all existing auto-fixes (CSS properties, component props, etc.)
+    // Extract scene number from the code if possible, otherwise use 0
+    const sceneMatch = fixedCode.match(/export\s+const\s+Scene(\d+)/);
+    const sceneNumber = sceneMatch ? parseInt(sceneMatch[1], 10) : 0;
+    fixedCode = this.autoFixSceneCode(fixedCode, sceneNumber);
+    
+    return fixedCode;
+  }
+
+  /**
+   * Attempt to correct scene code that failed during bundling/rendering.
+   * First tries auto-fixes, then calls AI if needed.
+   */
+  private async attemptRenderErrorCorrection(
+    state: WorkflowState,
+    scene: SceneDescription,
+    sceneFilePath: string,
+    errorMessage: string,
+    attempt: number,
+    context: PhaseContext
+  ): Promise<{ corrected: boolean; code?: string }> {
+    const { buildRenderErrorCorrectionPrompt } = await import('../../agent/promptBuilder');
+    
+    try {
+      // 1. Read the broken scene file
+      const brokenCode = await fs.readFile(sceneFilePath, 'utf-8');
+      
+      console.log(`[ImplementationPhase] Attempting render error correction for Scene ${scene.sceneNumber} (attempt ${attempt})`);
+      console.log(`[ImplementationPhase] Error: ${errorMessage.substring(0, 200)}...`);
+      
+      // 2. Try auto-fixes first (cheap, no API call)
+      const fixedCode = this.autoFixRenderErrors(brokenCode, errorMessage);
+      
+      // 3. Validate the auto-fixed code
+      const validation = this.validateSceneCode(fixedCode, scene.sceneNumber);
+      if (validation.valid) {
+        console.log(`[ImplementationPhase] Auto-fix succeeded for Scene ${scene.sceneNumber}`);
+        return { corrected: true, code: fixedCode };
+      }
+      
+      console.log(`[ImplementationPhase] Auto-fix validation failed: ${validation.errors.join(', ')}`);
+      
+      // 4. Auto-fix wasn't enough - call AI for correction
+      console.log(`[ImplementationPhase] Calling AI for Scene ${scene.sceneNumber} correction...`);
+      
+      const correctionPrompt = await buildRenderErrorCorrectionPrompt(
+        brokenCode,
+        errorMessage,
+        state.brand,
+        state.config,
+        { sceneNumber: scene.sceneNumber, description: scene.description }
+      );
+      
+      const ai = this.getAI();
+      const response = await this.rateLimitedCall(() =>
+        ai.models.generateContent({
+          model: AI_MODELS.SMART,
+          contents: [{ role: 'user', parts: [{ text: correctionPrompt }] }],
+          config: {
+            temperature: 0.2, // Low temperature for precise fixes
+            maxOutputTokens: 8192,
+          }
+        })
+      );
+      
+      const responseText = response.text || '';
+      let correctedCode = this.extractCode(responseText);
+      
+      if (!correctedCode) {
+        console.warn(`[ImplementationPhase] AI returned no code for Scene ${scene.sceneNumber} correction`);
+        return { corrected: false };
+      }
+      
+      // Apply auto-fixes to AI output too (belt and suspenders)
+      correctedCode = this.autoFixSceneCode(correctedCode, scene.sceneNumber);
+      correctedCode = this.autoFixRenderErrors(correctedCode, errorMessage);
+      
+      // Validate
+      const finalValidation = this.validateSceneCode(correctedCode, scene.sceneNumber);
+      if (finalValidation.valid) {
+        console.log(`[ImplementationPhase] AI correction succeeded for Scene ${scene.sceneNumber}`);
+        return { corrected: true, code: correctedCode };
+      }
+      
+      console.warn(`[ImplementationPhase] AI correction failed validation: ${finalValidation.errors.join(', ')}`);
+      return { corrected: false };
+      
+    } catch (error) {
+      console.error(`[ImplementationPhase] Error during render correction for Scene ${scene.sceneNumber}:`, error);
+      return { corrected: false };
+    }
   }
 }
