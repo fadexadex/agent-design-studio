@@ -13,6 +13,7 @@
     "@remotion/google-fonts",
     "@/components",
     "@/components/AnimatedText",
+    "@/components/TextChoreography",
     "@/components/MockupFrame",
     "@/components/Camera",
     "@/components/Layout",
@@ -33,6 +34,19 @@
       ],
       "priority": 9,
       "description": "Control when elements appear with Sequence and Series components"
+    },
+    {
+      "id": "text-choreography",
+      "file": "rules/text-choreography.md",
+      "keywords": [
+        "catch-up", "catch up", "catchup", "text cycle", "cycle", "replace",
+        "bounce", "bouncy", "playful", "makes space", "reveal", "morph",
+        "morphs into", "transform", "word by word", "momentum", "energetic",
+        "choreography", "introduction", "introducing"
+      ],
+      "requires": ["@/components/TextChoreography"],
+      "priority": 9,
+      "description": "Advanced text choreography patterns: catch-up, cycle, bounce, make-space, morph"
     },
     {
       "id": "text-animations",

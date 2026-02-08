@@ -1,5 +1,6 @@
 import { BrandContext, VideoConfig } from '../../agent/types';
 import { AgentThought } from '../../agent/orchestrator';
+import { StoryScript } from '../../types/script.types';
 
 // Forward declaration to avoid circular imports
 // Full type is defined in iteration/SelfEvaluator.ts
@@ -75,6 +76,10 @@ export interface SceneDescription {
   description: string;
   frameRange: { start: number; end: number };
   keyElements: string[];
+
+  // Story-driven fields
+  storyPhase?: 'problem' | 'solution' | 'magic' | 'result' | 'brand-reveal';
+  textContent?: string[];  // Actual text to display in this scene
 
   // Timeline architecture fields
   visualStyle?: 'kinetic_typography' | 'app_demo' | 'abstract_shape' | 'logo_reveal' | '3d_product_showcase' | 'abstract_ui' | '3d_grid_view';
@@ -163,6 +168,7 @@ export interface WorkflowState {
 
   // Script / Planning
   plan?: ImplementationPlan;
+  storyScript?: StoryScript; // Full narrative script with choreography
 
   // Execution State
   currentRound: number;

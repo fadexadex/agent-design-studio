@@ -19,10 +19,12 @@ import { IterationController, IterationDecision, EvaluationResult } from './iter
 import { BrandContext, VideoConfig } from '../agent/types';
 import { AgentThought } from '../agent/orchestrator';
 import { RemotionRenderer } from '../renderer/remotionRenderer';
+import { StoryScript, Scene as StoryScene } from '../types/script.types';
 
 /**
  * Script data provided from the script generation endpoint.
  * Contains the narrative script and scene breakdown.
+ * Can be either legacy format or full StoryScript.
  */
 export interface ProvidedScript {
   script: string;
@@ -32,7 +34,11 @@ export interface ProvidedScript {
     description: string;
     frameRange: { start: number; end: number };
     keyElements: string[];
+    storyPhase?: string;
+    textContent?: string[];
   }>;
+  // Full StoryScript if available (provides text choreography data)
+  storyScript?: StoryScript;
 }
 
 /**
@@ -159,20 +165,7 @@ export class WorkflowOrchestrator extends EventEmitter {
     this.isPaused = false;
 
     // Convert the provided script scenes to SceneDescription format
-    const sceneBreakdown: SceneDescription[] = script.scenes.map((scene, idx) => ({
-      id: scene.id || `scene-${idx + 1}`,
-      sceneNumber: scene.sceneNumber || idx + 1,
-      description: scene.description,
-      frameRange: scene.frameRange,
-      keyElements: scene.keyElements || [],
-      // Timeline architecture fields
-      visualStyle: (scene as any).visualStyle || 'abstract_shape',
-      energyLevel: (scene as any).energyLevel || 'medium',
-      suggestedDuration: (scene as any).suggestedDuration || 5,
-      textOverlay: (scene as any).textOverlay,
-      cameraMovement: (scene as any).cameraMovement,
-      assets: (scene as any).assets
-    }));
+    const sceneBreakdown: SceneDescription[] = this.convertToSceneDescriptions(script);
 
     // Create the implementation plan from the provided script
     const plan: ImplementationPlan = {
@@ -182,10 +175,11 @@ export class WorkflowOrchestrator extends EventEmitter {
       createdAt: new Date()
     };
 
-    // Set the plan AND transition to AWAITING_FEEDBACK in a single update
+    // Set the plan, storyScript (if available), AND transition to AWAITING_FEEDBACK
     // This ensures the state is complete before any emissions
     this.state = updateState(this.state, {
       plan,
+      storyScript: script.storyScript, // Store full StoryScript for choreography data
       currentPhase: WorkflowPhase.AWAITING_FEEDBACK,
       progress: {
         currentPhase: WorkflowPhase.AWAITING_FEEDBACK,
@@ -197,12 +191,78 @@ export class WorkflowOrchestrator extends EventEmitter {
     // Now emit state update - state is fully ready with plan and correct phase
     this.emitStateUpdate();
     this.emitThought('reason', 'Loading pre-generated script for review.');
-    this.emitThought('observe', `Loaded ${sceneBreakdown.length} scenes from provided script. Ready for review.`);
+    this.emitThought('observe', `Loaded ${sceneBreakdown.length} scenes from provided script${script.storyScript ? ' with full choreography data' : ''}. Ready for review.`);
 
     // Start the main loop (will immediately pause at AWAITING_FEEDBACK)
     await this.runLoop();
 
     return this.state;
+  }
+
+  /**
+   * Convert ProvidedScript scenes to SceneDescription format.
+   * If StoryScript is available, extract richer data from it.
+   */
+  private convertToSceneDescriptions(script: ProvidedScript): SceneDescription[] {
+    // If we have a full StoryScript, use it for richer scene data
+    if (script.storyScript && script.storyScript.scenes.length > 0) {
+      return script.storyScript.scenes.map((storyScene, idx) => {
+        // Extract text content from moments
+        const textContent = storyScene.moments.flatMap(m => 
+          m.textElements.map(t => t.content)
+        );
+
+        // Extract key elements from visual elements
+        const keyElements = [
+          ...storyScene.moments.flatMap(m => m.visualElements.map(v => v.name)),
+          ...storyScene.moments.flatMap(m => m.textElements.map(t => `${t.purpose}: ${t.content}`))
+        ].filter((v, i, a) => a.indexOf(v) === i);
+
+        // Build description from moment narratives
+        const description = storyScene.moments.map(m => m.visualAction).join(' ');
+
+        // Map energy level
+        const avgEnergy = storyScene.moments.reduce((acc, m) => {
+          const energyMap: Record<string, number> = {
+            intro: 1, building: 2, peak: 3, sustain: 2, resolution: 1, outro: 1
+          };
+          return acc + (energyMap[m.energyLevel] || 2);
+        }, 0) / storyScene.moments.length;
+
+        const energyLevel: 'high' | 'medium' | 'low' =
+          avgEnergy > 2.5 ? 'high' : avgEnergy > 1.5 ? 'medium' : 'low';
+
+        return {
+          id: storyScene.id,
+          sceneNumber: storyScene.sceneNumber,
+          description,
+          frameRange: storyScene.frameRange,
+          keyElements,
+          storyPhase: storyScene.storyPhase,
+          textContent,
+          visualStyle: 'kinetic_typography' as const,
+          energyLevel,
+          suggestedDuration: (storyScene.frameRange.end - storyScene.frameRange.start + 1) / 30
+        };
+      });
+    }
+
+    // Fall back to legacy scene format
+    return script.scenes.map((scene, idx) => ({
+      id: scene.id || `scene-${idx + 1}`,
+      sceneNumber: scene.sceneNumber || idx + 1,
+      description: scene.description,
+      frameRange: scene.frameRange,
+      keyElements: scene.keyElements || [],
+      storyPhase: scene.storyPhase as SceneDescription['storyPhase'],
+      textContent: scene.textContent,
+      visualStyle: (scene as any).visualStyle || 'abstract_shape',
+      energyLevel: (scene as any).energyLevel || 'medium',
+      suggestedDuration: (scene as any).suggestedDuration || 5,
+      textOverlay: (scene as any).textOverlay,
+      cameraMovement: (scene as any).cameraMovement,
+      assets: (scene as any).assets
+    }));
   }
 
   /**

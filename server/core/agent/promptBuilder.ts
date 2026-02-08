@@ -2,6 +2,7 @@ import { BrandContext, VideoConfig, MotionStyle } from './types';
 import { getSkillsRouter } from './skills/skillsRouter';
 import { SkillsContext } from './skills/skillsIndex';
 import { getComponentsRouter, ComponentsContext, resetComponentsRouter } from './skills/components/componentsRouter';
+import { VIDEO_CONFIG } from '../constants/video.constants';
 
 const STYLE_DESCRIPTIONS: Record<MotionStyle, string> = {
   minimalist: 'Clean, sparse, and elegant. Use lots of whitespace, subtle fade transitions, and refined typography. Focus on simplicity and precision. Use thin lines and delicate animations.',
@@ -135,7 +136,7 @@ Create a React component that renders an animated brand video using Remotion.
 ## VIDEO SPECIFICATIONS
 - Width: ${finalWidth}px
 - Height: ${finalHeight}px
-- Duration: 150 frames (5 seconds at 30fps)
+- Duration: ${VIDEO_CONFIG.TOTAL_FRAMES} frames (${VIDEO_CONFIG.DURATION_SECONDS} seconds at ${VIDEO_CONFIG.FPS}fps)
 - Style: ${config.style.toUpperCase()} - ${STYLE_DESCRIPTIONS[config.style]}
 
 ## CREATIVE DIRECTION
@@ -193,21 +194,40 @@ export default function BrandVideo() {
 }
 \`\`\`
 
-## DESIGN REQUIREMENTS (for 5-second / 150-frame video)
+## DESIGN REQUIREMENTS (for ${VIDEO_CONFIG.DURATION_SECONDS}-second / ${VIDEO_CONFIG.TOTAL_FRAMES}-frame video)
 
-1. **Opening (frames 0-45)**: Animated intro with brand colors. Shapes or patterns matching ${config.style} style.
+**STORY-DRIVEN STRUCTURE (5-Act Narrative)**:
+The video follows a story arc where the brand name "${brand.name}" appears ONLY in the final Brand Reveal phase.
 
-2. **Brand Name Reveal (frames 30-90)**: Display "${brand.name}" prominently:
-   - Large typography (fontSize: 48-80px)
-   - Animated entrance matching ${config.style}
-   - Color: '${brand.colors[1] || '#ffffff'}' on '${brand.colors[0] || '#000000'}' background
+1. **Problem Phase (frames 0-150, 0-5s)**: Establish user need
+   - Show a relatable situation or challenge
+   - Text animation: Question or context-setting statement
+   - Visual: Simple shapes or scene representing the problem
+   - NO BRAND NAME YET
 
-3. **Tagline (frames 60-120)**: Show "${brand.tagline}":
-   - Smaller text (fontSize: 20-32px)
-   - Staggered entrance after brand name
-   - letterSpacing for elegance
+2. **Solution Phase (frames 150-300, 5-10s)**: Show ease of use
+   - Demonstrate how simple the action is
+   - Text animation: "Just [action]" or instruction text
+   - Visual: Phone, upload, simple interaction
+   - STILL NO BRAND NAME
 
-4. **Closing (frames 100-150)**: Memorable outro with all elements converging.
+3. **Magic Phase (frames 300-480, 10-16s)**: Reveal capability
+   - Show what makes this special/powerful
+   - Text animation: Reveal the capability
+   - Visual: Network effect, transformation, multiplication
+   - BRAND STILL HIDDEN
+
+4. **Result Phase (frames 480-630, 16-21s)**: Success outcome
+   - Show the successful result
+   - Text animation: Value summary (3 verbs)
+   - Visual: Connection, transaction, satisfaction
+   - WAITING FOR BRAND...
+
+5. **Brand Reveal Phase (frames 630-900, 21-30s)**: 
+   - Bouncing/rhythmic text summary
+   - Brand name "${brand.name}" appears FOR THE FIRST TIME
+   - Tagline "${brand.tagline}" appears below
+   - Visual: Logo reveal, brand colors dominate
 
 ## AVAILABLE FONTS (Pre-loaded - use by name)
 Use these fonts directly in fontFamily props - they are globally pre-loaded:
@@ -294,10 +314,11 @@ export default function BrandVideo() {
 
 3. Display the brand name "${brand.name}" and tagline "${brand.tagline}"
 4. Use brand colors: ${brand.colors.join(', ')}
-5. Have 150 frames of animation (5 seconds at 30fps)
+5. Have ${VIDEO_CONFIG.TOTAL_FRAMES} frames of animation (${VIDEO_CONFIG.DURATION_SECONDS} seconds at ${VIDEO_CONFIG.FPS}fps)
 6. Follow ALL the MANDATORY RULES from the skills reference above
 7. **PREFER components** from the library when fixing - they handle animations correctly
 8. Use pre-loaded fonts: "DM Sans", "Inter", "Roboto", "Montserrat", "Poppins", "Space Grotesk", "Sora", "Manrope", "Oswald", "Bebas Neue", "Instrument Serif", "Playfair Display", "Lora", "Roboto Mono"
+9. Remember: Brand name "${brand.name}" should only appear in the Brand Reveal phase (frames 630-900)
 
 ## OUTPUT
 Return ONLY the corrected TSX code in a single code block. No explanations.`;
@@ -331,7 +352,7 @@ Create a React component that renders an animated brand video using Remotion.
 ## VIDEO SPECIFICATIONS
 - Width: ${finalWidth}px
 - Height: ${finalHeight}px
-- Duration: 150 frames (5 seconds at 30fps)
+- Duration: ${VIDEO_CONFIG.TOTAL_FRAMES} frames (${VIDEO_CONFIG.DURATION_SECONDS} seconds at ${VIDEO_CONFIG.FPS}fps)
 - Style: ${config.style.toUpperCase()} - ${STYLE_DESCRIPTIONS[config.style]}
 
 ## CREATIVE DIRECTION

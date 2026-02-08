@@ -10,6 +10,7 @@ import {
 import { BasePhase, PhaseContext, PhaseResult } from './BasePhase';
 import { AI_MODELS } from '../../agent/models';
 import { extractGeminiThoughts, getThinkingConfig } from '../../agent/geminiThoughts';
+import { VIDEO_CONFIG, STORY_PHASES } from '../../constants/video.constants';
 
 /**
  * PlanningPhase (The "Script Builder") converts the user's request into
@@ -44,7 +45,7 @@ export class PlanningPhase extends BasePhase {
       state,
       'reason',
       `Need to break down the video into discrete scenes for "${state.brand.name}". ` +
-      `Will create a scene structure with frame ranges for a 150-frame (5-second) video ` +
+      `Will create a scene structure with frame ranges for a ${VIDEO_CONFIG.TOTAL_FRAMES}-frame (${VIDEO_CONFIG.DURATION_SECONDS}-second) video ` +
       `using the ${state.config.style} style.`,
       context
     );
@@ -125,7 +126,7 @@ export class PlanningPhase extends BasePhase {
     const ai = this.getAI();
 
     const systemPrompt = `You are a motion design director creating a video storyboard.
-Break down a 5-second motion design video (150 frames at 30fps) into logical scenes.
+Break down a ${VIDEO_CONFIG.DURATION_SECONDS}-second motion design video (${VIDEO_CONFIG.TOTAL_FRAMES} frames at ${VIDEO_CONFIG.FPS}fps) into logical scenes.
 
 BRAND: ${state.brand.name}
 INDUSTRY: ${state.brand.industry}
@@ -137,10 +138,34 @@ ASPECT RATIO: ${state.config.aspectRatio}
 CREATIVE DIRECTION:
 ${state.config.prompt}
 
+## STORY STRUCTURE (5-Phase Narrative Arc)
+
+Your scenes MUST follow this story-driven structure:
+
+1. **PROBLEM Phase** (0-${STORY_PHASES.PROBLEM.frames.end} frames / 0-5 seconds)
+   - Establish user need or desire
+   - NO brand name here!
+
+2. **SOLUTION Phase** (${STORY_PHASES.SOLUTION.frames.start}-${STORY_PHASES.SOLUTION.frames.end} frames / 5-10 seconds)  
+   - Show how easy it is to use
+   - NO brand name here!
+
+3. **MAGIC Phase** (${STORY_PHASES.MAGIC.frames.start}-${STORY_PHASES.MAGIC.frames.end} frames / 10-16 seconds)
+   - Reveal special capability / network effect
+   - NO brand name here!
+
+4. **RESULT Phase** (${STORY_PHASES.RESULT.frames.start}-${STORY_PHASES.RESULT.frames.end} frames / 16-21 seconds)
+   - Show successful outcome
+   - NO brand name here!
+
+5. **BRAND REVEAL Phase** (${STORY_PHASES.BRAND_REVEAL.frames.start}-${STORY_PHASES.BRAND_REVEAL.frames.end} frames / 21-30 seconds)
+   - Value summary with brand name
+   - ONLY place where "${state.brand.name}" appears
+
 REQUIREMENTS:
-1. Create 3-5 distinct scenes that flow naturally
-2. Each scene must have a clear purpose (intro, main content, outro, etc.)
-3. Frame ranges must be consecutive and cover all 150 frames (0-149)
+1. Create 5-8 distinct scenes that flow naturally across the 5 phases
+2. Each scene must have a clear purpose and storyPhase tag
+3. Frame ranges must be consecutive and cover all ${VIDEO_CONFIG.TOTAL_FRAMES} frames (0-${VIDEO_CONFIG.TOTAL_FRAMES - 1})
 4. Include specific visual elements for each scene
 5. Consider the ${state.config.style} style in your scene descriptions
 
@@ -151,17 +176,23 @@ OUTPUT FORMAT - Return ONLY valid JSON matching this exact structure:
     {
       "sceneNumber": 1,
       "description": "What happens in this scene",
-      "frameRange": { "start": 0, "end": 49 },
-      "keyElements": ["element1", "element2"]
+      "storyPhase": "problem",
+      "frameRange": { "start": 0, "end": 149 },
+      "keyElements": ["element1", "element2"],
+      "textContent": ["Text that appears", "More text"],
+      "visualStyle": "kinetic_typography",
+      "energyLevel": "medium"
     }
   ],
   "estimatedComplexity": "low" | "medium" | "high"
 }
 
 IMPORTANT:
-- Frame ranges must start at 0 and end at 149
+- storyPhase must be one of: "problem", "solution", "magic", "result", "brand-reveal"
+- Frame ranges must start at 0 and end at ${VIDEO_CONFIG.TOTAL_FRAMES - 1}
 - Each scene's start must equal the previous scene's end + 1
 - Include at least 3 keyElements per scene
+- Include textContent array with the actual text to display
 - Return ONLY the JSON, no markdown code blocks or explanations`;
 
     // Enable thinking to capture the model's reasoning process
@@ -233,23 +264,38 @@ IMPORTANT:
       throw new Error('Invalid plan: missing or empty sceneBreakdown');
     }
 
+    // Calculate default frame allocation per scene based on 30-second video
+    const framesPerScene = Math.floor(VIDEO_CONFIG.TOTAL_FRAMES / sceneBreakdown.length);
+
     // Normalize scenes
     const normalizedScenes: SceneDescription[] = sceneBreakdown.map((scene, index) => {
       const rawFrameRange = scene.frameRange as { start?: number; end?: number } | undefined;
       const frameStart = rawFrameRange?.start;
       const frameEnd = rawFrameRange?.end;
 
+      // Default frame ranges based on equal distribution
+      const defaultStart = index * framesPerScene;
+      const defaultEnd = index === sceneBreakdown.length - 1 
+        ? VIDEO_CONFIG.TOTAL_FRAMES - 1 
+        : (index + 1) * framesPerScene - 1;
+
       return {
         id: uuidv4(),
         sceneNumber: (scene.sceneNumber as number) || index + 1,
         description: (scene.description as string) || `Scene ${index + 1}`,
+        storyPhase: (scene.storyPhase as string) || this.inferStoryPhase(index, sceneBreakdown.length),
         frameRange: {
-          start: typeof frameStart === 'number' ? frameStart : index * 50,
-          end: typeof frameEnd === 'number' ? frameEnd : (index + 1) * 50 - 1
+          start: typeof frameStart === 'number' ? frameStart : defaultStart,
+          end: typeof frameEnd === 'number' ? frameEnd : defaultEnd
         },
         keyElements: Array.isArray(scene.keyElements)
           ? (scene.keyElements as string[])
-          : ['animation', 'brand element']
+          : ['animation', 'brand element'],
+        textContent: Array.isArray(scene.textContent)
+          ? (scene.textContent as string[])
+          : [],
+        visualStyle: (scene.visualStyle as SceneDescription['visualStyle']) || 'abstract_shape',
+        energyLevel: (scene.energyLevel as SceneDescription['energyLevel']) || 'medium'
       };
     });
 
@@ -265,11 +311,14 @@ IMPORTANT:
   }
 
   /**
-   * Validate that frame ranges are consecutive and cover 0-149.
+   * Validate that frame ranges are consecutive and cover 0-899 (30 seconds at 30fps).
    */
   private validateFrameRanges(scenes: SceneDescription[]): void {
     // Sort by start frame
     scenes.sort((a, b) => a.frameRange.start - b.frameRange.start);
+
+    const totalFrames = VIDEO_CONFIG.TOTAL_FRAMES;
+    const minFramesPerScene = 60; // Minimum 2 seconds per scene
 
     // Adjust to ensure continuous coverage
     let expectedStart = 0;
@@ -278,15 +327,15 @@ IMPORTANT:
       scene.frameRange.start = expectedStart;
 
       if (i === scenes.length - 1) {
-        // Last scene must end at 149
-        scene.frameRange.end = 149;
+        // Last scene must end at totalFrames - 1
+        scene.frameRange.end = totalFrames - 1;
       } else {
         // Ensure end is before next scene's start
         const duration = Math.max(
-          20, // Minimum 20 frames per scene
+          minFramesPerScene, // Minimum frames per scene
           scene.frameRange.end - scene.frameRange.start + 1
         );
-        scene.frameRange.end = Math.min(148, expectedStart + duration - 1);
+        scene.frameRange.end = Math.min(totalFrames - 2, expectedStart + duration - 1);
       }
 
       expectedStart = scene.frameRange.end + 1;
@@ -306,6 +355,19 @@ IMPORTANT:
   }
 
   /**
+   * Infer the story phase based on scene position in the video.
+   */
+  private inferStoryPhase(sceneIndex: number, totalScenes: number): string {
+    const position = sceneIndex / totalScenes;
+    
+    if (position < 0.17) return 'problem';
+    if (position < 0.33) return 'solution';
+    if (position < 0.53) return 'magic';
+    if (position < 0.70) return 'result';
+    return 'brand-reveal';
+  }
+
+  /**
    * Create a fallback single-scene plan when generation fails.
    */
   private createFallbackPlan(state: WorkflowState): ImplementationPlan {
@@ -315,8 +377,8 @@ IMPORTANT:
         {
           id: uuidv4(),
           sceneNumber: 1,
-          description: `Full 5-second ${state.config.style} motion design featuring ${state.brand.name}`,
-          frameRange: { start: 0, end: 149 },
+          description: `Full ${VIDEO_CONFIG.DURATION_SECONDS}-second ${state.config.style} motion design featuring ${state.brand.name}`,
+          frameRange: { start: 0, end: VIDEO_CONFIG.TOTAL_FRAMES - 1 },
           keyElements: [
             'Brand name animation',
             'Tagline reveal',

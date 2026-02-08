@@ -17,6 +17,14 @@ import { BasePhase, PhaseContext, PhaseResult } from './BasePhase';
 import { AI_MODELS } from '../../agent/models';
 import { extractGeminiThoughts, getThinkingConfig } from '../../agent/geminiThoughts';
 import { RemotionRenderer } from '../../renderer/remotionRenderer';
+import {
+  StoryScript,
+  Scene as StoryScene,
+  Moment,
+  TextElement,
+  TextChoreography,
+  TextAnimationType
+} from '../../types/script.types';
 
 /**
  * ImplementationPhase (The "Code Generator") generates Remotion code
@@ -666,6 +674,8 @@ ${state.brand.logoPath ? `- **Logo**: Available at "${state.brand.logoPath}" - U
 ## STYLE: ${state.config.style.toUpperCase()}
 ${this.getStyleGuidelines(state.config.style)}
 
+${this.getSceneChoreographyData(state.storyScript, scene.sceneNumber)}
+
 ${componentLibraryDocs}
 
 ## EXAMPLE: USING COMPONENT LIBRARY (PREFERRED)
@@ -693,6 +703,18 @@ ${rawExampleCode}
 7. AbsoluteFill as root element
 8. Use brand colors: primary="${state.brand.colors[0] || '#000000'}", secondary="${state.brand.colors[1] || '#FFFFFF'}"${state.brand.logoPath ? `
 9. LOGO: Use <Img src={staticFile("${state.brand.logoPath}")} /> from 'remotion'` : ''}
+${state.storyScript ? `
+## CRITICAL: IMPLEMENT THE CHOREOGRAPHY DATA
+If TEXT CHOREOGRAPHY section is provided above, you MUST:
+- Display the EXACT text content specified (not improvised text)
+- Use the EXACT animation types specified (entrance.type, exit.type)
+- Use the EXACT timing durations (converted to frames: ms / 1000 * 30)
+- Position text at the specified coordinates (x%, y%)
+- Apply the typography specs (size, weight, color)
+- Follow the energy level and emotional tone
+- Implement any text interactions (makes-space-for, replaces, etc.)
+DO NOT improvise or change the script content - implement it faithfully!
+` : ''}
 
 ## CRITICAL MISTAKES TO AVOID (WILL CAUSE ERRORS)
 
@@ -743,6 +765,11 @@ You have access to a pre-built component library. **Review these components and 
 | **AnimatedText** | \`@/components/AnimatedText\` | Text with 9 animation presets, word/character stagger, positioning |
 | **LayoutGrid** | \`@/components/AnimatedText\` | Flexbox layout for grouping/centering elements |
 | **TextSequence** | \`@/components/AnimatedText\` | Sequential text animations (chain mode) |
+| **CatchUpText** | \`@/components/TextChoreography\` | Words animate sequentially, later words move faster to "catch up" |
+| **TextCycle** | \`@/components/TextChoreography\` | Words replace each other at the same position |
+| **BounceReveal** | \`@/components/TextChoreography\` | Words appear on rhythmic bounces |
+| **TextMakesSpace** | \`@/components/TextChoreography\` | Text slides aside to reveal other elements |
+| **MorphText** | \`@/components/TextChoreography\` | Text transforms/morphs into another element |
 | **Background** | \`@/components/Global\` | Animated backgrounds: gradient-mesh, grid-lines, blobs, presets |
 | **MotionContainer** | \`@/components/Layout\` | Animation wrapper with entrance/exit states |
 | **BentoGrid** | \`@/components/Layout\` | Animated CSS grid with stagger |
@@ -776,9 +803,75 @@ import { AnimatedText, LayoutGrid } from '@/components/AnimatedText';
 </LayoutGrid>
 \`\`\`
 
-**Presets:** fadeBlurIn, slideInUp, slideInDown, slideInLeft, slideInRight, scaleUp, typewriter, glitchReveal, maskSlideUp
+**Presets:** fadeBlurIn, fadeBlurOut, scaleIn, springIn, slideInUp, slideInDown, slideInLeft, slideInRight, maskSlideUp, maskSlideDown, maskSlideLeft, maskSlideRight, glitchReveal, typewriter, none
 
 **Key Props:** text, preset, delay, fontSize, fontWeight, color, anchor, animationUnit (full/word/character), stagger, exit (object with startFrame, opacity, blur, scale)
+
+### TextChoreography - Advanced Text Patterns
+\`\`\`tsx
+import { CatchUpText, TextCycle, BounceReveal, TextMakesSpace, MorphText } from '@/components/TextChoreography';
+
+// CatchUpText: Words animate sequentially, later words catch up
+// Great for: Headlines that build momentum
+<CatchUpText 
+  text="Build faster with AI"
+  startFrame={0}
+  convergenceFrame={30}  // All words land by frame 30
+  direction="up"
+  fontSize={64}
+  color="#FFFFFF"
+/>
+
+// TextCycle: Words replace each other in place
+// Great for: Feature lists, changing options
+<TextCycle 
+  items={["Simple", "Fast", "Powerful"]}
+  holdDuration={30}
+  transitionDuration={15}
+  enterFrom="up"
+  exitTo="up"
+  fontSize={72}
+/>
+
+// BounceReveal: Words bounce in with spring physics
+// Great for: Playful, energetic reveals
+<BounceReveal 
+  text="Hello World"
+  startFrame={0}
+  staggerFrames={8}
+  bounceHeight={60}
+  springConfig={{ damping: 10, stiffness: 180 }}
+  fontSize={64}
+/>
+
+// TextMakesSpace: Text slides aside to reveal content
+// Great for: "Introducing" → Product reveal
+<TextMakesSpace 
+  text="Introducing"
+  slideDirection="left"
+  slideDistance="40%"
+  textHoldDuration={30}
+>
+  <YourProductUI />
+</TextMakesSpace>
+
+// MorphText: Text morphs into another element
+// Great for: Text → Icon or Text → Logo transitions
+<MorphText 
+  text="Your Brand"
+  morphTo={<img src="/logo.png" />}
+  holdDuration={30}
+  morphDuration={20}
+  morphType="all"  // fade + scale + blur
+/>
+\`\`\`
+
+**When to use TextChoreography:**
+- "catch-up" animation type → CatchUpText
+- "replacement cycle" or word cycling → TextCycle
+- "bounce" animation type → BounceReveal
+- "makes-space-for" interaction → TextMakesSpace
+- "morph" or "morphs-into" interaction → MorphText
 
 ### Background - Animated Backgrounds
 \`\`\`tsx
@@ -848,6 +941,7 @@ import { MockupFrame } from '@/components/MockupFrame';
 
 ### Decision Guide
 - **Text animations**: AnimatedText handles most text needs with presets
+- **Advanced choreography**: Use TextChoreography components for catch-up, cycling, bounce, make-space, morph patterns
 - **Backgrounds**: Background for gradient/pattern backgrounds (use presets for best results)
 - **Layout/centering**: LayoutGrid for positioning, MotionContainer for entrance/exit
 - **Camera effects**: CameraRig for zoom/pan on any content
@@ -1656,5 +1750,159 @@ registerRoot(RemotionRoot);
     } else {
       return 'LONGER scene - Can support complex sequences. Consider multiple phases: intro, main content, outro. Use Sequence for timing.';
     }
+  }
+
+  /**
+   * Get choreography data from StoryScript for a specific scene.
+   * This extracts the rich text animation data from the script.
+   */
+  private getSceneChoreographyData(storyScript: StoryScript | undefined, sceneNumber: number): string {
+    if (!storyScript || !storyScript.scenes) {
+      return '';
+    }
+
+    const storyScene = storyScript.scenes.find(s => s.sceneNumber === sceneNumber);
+    if (!storyScene) {
+      return '';
+    }
+
+    const sections: string[] = [];
+
+    // Scene-level info
+    sections.push(`## STORY CONTEXT`);
+    sections.push(`- **Story Phase**: ${storyScene.storyPhase} - ${this.getStoryPhaseDescription(storyScene.storyPhase)}`);
+    sections.push(`- **Scene Purpose**: ${storyScene.purpose}`);
+    sections.push(`- **Visual Theme**: ${storyScene.visualTheme}`);
+    sections.push(`- **Text Theme**: ${storyScene.textTheme}`);
+    if (storyScene.dominantColor) {
+      sections.push(`- **Dominant Color**: ${storyScene.dominantColor}`);
+    }
+    sections.push('');
+
+    // Moments and text choreography
+    sections.push(`## TEXT CHOREOGRAPHY (${storyScene.moments.length} moments)`);
+    sections.push('');
+    sections.push('IMPORTANT: Implement these text elements with the EXACT choreography specified below.');
+    sections.push('Each text element has entrance, hold, and exit animations that MUST be followed.');
+    sections.push('');
+
+    for (const moment of storyScene.moments) {
+      const momentStartFrame = moment.timing.startFrame;
+      const momentEndFrame = moment.timing.endFrame;
+      
+      sections.push(`### Moment ${moment.sequence}: "${moment.narrative}" (frames ${momentStartFrame}-${momentEndFrame})`);
+      sections.push(`- **Visual Action**: ${moment.visualAction}`);
+      sections.push(`- **Purpose**: ${moment.storyPurpose}`);
+      sections.push(`- **Energy**: ${moment.energyLevel} | **Tone**: ${moment.emotionalTone}`);
+      
+      if (moment.camera) {
+        sections.push(`- **Camera**: ${moment.camera.type} (${moment.camera.intensity})`);
+      }
+      sections.push('');
+
+      // Text elements with full choreography
+      for (const textEl of moment.textElements) {
+        sections.push(`#### Text: "${textEl.content}"`);
+        sections.push(`  - **Purpose**: ${textEl.purpose} | **Personality**: ${textEl.personality}`);
+        sections.push(`  - **Position**: x=${textEl.position.x}%, y=${textEl.position.y}%, align=${textEl.position.align || 'center'}`);
+        sections.push(`  - **Typography**: size=${textEl.typography.size}px, weight=${textEl.typography.weight}, color=${textEl.typography.color}`);
+        
+        // Entrance animation
+        const entrance = textEl.choreography.entrance;
+        sections.push(`  - **ENTRANCE** (${entrance.type}): ${entrance.duration}ms, easing=${entrance.easing || 'ease-out'}`);
+        sections.push(`    ${this.getEntranceCodeHint(entrance)}`);
+        
+        // Hold animation
+        if (textEl.choreography.hold) {
+          const hold = textEl.choreography.hold;
+          sections.push(`  - **HOLD**: ${hold.duration}ms${hold.animation ? `, animation=${hold.animation}` : ''}`);
+        }
+        
+        // Exit animation
+        if (textEl.choreography.exit) {
+          const exit = textEl.choreography.exit;
+          sections.push(`  - **EXIT** (${exit.type}): ${exit.duration}ms, easing=${exit.easing || 'ease-in'}`);
+          sections.push(`    ${this.getExitCodeHint(exit)}`);
+        }
+
+        // Interactions with other elements
+        if (textEl.interactions && textEl.interactions.length > 0) {
+          for (const interaction of textEl.interactions) {
+            sections.push(`  - **INTERACTS**: ${interaction.relationship} "${interaction.with}" (${interaction.timing || 'simultaneous'})`);
+          }
+        }
+        sections.push('');
+      }
+
+      // Visual elements
+      if (moment.visualElements.length > 0) {
+        sections.push(`  **Visual Elements**: ${moment.visualElements.map(v => `${v.name} (${v.type})`).join(', ')}`);
+      }
+      sections.push('');
+    }
+
+    return sections.join('\n');
+  }
+
+  /**
+   * Get story phase description for context.
+   */
+  private getStoryPhaseDescription(phase: string): string {
+    const descriptions: Record<string, string> = {
+      'problem': 'Set up the challenge or pain point. Create tension. Use darker tones, slower reveals.',
+      'solution': 'Introduce the product/solution. Shift energy upward. Brighter colors, faster animations.',
+      'magic': 'Show the key differentiator. Peak energy. Bold animations, impactful reveals.',
+      'result': 'Demonstrate the outcome/benefit. Satisfying resolution. Smooth, confident animations.',
+      'brand-reveal': 'Final brand moment. Logo and tagline. Elegant, memorable. Leave lasting impression.'
+    };
+    return descriptions[phase] || 'Continue the narrative arc.';
+  }
+
+  /**
+   * Get code hint for entrance animation type.
+   */
+  private getEntranceCodeHint(entrance: { type: TextAnimationType; duration: number; startPosition?: { x: number; y: number }; startScale?: number; startOpacity?: number }): string {
+    const durationFrames = Math.round((entrance.duration / 1000) * 30);
+    
+    const hints: Record<string, string> = {
+      'slide-up': `Use AnimatedText preset="slideInUp" or interpolate translateY from 50 to 0 over ${durationFrames} frames`,
+      'slide-down': `Use AnimatedText preset="slideInDown" or interpolate translateY from -50 to 0 over ${durationFrames} frames`,
+      'slide-left': `Use AnimatedText preset="slideInLeft" or interpolate translateX from -100 to 0 over ${durationFrames} frames`,
+      'slide-right': `Use AnimatedText preset="slideInRight" or interpolate translateX from 100 to 0 over ${durationFrames} frames`,
+      'catch-up': `Use <CatchUpText text="..." convergenceFrame={${durationFrames}} /> from @/components/TextChoreography - words animate sequentially, later words catch up`,
+      'bounce': `Use <BounceReveal text="..." staggerFrames={8} /> from @/components/TextChoreography - words bounce in with spring physics`,
+      'word-by-word': `Use AnimatedText animationUnit="word" stagger=${Math.round(durationFrames / 3)} for word reveals`,
+      'letter-by-letter': `Use AnimatedText animationUnit="character" stagger=2 for typewriter effect`,
+      'fade': `Use AnimatedText preset="fadeBlurIn" or interpolate opacity from 0 to 1 over ${durationFrames} frames`,
+      'fade-scale': `Use AnimatedText preset="scaleUp" or combine opacity and scale interpolation`,
+      'scale-up': `Use AnimatedText preset="scaleUp" or interpolate scale from 0.8 to 1 with spring`,
+      'scale-down': `Interpolate scale from 1.2 to 1 over ${durationFrames} frames`,
+      'pop': `Use spring({ config: { damping: 8, stiffness: 200 } }) with scale overshoot to 1.1 then settle to 1`,
+      'morph': `Use <MorphText text="..." morphTo={...} /> from @/components/TextChoreography for text-to-element morphing`
+    };
+    
+    return hints[entrance.type] || `Animate with ${entrance.type} effect over ${durationFrames} frames`;
+  }
+
+  /**
+   * Get code hint for exit animation type.
+   */
+  private getExitCodeHint(exit: { type: TextAnimationType; duration: number; endPosition?: { x: number; y: number }; endScale?: number; endOpacity?: number }): string {
+    const durationFrames = Math.round((exit.duration / 1000) * 30);
+    
+    const hints: Record<string, string> = {
+      'slide-up': `Use exit={{ startFrame: X, translateY: { from: 0, to: -50 } }} over ${durationFrames} frames`,
+      'slide-down': `Use exit={{ startFrame: X, translateY: { from: 0, to: 50 } }} over ${durationFrames} frames`,
+      'slide-left': `Use exit={{ startFrame: X, translateX: { from: 0, to: -100 } }} over ${durationFrames} frames`,
+      'slide-right': `Use exit={{ startFrame: X, translateX: { from: 0, to: 100 } }} over ${durationFrames} frames`,
+      'fade': `Use exit={{ startFrame: X, opacity: { from: 1, to: 0 } }} over ${durationFrames} frames`,
+      'fade-scale': `Combine exit opacity and scale: exit={{ startFrame: X, opacity: { from: 1, to: 0 }, scale: { from: 1, to: 0.8 } }}`,
+      'scale-down': `Use exit={{ startFrame: X, scale: { from: 1, to: 0 } }} over ${durationFrames} frames`,
+      'scale-up': `Use exit={{ startFrame: X, scale: { from: 1, to: 1.5 }, opacity: { from: 1, to: 0 } }}`,
+      'pop': `Quick scale to 0 with spring damping`,
+      'morph': `Crossfade to next element`
+    };
+    
+    return hints[exit.type] || `Animate exit with ${exit.type} effect over ${durationFrames} frames`;
   }
 }

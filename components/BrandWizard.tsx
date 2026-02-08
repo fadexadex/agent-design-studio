@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { BrandContext, VideoConfig, MotionStyle, SceneDescription, VideoScript } from '../types';
+import { BrandContext, VideoConfig, MotionStyle, VideoScript, StoryScript } from '../types';
 import { Check, ChevronRight, Upload, Palette, Rocket, Zap, Sliders, FileText, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import ScriptPreview from './ScriptPreview';
 
 interface BrandWizardProps {
   onComplete: (brand: BrandContext, config: VideoConfig, script: VideoScript) => void;
@@ -25,12 +26,11 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
     prompt: '',
   });
 
-  // Script state for step 5
+  // Script state for step 5 (Story-driven format)
   const [scriptMode, setScriptMode] = useState<'upload' | 'generate' | null>(null);
   const [uploadedScript, setUploadedScript] = useState<string>('');
-  const [parsedScenes, setParsedScenes] = useState<SceneDescription[]>([]);
+  const [storyScript, setStoryScript] = useState<StoryScript | null>(null);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
-  const [generatedScript, setGeneratedScript] = useState<string>('');
   const [scriptError, setScriptError] = useState<string | null>(null);
 
   const steps = [
@@ -90,66 +90,6 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
   const nextStep = () => setStep(s => Math.min(s + 1, steps.length));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
-  // Parse uploaded script into scenes
-  const parseScriptToScenes = (scriptText: string): SceneDescription[] => {
-    // Split by common scene markers: "Scene X:", "[Scene X]", "SCENE X", numbered lines, or double newlines
-    const scenePatterns = /(?:^|\n)(?:(?:Scene\s*\d+[:\s-])|(?:\[Scene\s*\d+\])|(?:SCENE\s*\d+[:\s-])|(?:\d+[\.\)]\s))/gi;
-
-    let scenes: SceneDescription[] = [];
-    const parts = scriptText.split(scenePatterns).filter(p => p.trim());
-
-    if (parts.length > 1) {
-      // Script has clear scene markers
-      scenes = parts.map((content, idx) => ({
-        id: `scene-${idx + 1}`,
-        sceneNumber: idx + 1,
-        description: content.trim(),
-        frameRange: { start: idx * 270, end: (idx + 1) * 270 }, // ~9 seconds per scene for 45s total
-        keyElements: extractKeyElements(content)
-      }));
-    } else {
-      // No clear markers - split by paragraphs or sentences
-      const paragraphs = scriptText.split(/\n\n+/).filter(p => p.trim());
-      if (paragraphs.length >= 3) {
-        scenes = paragraphs.slice(0, 8).map((content, idx) => ({
-          id: `scene-${idx + 1}`,
-          sceneNumber: idx + 1,
-          description: content.trim(),
-          frameRange: { start: idx * 270, end: (idx + 1) * 270 },
-          keyElements: extractKeyElements(content)
-        }));
-      } else {
-        // Split into ~5-6 scenes based on content length
-        const words = scriptText.split(/\s+/);
-        const wordsPerScene = Math.ceil(words.length / 5);
-        for (let i = 0; i < 5; i++) {
-          const sceneWords = words.slice(i * wordsPerScene, (i + 1) * wordsPerScene);
-          if (sceneWords.length > 0) {
-            scenes.push({
-              id: `scene-${i + 1}`,
-              sceneNumber: i + 1,
-              description: sceneWords.join(' '),
-              frameRange: { start: i * 270, end: (i + 1) * 270 },
-              keyElements: extractKeyElements(sceneWords.join(' '))
-            });
-          }
-        }
-      }
-    }
-
-    return scenes;
-  };
-
-  const extractKeyElements = (text: string): string[] => {
-    // Extract key nouns, verbs, and descriptive phrases
-    const elements: string[] = [];
-    const keywords = text.match(/\b(logo|text|animation|transition|fade|zoom|slide|appear|reveal|glow|pulse|particle|gradient|background|foreground|brand|color|motion|movement)\b/gi);
-    if (keywords) {
-      elements.push(...[...new Set(keywords.map(k => k.toLowerCase()))].slice(0, 5));
-    }
-    return elements;
-  };
-
   const handleScriptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -157,35 +97,64 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
       reader.onloadend = () => {
         const text = reader.result as string;
         setUploadedScript(text);
-        const scenes = parseScriptToScenes(text);
-        setParsedScenes(scenes);
+        // Transform the uploaded text to story script
+        transformUploadedScript(text);
       };
       reader.readAsText(file);
+    }
+  };
+
+  const transformUploadedScript = async (text: string) => {
+    setIsGeneratingScript(true);
+    setScriptError(null);
+
+    try {
+      const response = await fetch('/api/script/transform', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          brand,
+          config
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.scenes) {
+        // API returns StoryScript directly (not wrapped in {script: ...})
+        setStoryScript(data);
+        setScriptError(null);
+      } else {
+        setScriptError(data.error || 'Failed to transform script. Please try again.');
+      }
+    } catch (error: any) {
+      setScriptError(error.message || 'Network error. Please check your connection and try again.');
+    } finally {
+      setIsGeneratingScript(false);
     }
   };
 
   const generateAIScript = async () => {
     setIsGeneratingScript(true);
     setScriptError(null);
-    setParsedScenes([]);
-    setGeneratedScript('');
+    setStoryScript(null);
 
     try {
-      const response = await fetch('/api/generate-script', {
+      const response = await fetch('/api/script/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brand,
-          config,
-          targetDuration: 45 // 45 seconds
+          config
         })
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        setGeneratedScript(data.script || '');
-        setParsedScenes(data.scenes || []);
+      if (response.ok && data.scenes) {
+        // API returns StoryScript directly (not wrapped in {script: ...})
+        setStoryScript(data);
         setScriptError(null);
       } else {
         setScriptError(data.error || 'Failed to generate script. Please try again.');
@@ -199,8 +168,8 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
 
   const isFoundationComplete = brand.name && brand.industry;
   const isCreativeComplete = config.prompt.length > 10;
-  // Script is REQUIRED - must have at least one scene
-  const isScriptComplete = parsedScenes.length > 0;
+  // Script is REQUIRED - must have a valid story script with scenes
+  const isScriptComplete = storyScript !== null && storyScript.scenes.length > 0;
 
   return (
     <div className="max-w-2xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -411,14 +380,14 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
         {step === 5 && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="space-y-2">
-              <h2 className="heading-font text-3xl font-bold uppercase tracking-tight">Video Script</h2>
+              <h2 className="heading-font text-3xl font-bold uppercase tracking-tight">Story Script</h2>
               <p className="text-zinc-400">
-                Choose how to create your ~45 second video script: upload an existing one or let AI generate it.
+                Choose how to create your 30-second story-driven video: upload your ideas or let AI craft the narrative.
               </p>
             </div>
 
             {/* Mode Selection */}
-            {!scriptMode && (
+            {!scriptMode && !storyScript && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <button
                   onClick={() => setScriptMode('upload')}
@@ -430,11 +399,11 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
                     </div>
                     <div>
                       <h3 className="font-bold text-white">Upload Script</h3>
-                      <p className="text-xs text-zinc-500">Use your own script file</p>
+                      <p className="text-xs text-zinc-500">Transform your ideas</p>
                     </div>
                   </div>
                   <p className="text-sm text-zinc-400">
-                    Upload a .txt file with your video script. We'll parse it into scenes automatically.
+                    Paste or upload your text. AI will transform it into a story-driven 5-act narrative.
                   </p>
                 </button>
 
@@ -451,18 +420,18 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
                     </div>
                     <div>
                       <h3 className="font-bold text-white">AI Generate</h3>
-                      <p className="text-xs text-zinc-500">Let AI create your script</p>
+                      <p className="text-xs text-zinc-500">Full story creation</p>
                     </div>
                   </div>
                   <p className="text-sm text-zinc-400">
-                    Based on your brand and creative brief, we'll generate a comprehensive 45-second video script.
+                    AI creates a complete 30-second story with text choreography based on your brand.
                   </p>
                 </button>
               </div>
             )}
 
             {/* Upload Mode */}
-            {scriptMode === 'upload' && (
+            {scriptMode === 'upload' && !storyScript && (
               <div className="space-y-6">
                 <div className="relative group">
                   <input
@@ -470,13 +439,20 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
                     onChange={handleScriptUpload}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     accept=".txt,.md,.rtf"
+                    disabled={isGeneratingScript}
                   />
-                  <div className="h-32 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-3 group-hover:border-zinc-500 transition-colors bg-zinc-900/50">
-                    {uploadedScript ? (
+                  <div className={`h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 transition-colors bg-zinc-900/50 ${
+                    isGeneratingScript ? 'border-blue-500' : uploadedScript ? 'border-green-500' : 'border-zinc-800 group-hover:border-zinc-500'
+                  }`}>
+                    {isGeneratingScript ? (
+                      <div className="text-center">
+                        <Loader2 className="mx-auto text-blue-400 mb-2 animate-spin" size={24} />
+                        <span className="text-sm text-blue-400">Transforming to story format...</span>
+                      </div>
+                    ) : uploadedScript ? (
                       <div className="text-center">
                         <FileText className="mx-auto text-green-400 mb-2" size={24} />
-                        <span className="text-sm text-green-400">Script uploaded successfully!</span>
-                        <p className="text-xs text-zinc-500 mt-1">{parsedScenes.length} scenes detected</p>
+                        <span className="text-sm text-green-400">Script uploaded - transforming...</span>
                       </div>
                     ) : (
                       <>
@@ -493,169 +469,143 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
                   <textarea
                     rows={8}
                     value={uploadedScript}
-                    onChange={(e) => {
-                      setUploadedScript(e.target.value);
-                      if (e.target.value.trim()) {
-                        setParsedScenes(parseScriptToScenes(e.target.value));
-                      }
-                    }}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 focus:outline-none focus:border-white transition-colors resize-none text-sm font-mono"
-                    placeholder="Scene 1: Opening with logo animation...&#10;Scene 2: Transition to product showcase...&#10;Scene 3: Feature highlights..."
+                    onChange={(e) => setUploadedScript(e.target.value)}
+                    disabled={isGeneratingScript}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 focus:outline-none focus:border-white transition-colors resize-none text-sm font-mono disabled:opacity-50"
+                    placeholder="Describe what should happen in your video...&#10;&#10;Example:&#10;Show someone struggling with textbooks, then easily snapping a photo to list them, other students see the post nearby, they meet up and exchange, ending with the app name."
                   />
+                  {uploadedScript && !isGeneratingScript && (
+                    <button
+                      onClick={() => transformUploadedScript(uploadedScript)}
+                      className="mt-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Sparkles size={14} /> Transform to Story
+                    </button>
+                  )}
                 </div>
+
+                {scriptError && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                    <p className="text-red-400 text-sm">{scriptError}</p>
+                  </div>
+                )}
 
                 <button
                   onClick={() => {
                     setScriptMode(null);
                     setUploadedScript('');
-                    setParsedScenes([]);
+                    setScriptError(null);
                   }}
                   className="text-sm text-zinc-500 hover:text-white transition-colors"
+                  disabled={isGeneratingScript}
                 >
                   ← Choose different option
                 </button>
               </div>
             )}
 
-            {/* Generate Mode */}
-            {scriptMode === 'generate' && (
-              <div className="space-y-6">
-                {isGeneratingScript ? (
-                  <div className="flex flex-col items-center justify-center py-16 gap-6">
-                    {/* Animated AI Brain Icon */}
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
-                      <div className="relative w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-700">
-                        <Sparkles size={32} className="text-purple-400 animate-pulse" />
-                      </div>
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping" />
-                    </div>
-
-                    {/* Loading Text */}
-                    <div className="text-center space-y-2">
-                      <h3 className="text-lg font-bold text-white">AI is crafting your script</h3>
-                      <p className="text-sm text-zinc-400 max-w-sm">
-                        Analyzing your brand "{brand.name}" and creating a compelling 45-second video narrative...
-                      </p>
-                    </div>
-
-                    {/* Progress Steps */}
-                    <div className="flex flex-col gap-3 w-full max-w-xs">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                          <Loader2 size={14} className="text-purple-400 animate-spin" />
-                        </div>
-                        <span className="text-sm text-zinc-300">Understanding brand context</span>
-                      </div>
-                      <div className="flex items-center gap-3 opacity-60">
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center">
-                          <div className="w-2 h-2 bg-zinc-600 rounded-full" />
-                        </div>
-                        <span className="text-sm text-zinc-500">Structuring scene flow</span>
-                      </div>
-                      <div className="flex items-center gap-3 opacity-40">
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center">
-                          <div className="w-2 h-2 bg-zinc-600 rounded-full" />
-                        </div>
-                        <span className="text-sm text-zinc-500">Writing scene descriptions</span>
-                      </div>
-                    </div>
-
-                    {/* Subtle tip */}
-                    <p className="text-xs text-zinc-600 italic">This usually takes 10-20 seconds</p>
+            {/* Generate Mode - Loading State */}
+            {scriptMode === 'generate' && isGeneratingScript && !storyScript && (
+              <div className="flex flex-col items-center justify-center py-16 gap-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
+                  <div className="relative w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-700">
+                    <Sparkles size={32} className="text-purple-400 animate-pulse" />
                   </div>
-                ) : scriptError ? (
-                  // Error State
-                  <div className="flex flex-col items-center justify-center py-12 gap-6">
-                    <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/30">
-                      <AlertCircle size={32} className="text-red-400" />
-                    </div>
-                    <div className="text-center space-y-2">
-                      <h3 className="text-lg font-bold text-white">Script Generation Failed</h3>
-                      <p className="text-sm text-zinc-400 max-w-sm">{scriptError}</p>
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          setScriptMode(null);
-                          setScriptError(null);
-                        }}
-                        className="text-sm text-zinc-500 hover:text-white transition-colors"
-                      >
-                        ← Choose different option
-                      </button>
-                      <button
-                        onClick={generateAIScript}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <Sparkles size={14} /> Try Again
-                      </button>
-                    </div>
-                  </div>
-                ) : parsedScenes.length > 0 ? (
-                  // Success State - Show Generated Script
-                  <>
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Generated Script</span>
-                        <span className="text-xs text-purple-400">{parsedScenes.length} scenes • ~45 seconds</span>
-                      </div>
-                      <div className="space-y-3 max-h-64 overflow-y-auto">
-                        {parsedScenes.map((scene) => (
-                          <div key={scene.id} className="bg-zinc-800/50 rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-bold text-purple-400">Scene {scene.sceneNumber}</span>
-                              <span className="text-[10px] text-zinc-600">({Math.round((scene.frameRange.end - scene.frameRange.start) / 30)}s)</span>
-                            </div>
-                            <p className="text-sm text-zinc-300">{scene.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping" />
+                </div>
 
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          setScriptMode(null);
-                          setGeneratedScript('');
-                          setParsedScenes([]);
-                        }}
-                        className="text-sm text-zinc-500 hover:text-white transition-colors"
-                      >
-                        ← Choose different option
-                      </button>
-                      <button
-                        onClick={generateAIScript}
-                        className="text-sm text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
-                      >
-                        <Sparkles size={14} /> Regenerate
-                      </button>
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-bold text-white">AI is crafting your story</h3>
+                  <p className="text-sm text-zinc-400 max-w-sm">
+                    Creating a compelling 30-second narrative for "{brand.name}" with text choreography...
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3 w-full max-w-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                      <Loader2 size={14} className="text-purple-400 animate-spin" />
                     </div>
-                  </>
-                ) : (
-                  // Initial Generate State - Should auto-trigger generation
-                  <div className="flex flex-col items-center justify-center py-12 gap-4">
-                    <p className="text-zinc-400">Starting script generation...</p>
+                    <span className="text-sm text-zinc-300">Building 5-act story arc</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-3 opacity-60">
+                    <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-zinc-600 rounded-full" />
+                    </div>
+                    <span className="text-sm text-zinc-500">Choreographing text animations</span>
+                  </div>
+                  <div className="flex items-center gap-3 opacity-40">
+                    <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-zinc-600 rounded-full" />
+                    </div>
+                    <span className="text-sm text-zinc-500">Timing story phases</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-600 italic">This usually takes 15-30 seconds</p>
               </div>
             )}
 
-            {/* Parsed Scenes Preview (for upload mode) */}
-            {scriptMode === 'upload' && parsedScenes.length > 0 && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Detected Scenes</span>
-                  <span className="text-xs text-green-400">{parsedScenes.length} scenes parsed</span>
+            {/* Generate Mode - Error State */}
+            {scriptMode === 'generate' && scriptError && !storyScript && (
+              <div className="flex flex-col items-center justify-center py-12 gap-6">
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/30">
+                  <AlertCircle size={32} className="text-red-400" />
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {parsedScenes.map((scene) => (
-                    <div key={scene.id} className="bg-zinc-800/50 rounded-lg p-2">
-                      <span className="text-xs font-bold text-green-400">Scene {scene.sceneNumber}:</span>
-                      <p className="text-xs text-zinc-400 truncate">{scene.description}</p>
-                    </div>
-                  ))}
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-bold text-white">Script Generation Failed</h3>
+                  <p className="text-sm text-zinc-400 max-w-sm">{scriptError}</p>
                 </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setScriptMode(null);
+                      setScriptError(null);
+                    }}
+                    className="text-sm text-zinc-500 hover:text-white transition-colors"
+                  >
+                    ← Choose different option
+                  </button>
+                  <button
+                    onClick={generateAIScript}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Sparkles size={14} /> Try Again
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Success State - Show ScriptPreview */}
+            {storyScript && (
+              <div className="space-y-4">
+                <ScriptPreview
+                  script={storyScript}
+                  isLoading={false}
+                  onRegenerate={() => {
+                    setStoryScript(null);
+                    setScriptError(null);
+                    if (scriptMode === 'generate') {
+                      generateAIScript();
+                    } else if (scriptMode === 'upload' && uploadedScript) {
+                      transformUploadedScript(uploadedScript);
+                    }
+                  }}
+                  error={scriptError || undefined}
+                />
+
+                <button
+                  onClick={() => {
+                    setScriptMode(null);
+                    setStoryScript(null);
+                    setUploadedScript('');
+                    setScriptError(null);
+                  }}
+                  className="text-sm text-zinc-500 hover:text-white transition-colors"
+                >
+                  ← Start over
+                </button>
               </div>
             )}
           </div>
@@ -682,10 +632,34 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
           <button
             disabled={!isScriptComplete || isGeneratingScript}
             onClick={() => {
-              // Build the full VideoScript object
+              if (!storyScript) return;
+              
+              // Convert StoryScript to legacy VideoScript format for compatibility
+              // The backend/orchestrator expects VideoScript format
+              const legacyScenes = storyScript.scenes.map((scene) => {
+                const textOverlay = scene.moments.flatMap((m) =>
+                  m.textElements.map((t) => t.content)
+                );
+                const keyElements = [
+                  ...scene.moments.flatMap((m) => m.visualElements?.map((v) => v.name) || []),
+                  ...scene.moments.flatMap((m) => m.textElements.map((t) => t.purpose)),
+                ].filter((v, i, a) => a.indexOf(v) === i);
+                const description = scene.moments.map((m) => m.visualAction).join(' ');
+
+                return {
+                  id: scene.id,
+                  sceneNumber: scene.sceneNumber,
+                  description,
+                  frameRange: scene.frameRange,
+                  keyElements,
+                  visualStyle: 'kinetic_typography' as const,
+                  textOverlay,
+                };
+              });
+
               const script: VideoScript = {
-                script: generatedScript || uploadedScript || '',
-                scenes: parsedScenes
+                script: `${storyScript.narrative.hook} ${storyScript.narrative.journey} ${storyScript.narrative.resolution}`,
+                scenes: legacyScenes,
               };
               onComplete(brand, config, script);
             }}

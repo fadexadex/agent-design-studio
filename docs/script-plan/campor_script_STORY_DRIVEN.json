@@ -1,0 +1,1087 @@
+# PROPERLY STORY-DRIVEN CAMPOR SCRIPT
+
+## Following LangEase's Narrative Structure: Problem → Solution → Magic → Result → Brand
+
+```json
+{
+  "title": "Campor: The Campus Marketplace Story",
+  "totalDuration": 30,
+  "totalFrames": 900,
+  "fps": 30,
+  
+  "narrative": {
+    "hook": "A student stares at an unused textbook, wondering what to do with it",
+    "journey": "They discover a simple solution - snap a photo, post it. The item connects to the campus network, another student finds it, they meet and exchange. The circular economy flows.",
+    "resolution": "This is the power of Campor - Sell. Find. Connect. Your campus economy."
+  },
+  
+  "textNarrative": {
+    "openingMessage": "Got stuff you don't need?",
+    "coreFeatures": ["Snap and post", "Campus sees it", "Meet and sell"],
+    "closingMessage": "Your campus economy"
+  },
+  
+  "scenes": [
+    {
+      "id": "scene-1",
+      "sceneNumber": 1,
+      "title": "The Student Problem",
+      "purpose": "Establish the relatable problem - unused items taking up space",
+      "visualTheme": "minimalist object focus with questioning text",
+      "textTheme": "problem statement through simple question",
+      
+      "moments": [
+        {
+          "id": "moment-1",
+          "sequence": 1,
+          "timing": {
+            "startFrame": 0,
+            "endFrame": 60,
+            "durationMs": 2000
+          },
+          "narrative": "A textbook sits on screen, unused and unwanted",
+          "visualAction": "Simple line-art textbook illustration fades in center, breathes slightly (pulse)",
+          "storyPurpose": "introduce-problem",
+          
+          "textElements": [],
+          
+          "visualElements": [
+            {
+              "id": "unused-textbook",
+              "name": "textbook_illustration",
+              "type": "illustration",
+              "state": "entering",
+              "properties": {
+                "style": "line-art",
+                "color": "#999",
+                "size": 120,
+                "position": { "x": 0, "y": 0 },
+                "animation": "subtle-breathe"
+              }
+            }
+          ],
+          
+          "sound": [
+            {
+              "type": "ambient",
+              "description": "quiet, contemplative tone",
+              "timing": "start"
+            }
+          ],
+          
+          "energyLevel": "intro",
+          "emotionalTone": "calm"
+        },
+        
+        {
+          "id": "moment-2",
+          "sequence": 2,
+          "timing": {
+            "startFrame": 61,
+            "endFrame": 150,
+            "durationMs": 3000
+          },
+          "narrative": "The question appears - what do you do with things you don't need?",
+          "visualAction": "'Got stuff' slides up, 'you don't need?' catches up below",
+          "storyPurpose": "introduce-problem",
+          
+          "textElements": [
+            {
+              "id": "text-got-stuff",
+              "sequence": 1,
+              "content": "Got stuff",
+              "typography": {
+                "size": 64,
+                "weight": 700,
+                "color": "#333",
+                "font": "sans-serif",
+                "letterSpacing": "0.02em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "slide-up",
+                  "duration": 600,
+                  "easing": "ease-out",
+                  "startPosition": { "x": 0, "y": 80 },
+                  "endPosition": { "x": 0, "y": -30 }
+                },
+                "hold": {
+                  "duration": 2000
+                }
+              },
+              "position": { "x": 0, "y": -30, "align": "center" },
+              "layer": 3,
+              "personality": "calm",
+              "purpose": "headline"
+            },
+            {
+              "id": "text-dont-need",
+              "sequence": 2,
+              "content": "you don't need?",
+              "typography": {
+                "size": 64,
+                "weight": 700,
+                "color": "#333",
+                "font": "sans-serif",
+                "letterSpacing": "0.02em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "catch-up",
+                  "duration": 800,
+                  "delay": 400,
+                  "easing": "spring",
+                  "startPosition": { "x": 0, "y": 100 },
+                  "endPosition": { "x": 0, "y": 20 }
+                },
+                "hold": {
+                  "duration": 1800
+                }
+              },
+              "position": { "x": 0, "y": 20, "align": "center" },
+              "layer": 3,
+              "interactions": [
+                {
+                  "with": "text-got-stuff",
+                  "relationship": "aligns-with",
+                  "timing": "on-entrance",
+                  "offset": 400
+                }
+              ],
+              "personality": "playful",
+              "purpose": "headline"
+            }
+          ],
+          
+          "sound": [
+            {
+              "type": "effect",
+              "description": "soft slide",
+              "timing": "on-text-entrance",
+              "syncWith": "text-got-stuff"
+            },
+            {
+              "type": "effect",
+              "description": "gentle thud",
+              "timing": "on-text-entrance",
+              "syncWith": "text-dont-need"
+            }
+          ],
+          
+          "energyLevel": "building",
+          "emotionalTone": "playful"
+        }
+      ],
+      
+      "frameRange": { "start": 0, "end": 150 }
+    },
+    
+    {
+      "id": "scene-2",
+      "sceneNumber": 2,
+      "title": "The Simple Solution",
+      "purpose": "Show how easy it is - just snap and post",
+      "visualTheme": "phone interaction with simple posting flow",
+      "textTheme": "instruction-driven simplicity",
+      
+      "moments": [
+        {
+          "id": "moment-3",
+          "sequence": 3,
+          "timing": {
+            "startFrame": 151,
+            "endFrame": 180,
+            "durationMs": 1000
+          },
+          "narrative": "Question fades out, phone appears",
+          "visualAction": "Text fades out, phone slides in from bottom",
+          "storyPurpose": "transition",
+          
+          "textElements": [],
+          
+          "visualElements": [
+            {
+              "id": "student-phone",
+              "name": "smartphone",
+              "type": "device",
+              "state": "entering",
+              "properties": {
+                "type": "phone-mockup",
+                "size": 200,
+                "position": { "x": 0, "y": 0 },
+                "animation": "slide-up"
+              }
+            }
+          ],
+          
+          "transformation": {
+            "type": "flow",
+            "from": "textbook",
+            "to": "phone-screen",
+            "easing": "ease-out",
+            "duration": 20
+          },
+          
+          "energyLevel": "building",
+          "emotionalTone": "calm"
+        },
+        
+        {
+          "id": "moment-4",
+          "sequence": 4,
+          "timing": {
+            "startFrame": 181,
+            "endFrame": 300,
+            "durationMs": 4000
+          },
+          "narrative": "Simple instruction appears, camera clicks, item gets posted",
+          "visualAction": "'Just' appears, 'snap and post' catches up. Camera icon clicks, photo appears in phone, posted!",
+          "storyPurpose": "show-feature",
+          
+          "textElements": [
+            {
+              "id": "text-just",
+              "sequence": 3,
+              "content": "Just",
+              "typography": {
+                "size": 72,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif",
+                "letterSpacing": "0.03em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "slide-up",
+                  "duration": 500,
+                  "easing": "ease-out",
+                  "startPosition": { "x": 0, "y": 60 },
+                  "endPosition": { "x": 0, "y": -40 }
+                },
+                "hold": {
+                  "duration": 600
+                },
+                "exit": {
+                  "type": "slide-left",
+                  "duration": 400,
+                  "easing": "ease-in",
+                  "endPosition": { "x": -100, "y": -40 }
+                }
+              },
+              "position": { "x": 0, "y": -40, "align": "center" },
+              "layer": 4,
+              "personality": "bold",
+              "purpose": "instruction"
+            },
+            {
+              "id": "text-snap-post",
+              "sequence": 4,
+              "content": "snap and post",
+              "typography": {
+                "size": 72,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif",
+                "letterSpacing": "0.03em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "catch-up",
+                  "duration": 700,
+                  "delay": 300,
+                  "easing": "spring",
+                  "startPosition": { "x": 200, "y": -40 },
+                  "endPosition": { "x": 0, "y": -40 }
+                },
+                "hold": {
+                  "duration": 2500
+                }
+              },
+              "position": { "x": 0, "y": -40, "align": "center" },
+              "layer": 4,
+              "interactions": [
+                {
+                  "with": "text-just",
+                  "relationship": "replaces",
+                  "timing": "on-entrance",
+                  "offset": 300
+                }
+              ],
+              "personality": "energetic",
+              "purpose": "instruction"
+            },
+            {
+              "id": "text-done",
+              "sequence": 5,
+              "content": "Done!",
+              "typography": {
+                "size": 48,
+                "weight": 700,
+                "color": "#22c55e",
+                "font": "sans-serif"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "bounce",
+                  "duration": 500,
+                  "delay": 3000,
+                  "easing": "bounce",
+                  "startPosition": { "x": 0, "y": -20 },
+                  "endPosition": { "x": 0, "y": -40 },
+                  "startScale": 0.5,
+                  "endScale": 1.0
+                },
+                "hold": {
+                  "duration": 500
+                }
+              },
+              "position": { "x": 0, "y": -40, "align": "center" },
+              "layer": 4,
+              "personality": "playful",
+              "purpose": "value-prop"
+            }
+          ],
+          
+          "visualElements": [
+            {
+              "id": "camera-icon",
+              "name": "camera_click",
+              "type": "icon",
+              "state": "transforming",
+              "properties": {
+                "animation": "click-flash",
+                "timing": 1500
+              }
+            },
+            {
+              "id": "checkmark",
+              "name": "success_check",
+              "type": "icon",
+              "state": "entering",
+              "properties": {
+                "color": "#22c55e",
+                "animation": "pop",
+                "timing": 3000
+              }
+            }
+          ],
+          
+          "sound": [
+            {
+              "type": "effect",
+              "description": "camera shutter click",
+              "timing": "middle"
+            },
+            {
+              "type": "effect",
+              "description": "success ping",
+              "timing": "end",
+              "syncWith": "text-done"
+            }
+          ],
+          
+          "energyLevel": "peak",
+          "emotionalTone": "satisfying"
+        }
+      ],
+      
+      "frameRange": { "start": 151, "end": 300 }
+    },
+    
+    {
+      "id": "scene-3",
+      "sceneNumber": 3,
+      "title": "The Campus Network Magic",
+      "purpose": "Show the platform's power - connecting students on campus",
+      "visualTheme": "network visualization with connecting dots",
+      "textTheme": "reveal of the magical connection moment",
+      
+      "moments": [
+        {
+          "id": "moment-5",
+          "sequence": 5,
+          "timing": {
+            "startFrame": 301,
+            "endFrame": 330,
+            "durationMs": 1000
+          },
+          "narrative": "Phone zooms out, revealing it's part of a larger network",
+          "visualAction": "Camera pulls back, phone shrinks, becomes a dot among many",
+          "storyPurpose": "demonstrate-ease",
+          
+          "textElements": [],
+          
+          "visualElements": [
+            {
+              "id": "network-dots",
+              "name": "student_nodes",
+              "type": "illustration",
+              "state": "entering",
+              "properties": {
+                "dotCount": 12,
+                "color": "#cbd5e1",
+                "animation": "fade-in-stagger"
+              }
+            }
+          ],
+          
+          "camera": {
+            "type": "zoom",
+            "target": "phone",
+            "intensity": "dramatic",
+            "duration": 30
+          },
+          
+          "transformation": {
+            "type": "zoom",
+            "from": "phone-closeup",
+            "to": "phone-as-dot",
+            "easing": "ease-out",
+            "duration": 30
+          },
+          
+          "energyLevel": "peak",
+          "emotionalTone": "exciting"
+        },
+        
+        {
+          "id": "moment-6",
+          "sequence": 6,
+          "timing": {
+            "startFrame": 331,
+            "endFrame": 480,
+            "durationMs": 5000
+          },
+          "narrative": "Text reveals what's happening - students on campus see the item",
+          "visualAction": "'Students on campus' appears as dots light up blue, lines connect, ripple effect spreads",
+          "storyPurpose": "reveal-capability",
+          
+          "textElements": [
+            {
+              "id": "text-students",
+              "sequence": 6,
+              "content": "Students",
+              "typography": {
+                "size": 56,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif",
+                "letterSpacing": "0.04em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "fade",
+                  "duration": 600,
+                  "easing": "ease",
+                  "startOpacity": 0,
+                  "endOpacity": 1
+                },
+                "hold": {
+                  "duration": 1200
+                },
+                "exit": {
+                  "type": "slide-left",
+                  "duration": 400,
+                  "easing": "ease-in",
+                  "endPosition": { "x": -150, "y": -30 }
+                }
+              },
+              "position": { "x": 0, "y": -30, "align": "center" },
+              "layer": 4,
+              "personality": "bold",
+              "purpose": "feature"
+            },
+            {
+              "id": "text-on-campus",
+              "sequence": 7,
+              "content": "on campus",
+              "typography": {
+                "size": 56,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif",
+                "letterSpacing": "0.04em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "catch-up",
+                  "duration": 700,
+                  "delay": 400,
+                  "easing": "spring",
+                  "startPosition": { "x": 200, "y": 10 },
+                  "endPosition": { "x": 0, "y": 10 }
+                },
+                "hold": {
+                  "duration": 1000
+                },
+                "exit": {
+                  "type": "slide-left",
+                  "duration": 400,
+                  "easing": "ease-in",
+                  "endPosition": { "x": -150, "y": 10 }
+                }
+              },
+              "position": { "x": 0, "y": 10, "align": "center" },
+              "layer": 4,
+              "interactions": [
+                {
+                  "with": "text-students",
+                  "relationship": "aligns-with",
+                  "timing": "on-entrance",
+                  "offset": 400
+                }
+              ],
+              "personality": "energetic",
+              "purpose": "feature"
+            },
+            {
+              "id": "text-see-it",
+              "sequence": 8,
+              "content": "see it instantly",
+              "typography": {
+                "size": 32,
+                "weight": 400,
+                "color": "#64748b",
+                "font": "sans-serif",
+                "letterSpacing": "0.05em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "fade",
+                  "duration": 600,
+                  "delay": 2200,
+                  "easing": "ease",
+                  "startOpacity": 0,
+                  "endOpacity": 1
+                },
+                "hold": {
+                  "duration": 2000
+                }
+              },
+              "position": { "x": 0, "y": 50, "align": "center" },
+              "layer": 3,
+              "personality": "subtle",
+              "purpose": "feature"
+            }
+          ],
+          
+          "visualElements": [
+            {
+              "id": "connection-lines",
+              "name": "network_connections",
+              "type": "illustration",
+              "state": "transforming",
+              "properties": {
+                "animation": "ripple-connect",
+                "color": "#1d00f5",
+                "lineWidth": 2
+              }
+            }
+          ],
+          
+          "transformation": {
+            "type": "ripple",
+            "from": "center-dot",
+            "to": "all-dots",
+            "easing": "ease-out",
+            "duration": 60
+          },
+          
+          "sound": [
+            {
+              "type": "effect",
+              "description": "network ping expanding",
+              "timing": "start"
+            },
+            {
+              "type": "ambient",
+              "description": "gentle pulse hum",
+              "timing": "middle"
+            }
+          ],
+          
+          "energyLevel": "peak",
+          "emotionalTone": "exciting"
+        }
+      ],
+      
+      "frameRange": { "start": 301, "end": 480 }
+    },
+    
+    {
+      "id": "scene-4",
+      "sceneNumber": 4,
+      "title": "The Direct Exchange",
+      "purpose": "Show the peer-to-peer transaction happening",
+      "visualTheme": "two students connecting and exchanging",
+      "textTheme": "simple value statement",
+      
+      "moments": [
+        {
+          "id": "moment-7",
+          "sequence": 7,
+          "timing": {
+            "startFrame": 481,
+            "endFrame": 630,
+            "durationMs": 5000
+          },
+          "narrative": "Two dots light up, connect, item and money exchange",
+          "visualAction": "Network fades except two dots. Line zips between them. Item icon slides from left dot to right, money icon slides from right to left",
+          "storyPurpose": "demonstrate-ease",
+          
+          "textElements": [
+            {
+              "id": "text-meet",
+              "sequence": 9,
+              "content": "Meet.",
+              "typography": {
+                "size": 64,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "bounce",
+                  "duration": 500,
+                  "delay": 1000,
+                  "easing": "bounce",
+                  "startPosition": { "x": -80, "y": -20 },
+                  "endPosition": { "x": -80, "y": -40 },
+                  "startScale": 0.7,
+                  "endScale": 1.0
+                },
+                "hold": {
+                  "duration": 3500
+                }
+              },
+              "position": { "x": -80, "y": -40, "align": "center" },
+              "layer": 4,
+              "personality": "playful",
+              "purpose": "value-prop"
+            },
+            {
+              "id": "text-exchange",
+              "sequence": 10,
+              "content": "Exchange.",
+              "typography": {
+                "size": 64,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "bounce",
+                  "duration": 500,
+                  "delay": 2500,
+                  "easing": "bounce",
+                  "startPosition": { "x": 80, "y": -20 },
+                  "endPosition": { "x": 80, "y": -40 },
+                  "startScale": 0.7,
+                  "endScale": 1.0
+                },
+                "hold": {
+                  "duration": 2000
+                }
+              },
+              "position": { "x": 80, "y": -40, "align": "center" },
+              "layer": 4,
+              "personality": "playful",
+              "purpose": "value-prop"
+            },
+            {
+              "id": "text-done-locally",
+              "sequence": 11,
+              "content": "Done. Locally.",
+              "typography": {
+                "size": 28,
+                "weight": 400,
+                "color": "#64748b",
+                "font": "sans-serif",
+                "letterSpacing": "0.08em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "fade",
+                  "duration": 600,
+                  "delay": 4000,
+                  "easing": "ease",
+                  "startOpacity": 0,
+                  "endOpacity": 1
+                },
+                "hold": {
+                  "duration": 400
+                }
+              },
+              "position": { "x": 0, "y": 30, "align": "center" },
+              "layer": 3,
+              "personality": "calm",
+              "purpose": "value-prop"
+            }
+          ],
+          
+          "visualElements": [
+            {
+              "id": "two-students",
+              "name": "peer_connection",
+              "type": "illustration",
+              "state": "transforming",
+              "properties": {
+                "leftDot": { "color": "#1d00f5", "size": 30 },
+                "rightDot": { "color": "#1d00f5", "size": 30 },
+                "connectionLine": { "animation": "zip", "color": "#1d00f5" }
+              }
+            },
+            {
+              "id": "item-icon",
+              "name": "book_exchange",
+              "type": "icon",
+              "state": "transforming",
+              "properties": {
+                "animation": "slide-left-to-right",
+                "timing": 2000
+              }
+            },
+            {
+              "id": "money-icon",
+              "name": "currency_exchange",
+              "type": "icon",
+              "state": "transforming",
+              "properties": {
+                "animation": "slide-right-to-left",
+                "timing": 2000
+              }
+            }
+          ],
+          
+          "transformation": {
+            "type": "flow",
+            "from": "left-dot",
+            "to": "right-dot",
+            "easing": "ease-in-out",
+            "duration": 60
+          },
+          
+          "sound": [
+            {
+              "type": "effect",
+              "description": "connection zip",
+              "timing": "start"
+            },
+            {
+              "type": "effect",
+              "description": "exchange whoosh",
+              "timing": "middle"
+            },
+            {
+              "type": "effect",
+              "description": "satisfying ding",
+              "timing": "end"
+            }
+          ],
+          
+          "energyLevel": "sustain",
+          "emotionalTone": "satisfying"
+        }
+      ],
+      
+      "frameRange": { "start": 481, "end": 630 }
+    },
+    
+    {
+      "id": "scene-5",
+      "sceneNumber": 5,
+      "title": "Value Summary and Brand Reveal",
+      "purpose": "Summarize the platform's value and reveal brand at the end",
+      "visualTheme": "bouncing summary leading to brand lockup",
+      "textTheme": "bounce-synchronized value props culminating in brand",
+      
+      "moments": [
+        {
+          "id": "moment-8",
+          "sequence": 8,
+          "timing": {
+            "startFrame": 631,
+            "endFrame": 810,
+            "durationMs": 6000
+          },
+          "narrative": "Dot bounces, revealing core value props on each bounce",
+          "visualAction": "Blue dot bounces down from top. Bounce 1: 'Sell.' appears. Bounce 2: 'Find.' appears. Bounce 3: 'Connect.' appears",
+          "storyPurpose": "build-momentum",
+          
+          "textElements": [
+            {
+              "id": "text-sell-final",
+              "sequence": 12,
+              "content": "Sell.",
+              "typography": {
+                "size": 56,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "bounce",
+                  "duration": 400,
+                  "delay": 800,
+                  "easing": "bounce",
+                  "startPosition": { "x": -90, "y": 20 },
+                  "endPosition": { "x": -90, "y": 0 },
+                  "startScale": 0.8,
+                  "endScale": 1.0
+                },
+                "hold": {
+                  "duration": 4800
+                }
+              },
+              "position": { "x": -90, "y": 0, "align": "center" },
+              "layer": 3,
+              "interactions": [
+                {
+                  "with": "bouncing-dot",
+                  "relationship": "bounces-with",
+                  "timing": "simultaneous"
+                }
+              ],
+              "personality": "playful",
+              "purpose": "value-prop"
+            },
+            {
+              "id": "text-find-final",
+              "sequence": 13,
+              "content": "Find.",
+              "typography": {
+                "size": 56,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "bounce",
+                  "duration": 400,
+                  "delay": 2600,
+                  "easing": "bounce",
+                  "startPosition": { "x": 0, "y": 20 },
+                  "endPosition": { "x": 0, "y": 0 },
+                  "startScale": 0.8,
+                  "endScale": 1.0
+                },
+                "hold": {
+                  "duration": 3000
+                }
+              },
+              "position": { "x": 0, "y": 0, "align": "center" },
+              "layer": 3,
+              "interactions": [
+                {
+                  "with": "bouncing-dot",
+                  "relationship": "bounces-with",
+                  "timing": "simultaneous"
+                }
+              ],
+              "personality": "playful",
+              "purpose": "value-prop"
+            },
+            {
+              "id": "text-connect-final",
+              "sequence": 14,
+              "content": "Connect.",
+              "typography": {
+                "size": 56,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "bounce",
+                  "duration": 400,
+                  "delay": 4400,
+                  "easing": "bounce",
+                  "startPosition": { "x": 90, "y": 20 },
+                  "endPosition": { "x": 90, "y": 0 },
+                  "startScale": 0.8,
+                  "endScale": 1.0
+                },
+                "hold": {
+                  "duration": 1200
+                }
+              },
+              "position": { "x": 90, "y": 0, "align": "center" },
+              "layer": 3,
+              "interactions": [
+                {
+                  "with": "bouncing-dot",
+                  "relationship": "bounces-with",
+                  "timing": "simultaneous"
+                }
+              ],
+              "personality": "playful",
+              "purpose": "value-prop"
+            }
+          ],
+          
+          "visualElements": [
+            {
+              "id": "bouncing-dot",
+              "name": "blue_ball",
+              "type": "shape",
+              "state": "transforming",
+              "properties": {
+                "type": "circle",
+                "size": 30,
+                "color": "#1d00f5",
+                "bounceCount": 3,
+                "bounceHeight": 120,
+                "trail": true,
+                "trailColor": "#93c5fd"
+              }
+            }
+          ],
+          
+          "sound": [
+            {
+              "type": "effect",
+              "description": "bounce sound 1",
+              "timing": "start",
+              "syncWith": "text-sell-final"
+            },
+            {
+              "type": "effect",
+              "description": "bounce sound 2",
+              "timing": "middle",
+              "syncWith": "text-find-final"
+            },
+            {
+              "type": "effect",
+              "description": "bounce sound 3",
+              "timing": "end",
+              "syncWith": "text-connect-final"
+            }
+          ],
+          
+          "energyLevel": "peak",
+          "emotionalTone": "playful"
+        },
+        
+        {
+          "id": "moment-9",
+          "sequence": 9,
+          "timing": {
+            "startFrame": 811,
+            "endFrame": 900,
+            "durationMs": 3000
+          },
+          "narrative": "Value props converge and morph into brand, tagline appears",
+          "visualAction": "Three words and dot move to center, merge, 'Campor' emerges. 'Your campus economy' fades in below",
+          "storyPurpose": "brand-reveal",
+          
+          "textElements": [
+            {
+              "id": "text-campor-final",
+              "sequence": 15,
+              "content": "Campor",
+              "typography": {
+                "size": 96,
+                "weight": 700,
+                "color": "#1d00f5",
+                "font": "sans-serif",
+                "letterSpacing": "0.03em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "morph",
+                  "duration": 1000,
+                  "delay": 300,
+                  "easing": "ease-in-out",
+                  "startScale": 0.6,
+                  "endScale": 1.0,
+                  "startOpacity": 0,
+                  "endOpacity": 1
+                },
+                "hold": {
+                  "duration": 1700,
+                  "animation": "pulse"
+                }
+              },
+              "position": { "x": 0, "y": -20, "align": "center" },
+              "layer": 4,
+              "personality": "bold",
+              "purpose": "brand"
+            },
+            {
+              "id": "text-tagline-final",
+              "sequence": 16,
+              "content": "Your campus economy",
+              "typography": {
+                "size": 24,
+                "weight": 400,
+                "color": "#64748b",
+                "font": "sans-serif",
+                "letterSpacing": "0.12em"
+              },
+              "choreography": {
+                "entrance": {
+                  "type": "fade",
+                  "duration": 800,
+                  "delay": 1500,
+                  "easing": "ease",
+                  "startOpacity": 0,
+                  "endOpacity": 1
+                },
+                "hold": {
+                  "duration": 700
+                }
+              },
+              "position": { "x": 0, "y": 30, "align": "center" },
+              "layer": 3,
+              "personality": "calm",
+              "purpose": "value-prop"
+            }
+          ],
+          
+          "transformation": {
+            "type": "merge",
+            "from": "three-value-props-and-dot",
+            "to": "brand-logo",
+            "easing": "ease-in-out",
+            "duration": 30
+          },
+          
+          "sound": [
+            {
+              "type": "transition",
+              "description": "satisfying merge whoosh",
+              "timing": "start"
+            },
+            {
+              "type": "ambient",
+              "description": "gentle resolve chord",
+              "timing": "middle"
+            }
+          ],
+          
+          "energyLevel": "resolution",
+          "emotionalTone": "satisfying"
+        }
+      ],
+      
+      "frameRange": { "start": 631, "end": 900 }
+    }
+  ],
+  
+  "recurringMotifs": [
+    "blue_dot",
+    "kinetic_typography",
+    "network_connections",
+    "bouncing_elements"
+  ],
+  
+  "colorJourney": ["#ffffff", "#999999", "#1d00f5", "#ffffff"],
+  
+  "audioNarrative": "Story-driven sound design that builds from contemplative (problem) to playful (solution) to exciting (network magic) to satisfying (exchange) to celebratory (brand reveal). Each narrative beat has distinct sonic character."
+}
+```

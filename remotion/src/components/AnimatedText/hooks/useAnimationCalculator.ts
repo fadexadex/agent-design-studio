@@ -66,6 +66,7 @@ export const useAnimationCalculator = (
   return useMemo(() => {
     const {
       preset = 'none',
+      delay: globalDelay = 0,
       blur: blurProp,
       opacity: opacityProp,
       scale: scaleProp,
@@ -109,13 +110,15 @@ export const useAnimationCalculator = (
 
     if (typewriterConfig && preset === 'typewriter') {
       // For typewriter, calculate visible characters based on frame
+      // Respect globalDelay before starting the typewriter effect
+      const effectiveFrame = Math.max(0, frame - globalDelay);
       const charsPerFrame = 0.5; // Approximately 2 frames per character
-      typewriterVisibleChars = Math.floor(frame * charsPerFrame);
+      typewriterVisibleChars = Math.floor(effectiveFrame * charsPerFrame);
 
       // Cursor blink
       if (typewriterConfig.cursor) {
         const blinkCycle = typewriterConfig.cursorBlinkSpeed || 16;
-        showCursor = Math.floor(frame / (blinkCycle / 2)) % 2 === 0;
+        showCursor = Math.floor(effectiveFrame / (blinkCycle / 2)) % 2 === 0;
       }
     }
 
@@ -138,9 +141,10 @@ export const useAnimationCalculator = (
       }
 
       // Calculate stagger offset for this unit
+      // globalDelay is added to ALL animations as a base offset
       const staggerDelay = stagger.reverse
-        ? (totalUnits - 1 - unitIndex) * (stagger.delay || 0)
-        : unitIndex * (stagger.delay || 0);
+        ? (totalUnits - 1 - unitIndex) * (stagger.delay || 0) + globalDelay
+        : unitIndex * (stagger.delay || 0) + globalDelay;
 
       // Get entrance animation values
       let blur = 0;

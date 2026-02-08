@@ -18,6 +18,8 @@ import {
 } from './routes';
 import {
     generateScript,
+    generateScriptLegacy,
+    transformScript,
     generateVideo,
     getJobStatus,
     getVideo,
@@ -44,7 +46,7 @@ export const createApp = (): express.Application => {
 
     // === Legacy Routes (backward compatibility) ===
     // These match the old API endpoints the frontend expects
-    app.post('/api/generate-script', generateScript);
+    app.post('/api/generate-script', generateScriptLegacy);
     app.post('/api/generate', generateVideo);
     app.get('/api/status/:jobId', getJobStatus);
     app.get('/api/video/:jobId', getVideo);

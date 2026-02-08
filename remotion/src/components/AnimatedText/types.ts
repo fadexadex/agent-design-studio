@@ -178,6 +178,11 @@ export type PresetType =
   | "slideInRight"
   | "slideInUp"
   | "slideInDown"
+  | "maskSlideUp"
+  | "maskSlideDown"
+  | "maskSlideLeft"
+  | "maskSlideRight"
+  | "glitchReveal"
   | "typewriter"
   | "none";
 
@@ -191,6 +196,10 @@ export interface AnimatedTextProps extends PositioningProps {
   // Animation config
   animationUnit?: AnimationUnit;
   preset?: PresetType;
+  
+  // Global delay offset (frames) - delays the start of ALL animations
+  // This is a convenience prop that adds to any individual animation delays
+  delay?: number;
 
   // Individual animations (can be combined)
   blur?: BlurAnimation | boolean;

@@ -72,6 +72,58 @@ export const presets: Record<PresetType, PresetDefinition> = {
     opacity: { from: 0, to: 1, duration: 12 },
   },
 
+  // MASKED SLIDE PRESETS - Text slides in from behind a clip mask
+  // These automatically enable the mask prop for kinetic reveal effect
+  // The mask creates a "portal" where text appears to slide out from behind a line
+  maskSlideUp: {
+    position: {
+      fromY: 50,
+      toY: 0,
+      easing: { type: "spring", damping: 20, stiffness: 200 },
+    },
+    opacity: { from: 0, to: 1, duration: 8 },
+  },
+
+  maskSlideDown: {
+    position: {
+      fromY: -50,
+      toY: 0,
+      easing: { type: "spring", damping: 20, stiffness: 200 },
+    },
+    opacity: { from: 0, to: 1, duration: 8 },
+  },
+
+  maskSlideLeft: {
+    position: {
+      fromX: 60,
+      toX: 0,
+      easing: { type: "spring", damping: 20, stiffness: 200 },
+    },
+    opacity: { from: 0, to: 1, duration: 8 },
+  },
+
+  maskSlideRight: {
+    position: {
+      fromX: -60,
+      toX: 0,
+      easing: { type: "spring", damping: 20, stiffness: 200 },
+    },
+    opacity: { from: 0, to: 1, duration: 8 },
+  },
+
+  // GLITCH REVEAL - Chaotic, tech-inspired reveal
+  // Combines rapid scale oscillation with blur for a digital glitch aesthetic
+  glitchReveal: {
+    scale: {
+      from: 1.1,
+      to: 1,
+      duration: 18,
+      easing: "backOut",
+    },
+    blur: { from: 8, to: 0, duration: 12 },
+    opacity: { from: 0, to: 1, duration: 6 },
+  },
+
   typewriter: {
     typewriter: { cursor: true, cursorChar: "|", cursorBlinkSpeed: 16 },
     animationUnit: "character",
