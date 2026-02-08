@@ -1,38 +1,40 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
-    ReactFlow,
-    MiniMap,
-    Controls,
-    Background,
     useNodesState,
     useEdgesState,
     addEdge,
     Connection,
-    Edge,
-    Node,
+    Edge as FlowEdge,
+    Node as FlowNode,
     ReactFlowProvider,
     Panel,
     useReactFlow,
-    BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 import { SceneNode, SceneNodeData } from './SceneNode';
-import { Plus, LayoutTemplate, Save } from 'lucide-react';
+import { Canvas } from './ui/canvas';
+import { Edge as CustomEdge } from './ui/edge';
+import { Plus, LayoutTemplate } from 'lucide-react';
 
 const nodeTypes = {
     scene: SceneNode,
 };
 
+const edgeTypes = {
+    animated: CustomEdge.Animated,
+    temporary: CustomEdge.Temporary,
+};
+
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-const nodeWidth = 400;
-const nodeHeight = 200;
+const nodeWidth = 320;
+const nodeHeight = 180;
 
-const getLayoutedElements = (nodes: Node<SceneNodeData>[], edges: Edge[], direction = 'TB') => {
+const getLayoutedElements = (nodes: FlowNode<SceneNodeData>[], edges: FlowEdge[], direction = 'LR') => {
     const isHorizontal = direction === 'LR';
-    dagreGraph.setGraph({ rankdir: direction });
+    dagreGraph.setGraph({ rankdir: direction, nodesep: 60, ranksep: 120 });
 
     nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -50,13 +52,11 @@ const getLayoutedElements = (nodes: Node<SceneNodeData>[], edges: Edge[], direct
             ...node,
             targetPosition: isHorizontal ? 'left' : 'top',
             sourcePosition: isHorizontal ? 'right' : 'bottom',
-            // We are shifting the dagre node position (anchor=center center) to the top left
-            // so it matches the React Flow node anchor point (top left).
             position: {
                 x: nodeWithPosition.x - nodeWidth / 2,
                 y: nodeWithPosition.y - nodeHeight / 2,
             },
-        } as Node<SceneNodeData>;
+        } as FlowNode<SceneNodeData>;
     });
 
     return { nodes: layoutedNodes, edges };
@@ -77,7 +77,6 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         if (!onScenesChange) return;
 
         const newSceneIndex = scenes.length;
-        // Calculate frame range based on previous scenes
         const framesPerScene = 270; // ~9 seconds at 30fps
         const startFrame = newSceneIndex * framesPerScene;
 
@@ -85,9 +84,8 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
             id: `scene-${Date.now()}`,
             title: `Scene ${newSceneIndex + 1}`,
             description: 'New scene description. Click to edit.',
-            duration: 9, // ~9 seconds per scene for 45s total
+            duration: 9,
             index: newSceneIndex,
-            // Include backend fields for proper sync
             sceneNumber: newSceneIndex + 1,
             frameRange: { start: startFrame, end: startFrame + framesPerScene },
             keyElements: ['animated element', 'brand colors']
@@ -96,7 +94,6 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         const updatedScenes = [...scenes, newScene];
         onScenesChange(updatedScenes);
 
-        // Trigger re-layout after adding
         window.requestAnimationFrame(() => {
             fitView();
         });
@@ -113,9 +110,8 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         onScenesChange(updatedScenes);
     }, [scenes, onScenesChange]);
 
-    // Transform initial scenes to Nodes and Edges
-    // We memoize this so we don't recreate it unnecessarily, but we need to update it when scenes change
-    const createNodes = (currentScenes: SceneNodeData[]): Node<SceneNodeData>[] => currentScenes.map((scene) => ({
+    // Transform scenes to Nodes
+    const createNodes = (currentScenes: SceneNodeData[]): FlowNode<SceneNodeData>[] => currentScenes.map((scene) => ({
         id: scene.id,
         type: 'scene',
         data: {
@@ -125,13 +121,12 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         position: { x: 0, y: 0 } // Layouted by dagre
     }));
 
-    const createEdges = (currentScenes: SceneNodeData[]): Edge[] => currentScenes.slice(0, -1).map((scene, idx) => ({
+    // Transform scenes to Edges with animated type
+    const createEdges = (currentScenes: SceneNodeData[]): FlowEdge[] => currentScenes.slice(0, -1).map((scene, idx) => ({
         id: `e${scene.id}-${currentScenes[idx + 1].id}`,
         source: scene.id,
         target: currentScenes[idx + 1].id,
-        animated: true,
-        style: { stroke: '#64748b' },
-        type: 'smoothstep',
+        type: 'animated',
     }));
 
     const [nodes, setNodes, onNodesChangeState] = useNodesState([]);
@@ -139,14 +134,6 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
 
     // Sync props to state
     useEffect(() => {
-        // Only update if we have scenes and they are different enough?
-        // For now, we trust the parent to not spam updates, or we rely on React diffing.
-        // But re-creating nodes resets layout positions if we aren't careful.
-        // We really only want to update DATA if IDs match.
-
-        // Simple approach: Re-create all. But we lose positions.
-        // Better: Update existing nodes' data.
-
         setNodes((nds) => {
             const newNodes = createNodes(scenes);
 
@@ -166,15 +153,14 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
     }, [scenes, onNodeDataChange]);
 
     const onConnect = useCallback(
-        (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#64748b' } }, eds)),
+        (params: Connection) => setEdges((eds) => addEdge({ ...params, type: 'animated' }, eds)),
         [setEdges],
     );
 
     const onLayout = useCallback(
-        (direction = 'TB') => {
-            // We use the current nodes from state
+        (direction = 'LR') => {
             const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-                nodes, // Use current nodes
+                nodes,
                 edges,
                 direction,
             );
@@ -189,15 +175,15 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         [nodes, edges, fitView, setNodes, setEdges]
     );
 
-    // Auto-layout on initial load (when nodes become populated)
+    // Auto-layout on initial load
     useEffect(() => {
         if (nodes.length > 0 && nodes[0].position.x === 0 && nodes[0].position.y === 0) {
             onLayout();
         }
-    }, [nodes.length]); // Dependency on length so it runs when nodes are added
+    }, [nodes.length]);
 
     // Handle node selection to notify parent
-    const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: Node<SceneNodeData>[] }) => {
+    const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: FlowNode<SceneNodeData>[] }) => {
         if (onSceneSelect) {
             if (selectedNodes.length > 0) {
                 onSceneSelect(selectedNodes[0].id);
@@ -208,39 +194,35 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
     }, [onSceneSelect]);
 
     return (
-        <div className="w-full h-full min-h-[500px] bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800">
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChangeState}
-                onEdgesChange={onEdgesChangeState}
-                onConnect={onConnect}
-                onSelectionChange={onSelectionChange}
-                nodeTypes={nodeTypes}
-                fitView
-            >
-                <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#333" />
-                <Controls className="!bg-zinc-800 !border-zinc-700 !text-zinc-400 [&>button]:!fill-zinc-400" />
+        <Canvas
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChangeState}
+            onEdgesChange={onEdgesChangeState}
+            onConnect={onConnect}
+            onSelectionChange={onSelectionChange}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            fitView
+        >
+            <Panel position="top-right" className="flex gap-2">
+                <button
+                    onClick={() => onLayout('LR')}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 text-xs font-medium rounded-md border border-zinc-700/50 transition-colors backdrop-blur-sm"
+                >
+                    <LayoutTemplate size={14} />
+                    Auto Layout
+                </button>
 
-                <Panel position="top-right" className="flex gap-2">
-                    <button
-                        onClick={() => onLayout('TB')}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium rounded-md border border-zinc-700 transition-colors"
-                    >
-                        <LayoutTemplate size={14} />
-                        Auto Layout
-                    </button>
-
-                    <button
-                        onClick={handleAddScene}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-md transition-colors shadow-lg shadow-blue-900/20"
-                    >
-                        <Plus size={14} />
-                        Add Scene
-                    </button>
-                </Panel>
-            </ReactFlow>
-        </div>
+                <button
+                    onClick={handleAddScene}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-md transition-colors shadow-lg shadow-blue-900/20"
+                >
+                    <Plus size={14} />
+                    Add Scene
+                </button>
+            </Panel>
+        </Canvas>
     );
 };
 

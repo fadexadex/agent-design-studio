@@ -5,6 +5,7 @@ import { BrandWizard } from './components/BrandWizard';
 import { MotionPreview } from './components/MotionPreview';
 import { WorkflowDashboard } from './components/workflow/WorkflowDashboard';
 import { SceneEditor } from './components/editor/SceneEditor';
+import { VideoViewer } from './components/VideoViewer';
 import { HistorySidebar } from './components/history/HistorySidebar';
 import { HistoryProvider, useHistory } from './contexts/HistoryContext';
 import { BrandContext, VideoConfig, GenerationState, VideoScript, WorkflowPhase } from './types';
@@ -188,12 +189,16 @@ const HomePage: React.FC = () => {
         <div className="flex-1 relative">
           <button
             onClick={toggleSidebar}
-            className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            className={`fixed bottom-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
             title="Open History"
           >
             <History size={20} className="text-zinc-400" />
           </button>
-          <WorkflowDashboard jobId={workflowJobId} onNavigateToEditor={(jobId) => navigate(`/editor/${jobId}`)} />
+          <WorkflowDashboard
+            jobId={workflowJobId}
+            onNavigateToEditor={(jobId) => navigate(`/editor/${jobId}`)}
+            onNavigateToVideo={(jobId) => navigate(`/video/${jobId}`)}
+          />
         </div>
       </div>
     );
@@ -209,7 +214,7 @@ const HomePage: React.FC = () => {
       <div className="flex-1 relative">
         <button
           onClick={toggleSidebar}
-          className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`fixed bottom-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Open History"
         >
           <History size={20} className="text-zinc-400" />
@@ -284,12 +289,16 @@ const WorkflowPage: React.FC = () => {
       <div className="flex-1 relative">
         <button
           onClick={toggleSidebar}
-          className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`fixed bottom-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Open History"
         >
           <History size={20} className="text-zinc-400" />
         </button>
-        <WorkflowDashboard jobId={jobId} onNavigateToEditor={(id) => navigate(`/editor/${id}`)} />
+        <WorkflowDashboard
+          jobId={jobId}
+          onNavigateToEditor={(id) => navigate(`/editor/${id}`)}
+          onNavigateToVideo={(id) => navigate(`/video/${id}`)}
+        />
       </div>
     </div>
   );
@@ -321,7 +330,7 @@ const EditorPage: React.FC = () => {
       <div className="flex-1 relative">
         <button
           onClick={toggleSidebar}
-          className={`fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`fixed bottom-4 left-4 z-50 p-2 rounded-lg bg-zinc-800/80 backdrop-blur border border-zinc-700/50 hover:bg-zinc-700 transition-all ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Open History"
         >
           <History size={20} className="text-zinc-400" />
@@ -342,6 +351,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/workflow/:jobId" element={<WorkflowPage />} />
+          <Route path="/video/:jobId" element={<VideoViewer />} />
           <Route path="/editor/:jobId" element={<EditorPage />} />
         </Routes>
       </HistoryProvider>

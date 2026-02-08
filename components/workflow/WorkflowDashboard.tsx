@@ -12,6 +12,7 @@ import { Check, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
 interface WorkflowDashboardProps {
     jobId: string;
     onNavigateToEditor?: (jobId: string) => void;
+    onNavigateToVideo?: (jobId: string) => void;
 }
 
 const PHASES = [
@@ -21,7 +22,7 @@ const PHASES = [
     { id: WorkflowPhase.COMPLETE, label: 'Final' },
 ];
 
-export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onNavigateToEditor }) => {
+export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onNavigateToEditor, onNavigateToVideo }) => {
     const { state, isConnected, isError, renderProgress } = useWorkflowStream(jobId);
     
     // Sync workflow state to history localStorage
@@ -68,6 +69,24 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
 
     // Logic for video URL
     const videoUrl = state?.outputVideoPath || undefined;
+
+    // Auto-navigate to video viewer when video is ready
+    const [hasNavigatedToVideo, setHasNavigatedToVideo] = useState(false);
+    useEffect(() => {
+        if (
+            videoUrl &&
+            state?.currentPhase === WorkflowPhase.COMPLETE &&
+            onNavigateToVideo &&
+            !hasNavigatedToVideo
+        ) {
+            // Small delay so the user sees the "Complete" state briefly
+            const timer = setTimeout(() => {
+                setHasNavigatedToVideo(true);
+                onNavigateToVideo(jobId);
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [videoUrl, state?.currentPhase, onNavigateToVideo, jobId, hasNavigatedToVideo]);
 
     if (isError) {
         return (
@@ -133,12 +152,20 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                 }
             } : undefined;
 
+            // During planning, stay in awaiting_feedback so user can keep editing.
+            // Without targetPhase, the backend defaults to 'implementation' which
+            // causes an unwanted jump out of the planning screen.
+            const targetPhase = isPlanning
+                ? WorkflowPhase.AWAITING_FEEDBACK
+                : undefined;
+
             await fetch(`/api/workflow/${jobId}/feedback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'modify',
                     message: text,
+                    targetPhase,
                     modifications
                 })
             });

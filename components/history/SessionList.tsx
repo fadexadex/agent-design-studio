@@ -33,17 +33,19 @@ export const SessionList: React.FC = () => {
     <div className="flex flex-col h-full">
       {/* Search */}
       <div className="p-3 border-b border-zinc-800">
-        <div className="relative">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-          />
+        <div className="flex items-stretch rounded-lg border border-zinc-700 bg-zinc-800 overflow-hidden focus-within:border-purple-500 transition-colors">
+          <span
+            className="flex items-center justify-center px-3 text-zinc-500 shrink-0"
+            aria-hidden
+          >
+            <Search size={16} />
+          </span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search sessions..."
-            className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 transition-colors"
+            className="flex-1 min-w-0 py-2 pr-3 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
           />
         </div>
       </div>
