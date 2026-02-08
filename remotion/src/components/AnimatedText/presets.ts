@@ -1,4 +1,5 @@
 import type { PresetDefinition, PresetType } from "./types";
+import { SPRING_CONFIGS } from "../Animation/springs";
 
 /**
  * Animation preset definitions
@@ -6,6 +7,11 @@ import type { PresetDefinition, PresetType } from "./types";
  *
  * NOTE: Slide presets use springs for that magnetic "snap" at the end.
  * This is the key difference between "smooth but soft" and "snappy and kinetic".
+ * 
+ * Spring presets used:
+ * - kinetic: Quick settle with subtle overshoot for slides
+ * - bouncy: Playful oscillation for attention-grabbing animations
+ * - pop: Quick scale with slight bounce for icons/badges
  */
 export const presets: Record<PresetType, PresetDefinition> = {
   fadeBlurIn: {
@@ -28,19 +34,18 @@ export const presets: Record<PresetType, PresetDefinition> = {
     scale: {
       from: 0,
       to: 1,
-      easing: { type: "spring", damping: 12, stiffness: 100 },
+      easing: { type: "spring", ...SPRING_CONFIGS.bouncy },
     },
     opacity: { from: 0, to: 1, duration: 15 },
   },
 
   // KINETIC SLIDE PRESETS - Using springs for magnetic "snap"
-  // High damping (18-20) = quick settle, minimal overshoot
-  // High stiffness (200-250) = fast, snappy movement
+  // Uses kinetic preset: quick settle with subtle overshoot
   slideInLeft: {
     position: {
       fromX: -50,
       toX: 0,
-      easing: { type: "spring", damping: 18, stiffness: 220 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
@@ -49,7 +54,7 @@ export const presets: Record<PresetType, PresetDefinition> = {
     position: {
       fromX: 50,
       toX: 0,
-      easing: { type: "spring", damping: 18, stiffness: 220 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
@@ -58,7 +63,7 @@ export const presets: Record<PresetType, PresetDefinition> = {
     position: {
       fromY: 40,
       toY: 0,
-      easing: { type: "spring", damping: 18, stiffness: 220 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
@@ -67,19 +72,18 @@ export const presets: Record<PresetType, PresetDefinition> = {
     position: {
       fromY: -40,
       toY: 0,
-      easing: { type: "spring", damping: 18, stiffness: 220 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
 
   // MASKED SLIDE PRESETS - Text slides in from behind a clip mask
-  // These automatically enable the mask prop for kinetic reveal effect
-  // The mask creates a "portal" where text appears to slide out from behind a line
+  // Uses snappy preset: quick with minimal overshoot
   maskSlideUp: {
     position: {
       fromY: 50,
       toY: 0,
-      easing: { type: "spring", damping: 20, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.snappy },
     },
     opacity: { from: 0, to: 1, duration: 8 },
   },
@@ -88,7 +92,7 @@ export const presets: Record<PresetType, PresetDefinition> = {
     position: {
       fromY: -50,
       toY: 0,
-      easing: { type: "spring", damping: 20, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.snappy },
     },
     opacity: { from: 0, to: 1, duration: 8 },
   },
@@ -97,7 +101,7 @@ export const presets: Record<PresetType, PresetDefinition> = {
     position: {
       fromX: 60,
       toX: 0,
-      easing: { type: "spring", damping: 20, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.snappy },
     },
     opacity: { from: 0, to: 1, duration: 8 },
   },
@@ -106,13 +110,12 @@ export const presets: Record<PresetType, PresetDefinition> = {
     position: {
       fromX: -60,
       toX: 0,
-      easing: { type: "spring", damping: 20, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.snappy },
     },
     opacity: { from: 0, to: 1, duration: 8 },
   },
 
   // GLITCH REVEAL - Chaotic, tech-inspired reveal
-  // Combines rapid scale oscillation with blur for a digital glitch aesthetic
   glitchReveal: {
     scale: {
       from: 1.1,

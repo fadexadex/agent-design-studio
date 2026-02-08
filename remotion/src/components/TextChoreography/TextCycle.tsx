@@ -1,5 +1,7 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring, Sequence } from "remotion";
+import { useCurrentFrame, interpolate } from "remotion";
+import { Animated, Move, Scale, Fade } from "remotion-animated";
+import { SPRING_CONFIGS } from "../Animation/springs";
 
 /**
  * TextCycle - Words replace each other at the same position
@@ -7,7 +9,7 @@ import { useCurrentFrame, useVideoConfig, interpolate, spring, Sequence } from "
  * Creates a cycling text effect where words appear, hold, then exit
  * while the next word enters. Useful for listing features or options.
  *
- * Example: "Simple" → "Fast" → "Powerful" cycling in place
+ * Now uses remotion-animated for declarative spring animations.
  */
 export interface TextCycleItem {
   text: string;
@@ -21,7 +23,7 @@ export interface TextCycleProps {
   // Timing (in frames)
   startFrame?: number;
   holdDuration?: number; // How long each word stays visible (default: 30)
-  transitionDuration?: number; // Overlap between exit/enter (default: 15)
+  transitionDuration?: number; // Duration of enter/exit transitions (default: 15)
 
   // Animation style
   enterFrom?: "up" | "down" | "left" | "right" | "fade" | "scale";
@@ -63,7 +65,6 @@ export const TextCycle: React.FC<TextCycleProps> = ({
   loop = false,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
   // Normalize items to TextCycleItem format
   const normalizedItems: TextCycleItem[] = items.map((item) =>
@@ -73,60 +74,33 @@ export const TextCycle: React.FC<TextCycleProps> = ({
   // Calculate total cycle duration per item
   const itemDuration = holdDuration + transitionDuration;
 
-  // Calculate which item is currently active
-  const getActiveItemIndex = () => {
-    const adjustedFrame = frame - startFrame;
-    if (adjustedFrame < 0) return -1;
-
-    const rawIndex = Math.floor(adjustedFrame / itemDuration);
-
-    if (loop) {
-      return rawIndex % normalizedItems.length;
-    }
-
-    return Math.min(rawIndex, normalizedItems.length - 1);
-  };
-
-  const activeIndex = getActiveItemIndex();
-
-  // Calculate animation values for enter/exit
-  const getEnterTransform = (progress: number): string => {
-    const offset = (1 - progress) * distance;
+  // Get initial offset for enter animation
+  const getEnterOffset = () => {
     switch (enterFrom) {
-      case "up":
-        return `translateY(${offset}px)`;
-      case "down":
-        return `translateY(${-offset}px)`;
-      case "left":
-        return `translateX(${offset}px)`;
-      case "right":
-        return `translateX(${-offset}px)`;
-      case "scale":
-        return `scale(${0.8 + 0.2 * progress})`;
-      case "fade":
-      default:
-        return "none";
+      case "up": return { initialY: distance };
+      case "down": return { initialY: -distance };
+      case "left": return { initialX: distance };
+      case "right": return { initialX: -distance };
+      case "scale": return { initialScale: 0.8 };
+      default: return {};
     }
   };
 
-  const getExitTransform = (progress: number): string => {
-    const offset = progress * distance;
+  // Get exit offset
+  const getExitOffset = () => {
     switch (exitTo) {
-      case "up":
-        return `translateY(${-offset}px)`;
-      case "down":
-        return `translateY(${offset}px)`;
-      case "left":
-        return `translateX(${-offset}px)`;
-      case "right":
-        return `translateX(${offset}px)`;
-      case "scale":
-        return `scale(${1 - 0.2 * progress})`;
-      case "fade":
-      default:
-        return "none";
+      case "up": return { y: -distance };
+      case "down": return { y: distance };
+      case "left": return { x: -distance };
+      case "right": return { x: distance };
+      case "scale": return { scale: 0.8 };
+      default: return {};
     }
   };
+
+  const enterOffset = getEnterOffset();
+  const exitOffset = getExitOffset();
+  const springConfig = SPRING_CONFIGS.kinetic;
 
   return (
     <span
@@ -147,82 +121,94 @@ export const TextCycle: React.FC<TextCycleProps> = ({
       {normalizedItems.map((item, index) => {
         // Calculate timing for this item
         const itemStart = startFrame + index * itemDuration;
-        const holdEnd = itemStart + holdDuration;
-        const itemEnd = itemStart + itemDuration;
+        const exitStart = itemStart + holdDuration;
 
-        // Determine if this item should be visible
-        const isActive = index === activeIndex;
-        const isPrevious = index === activeIndex - 1 || (loop && index === normalizedItems.length - 1 && activeIndex === 0);
-
-        // Skip items that are neither active nor transitioning out
+        // Check visibility
         const adjustedFrame = frame - startFrame;
         const itemFrame = adjustedFrame - index * itemDuration;
 
-        // Only render if we're within the item's visibility window
+        // Only render if within visibility window
         if (itemFrame < -transitionDuration || itemFrame > itemDuration + transitionDuration) {
           return null;
         }
 
-        // Calculate enter animation (spring-based)
-        const enterProgress =
-          itemFrame >= 0
-            ? spring({
-                frame: itemFrame,
-                fps,
-                config: { damping: 15, stiffness: 150 },
-              })
-            : 0;
-
-        // Calculate exit animation
+        // Calculate exit progress for opacity fade
         const exitFrame = itemFrame - holdDuration;
-        const exitProgress =
-          exitFrame > 0
-            ? interpolate(exitFrame, [0, transitionDuration], [0, 1], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-              })
-            : 0;
+        const exitProgress = exitFrame > 0
+          ? interpolate(exitFrame, [0, transitionDuration], [0, 1], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+            })
+          : 0;
 
-        // Combine enter and exit
-        const isEntering = itemFrame >= 0 && itemFrame < holdDuration;
-        const isExiting = exitFrame > 0;
-        const isHolding = itemFrame >= transitionDuration && !isExiting;
+        // Skip if fully exited
+        if (exitProgress >= 1) return null;
 
-        // Calculate final opacity and transform
-        let opacity = 0;
-        let transform = "none";
+        // Build enter animations
+        const enterAnimations = [
+          // Fade in
+          Fade({
+            to: 1,
+            initial: 0,
+            start: itemStart,
+            duration: transitionDuration,
+          }),
+        ];
 
-        if (isEntering) {
-          opacity = interpolate(enterProgress, [0, 1], [0, 1], {
-            extrapolateRight: "clamp",
-          });
-          transform = getEnterTransform(enterProgress);
-        } else if (isHolding) {
-          opacity = 1;
-          transform = "none";
-        } else if (isExiting) {
-          opacity = 1 - exitProgress;
-          transform = getExitTransform(exitProgress);
+        // Add movement animation based on enterFrom
+        if (enterOffset.initialY !== undefined) {
+          enterAnimations.push(
+            Move({ y: 0, initialY: enterOffset.initialY, start: itemStart, ...springConfig })
+          );
+        }
+        if (enterOffset.initialX !== undefined) {
+          enterAnimations.push(
+            Move({ x: 0, initialX: enterOffset.initialX, start: itemStart, ...springConfig })
+          );
+        }
+        if (enterOffset.initialScale !== undefined) {
+          enterAnimations.push(
+            Scale({ by: 1, initial: enterOffset.initialScale, start: itemStart, ...springConfig })
+          );
         }
 
-        if (opacity <= 0) return null;
+        // Build exit animations
+        if (exitOffset.y !== undefined) {
+          enterAnimations.push(
+            Move({ y: exitOffset.y, initialY: 0, start: exitStart, duration: transitionDuration, damping: 100 })
+          );
+        }
+        if (exitOffset.x !== undefined) {
+          enterAnimations.push(
+            Move({ x: exitOffset.x, initialX: 0, start: exitStart, duration: transitionDuration, damping: 100 })
+          );
+        }
+        if (exitOffset.scale !== undefined) {
+          enterAnimations.push(
+            Scale({ by: exitOffset.scale, initial: 1, start: exitStart, duration: transitionDuration, damping: 100 })
+          );
+        }
+
+        // Add exit fade
+        enterAnimations.push(
+          Fade({ to: 0, initial: 1, start: exitStart, duration: transitionDuration })
+        );
 
         return (
-          <span
-            key={`${item.text}-${index}`}
-            style={{
-              position: index === 0 ? "relative" : "absolute",
-              left: index === 0 ? undefined : 0,
-              top: index === 0 ? undefined : 0,
-              width: "100%",
-              opacity,
-              transform,
-              color: item.color || color,
-              willChange: "transform, opacity",
-            }}
-          >
-            {item.text}
-          </span>
+          <Animated key={`${item.text}-${index}`} animations={enterAnimations}>
+            <span
+              style={{
+                position: index === 0 ? "relative" : "absolute",
+                left: index === 0 ? undefined : 0,
+                top: index === 0 ? undefined : 0,
+                width: "100%",
+                color: item.color || color,
+                display: "inline-block",
+              }}
+            >
+              {item.text}
+            </span>
+          </Animated>
         );
       })}
     </span>

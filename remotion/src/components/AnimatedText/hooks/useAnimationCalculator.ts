@@ -2,6 +2,7 @@ import { useCurrentFrame, useVideoConfig, spring } from 'remotion';
 import { useMemo } from 'react';
 import { interpolateWithDelay } from '../utils/interpolation';
 import { getPreset, DEFAULTS } from '../presets';
+import { SPRING_CONFIGS, type SpringConfig as AnimSpringConfig } from '../../Animation/springs';
 import type {
   AnimatedTextProps,
   AnimationValues,
@@ -39,6 +40,17 @@ const isSpringConfig = (
   easing: EasingType | SpringConfig | undefined
 ): easing is SpringConfig => {
   return typeof easing === 'object' && easing?.type === 'spring';
+};
+
+/**
+ * Get spring values from config, with fallback to kinetic preset
+ */
+const getSpringValues = (config: SpringConfig): AnimSpringConfig => {
+  return {
+    damping: config.damping ?? SPRING_CONFIGS.kinetic.damping,
+    stiffness: config.stiffness ?? SPRING_CONFIGS.kinetic.stiffness,
+    mass: config.mass ?? SPRING_CONFIGS.kinetic.mass,
+  };
 };
 
 /**
@@ -184,15 +196,12 @@ export const useAnimationCalculator = (
         const delay = (scaleConfig.delay || 0) + staggerDelay;
 
         if (isSpringConfig(scaleConfig.easing)) {
-          // Use Remotion spring for scale
+          // Use Remotion spring with our preset-based config
+          const springValues = getSpringValues(scaleConfig.easing);
           const springValue = spring({
             frame: frame - delay,
             fps,
-            config: {
-              damping: scaleConfig.easing.damping ?? 10,
-              stiffness: scaleConfig.easing.stiffness ?? 100,
-              mass: scaleConfig.easing.mass ?? 1,
-            },
+            config: springValues,
           });
           const from = scaleConfig.from ?? 0;
           const to = scaleConfig.to ?? 1;
@@ -214,15 +223,12 @@ export const useAnimationCalculator = (
         const delay = (positionConfig.delay || 0) + staggerDelay;
 
         if (isSpringConfig(positionConfig.easing)) {
-          // Use spring for position
+          // Use spring with our preset-based config
+          const springValues = getSpringValues(positionConfig.easing);
           const springValue = spring({
             frame: frame - delay,
             fps,
-            config: {
-              damping: positionConfig.easing.damping ?? 10,
-              stiffness: positionConfig.easing.stiffness ?? 100,
-              mass: positionConfig.easing.mass ?? 1,
-            },
+            config: springValues,
           });
           translateX =
             (positionConfig.fromX ?? 0) +

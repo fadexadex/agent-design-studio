@@ -216,3 +216,34 @@ export type {
   AnimationValues,
   Direction,
 } from "./shared";
+
+// ============================================
+// Animation - Declarative animation utilities
+// ============================================
+// Re-exports from remotion-animated, remotion-time, and custom presets
+export {
+  // Core remotion-animated components
+  Animated,
+  Move,
+  Scale,
+  Fade,
+  Rotate,
+  Size,
+  // Animation presets object (use as PRESETS.slideUp(), PRESETS.fadeIn(), etc.)
+  PRESETS,
+  // Spring configuration presets (use as SPRING_CONFIGS.bouncy, etc.)
+  SPRING_CONFIGS as ANIMATION_SPRINGS,
+  getSpringConfig,
+  // Time utilities from remotion-time
+  useTime,
+  useTimeConfig,
+  useInterpolate,
+  // Text animation from remotion-animate-text
+  TextAnimator,
+} from "./Animation";
+
+export type {
+  Animation,
+  PresetName,
+  SpringPreset,
+} from "./Animation";

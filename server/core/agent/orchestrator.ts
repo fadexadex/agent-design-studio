@@ -548,7 +548,12 @@ export class AgentOrchestrator {
 
         const hasComponentImport = /from\s+['"]@\/components/.test(code);
 
-        if (!hasRemotionImport && !hasComponentImport) {
+        // Also accept remotion-animated ecosystem packages (declarative animation libraries)
+        const hasAnimatedImport = /from\s+['"]remotion-animated['"]/.test(code) ||
+            /from\s+['"]remotion-time['"]/.test(code) ||
+            /from\s+['"]remotion-animate-text['"]/.test(code);
+
+        if (!hasRemotionImport && !hasComponentImport && !hasAnimatedImport) {
             return { valid: false, error: 'Missing Remotion or component library import' };
         }
 

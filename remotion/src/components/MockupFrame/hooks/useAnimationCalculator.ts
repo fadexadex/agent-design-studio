@@ -15,6 +15,7 @@ import type {
 } from "../types";
 import { getEntrancePreset, getExitPreset, DEFAULTS } from "../presets";
 import { interpolateWithDelay } from "./interpolation";
+import { SPRING_CONFIGS, type SpringConfig as AnimSpringConfig } from "../../Animation/springs";
 
 interface AnimationCalculatorResult {
   values: AnimationValues;
@@ -39,6 +40,17 @@ const isSpringConfig = (
   easing: EasingType | SpringConfig | undefined,
 ): easing is SpringConfig => {
   return typeof easing === "object" && easing?.type === "spring";
+};
+
+/**
+ * Get spring values from config, with fallback to kinetic preset
+ */
+const getSpringValues = (config: SpringConfig): AnimSpringConfig => {
+  return {
+    damping: config.damping ?? SPRING_CONFIGS.kinetic.damping,
+    stiffness: config.stiffness ?? SPRING_CONFIGS.kinetic.stiffness,
+    mass: config.mass ?? SPRING_CONFIGS.kinetic.mass,
+  };
 };
 
 /**
@@ -134,14 +146,11 @@ export const useAnimationCalculator = (
       const delay = scaleConfig.delay || 0;
 
       if (isSpringConfig(scaleConfig.easing)) {
+        const springValues = getSpringValues(scaleConfig.easing);
         const springValue = spring({
           frame: frame - delay,
           fps,
-          config: {
-            damping: scaleConfig.easing.damping ?? 15,
-            stiffness: scaleConfig.easing.stiffness ?? 100,
-            mass: scaleConfig.easing.mass ?? 1,
-          },
+          config: springValues,
         });
         const from = scaleConfig.from ?? 0.5;
         const to = scaleConfig.to ?? 1;
@@ -163,14 +172,11 @@ export const useAnimationCalculator = (
       const delay = positionConfig.delay || 0;
 
       if (isSpringConfig(positionConfig.easing)) {
+        const springValues = getSpringValues(positionConfig.easing);
         const springValue = spring({
           frame: frame - delay,
           fps,
-          config: {
-            damping: positionConfig.easing.damping ?? 18,
-            stiffness: positionConfig.easing.stiffness ?? 180,
-            mass: positionConfig.easing.mass ?? 1,
-          },
+          config: springValues,
         });
         translateX =
           (positionConfig.fromX ?? 0) +
@@ -206,14 +212,11 @@ export const useAnimationCalculator = (
       perspective = rotateConfig.perspective ?? 1200;
 
       if (isSpringConfig(rotateConfig.easing)) {
+        const springValues = getSpringValues(rotateConfig.easing);
         const springValue = spring({
           frame: frame - delay,
           fps,
-          config: {
-            damping: rotateConfig.easing.damping ?? 20,
-            stiffness: rotateConfig.easing.stiffness ?? 120,
-            mass: rotateConfig.easing.mass ?? 1,
-          },
+          config: springValues,
         });
         rotateX =
           (rotateConfig.fromX ?? 0) +
@@ -286,14 +289,11 @@ export const useAnimationCalculator = (
         const exitScaleConfig = exitPresetValues.scale;
 
         if (isSpringConfig(exitScaleConfig.easing)) {
+          const springValues = getSpringValues(exitScaleConfig.easing);
           const springValue = spring({
             frame: exitFrame - (exitScaleConfig.delay || 0),
             fps,
-            config: {
-              damping: exitScaleConfig.easing.damping ?? 200,
-              stiffness: exitScaleConfig.easing.stiffness ?? 200,
-              mass: exitScaleConfig.easing.mass ?? 1,
-            },
+            config: { ...springValues, damping: 100 }, // Higher damping for exits
           });
           const from = exitScaleConfig.from ?? 1;
           const to = exitScaleConfig.to ?? 0.8;
@@ -314,14 +314,11 @@ export const useAnimationCalculator = (
         const exitPositionConfig = exitPresetValues.position;
 
         if (isSpringConfig(exitPositionConfig.easing)) {
+          const springValues = getSpringValues(exitPositionConfig.easing);
           const springValue = spring({
             frame: exitFrame - (exitPositionConfig.delay || 0),
             fps,
-            config: {
-              damping: exitPositionConfig.easing.damping ?? 200,
-              stiffness: exitPositionConfig.easing.stiffness ?? 200,
-              mass: exitPositionConfig.easing.mass ?? 1,
-            },
+            config: { ...springValues, damping: 100 }, // Higher damping for exits
           });
           translateX =
             (exitPositionConfig.fromX ?? 0) +

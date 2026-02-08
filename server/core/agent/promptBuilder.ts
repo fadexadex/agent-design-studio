@@ -14,25 +14,40 @@ const STYLE_DESCRIPTIONS: Record<MotionStyle, string> = {
 
 const STYLE_CODE_HINTS: Record<MotionStyle, string> = {
   minimalist: `
-    // Use subtle opacity fades and gentle position shifts
-    const opacity = interpolate(frame, [0, 1 * fps], [0, 1], { extrapolateRight: 'clamp' });
-    const slideUp = interpolate(frame, [0, 1.5 * fps], [20, 0], { extrapolateRight: 'clamp' });`,
+    // PREFERRED: Use declarative <Animated> for clean, minimal motion
+    import { Animated, Fade, Move } from 'remotion-animated';
+    // Subtle opacity and position shifts
+    <Animated animations={[
+      Fade({ to: 1, initial: 0, start: 0, duration: 30 }),
+      Move({ y: 0, initialY: 20, start: 0, damping: 100, stiffness: 100 })
+    ]}>`,
   geometric: `
-    // Use rotation and scale transforms with linear timing
-    const rotation = interpolate(frame, [0, 2 * fps], [0, 360]);
-    const scale = interpolate(frame, [0, 1 * fps], [0, 1], { extrapolateRight: 'clamp' });`,
+    // Use declarative animations with rotation and scale
+    import { Animated, Scale, Rotate } from 'remotion-animated';
+    <Animated animations={[
+      Scale({ by: 1, initial: 0, start: 0, damping: 15, stiffness: 100 }),
+      Rotate({ degrees: 0, initial: 360, start: 0, damping: 20, stiffness: 120 })
+    ]}>`,
   fluid: `
-    // Use spring animations for natural motion
-    const scale = spring({ frame, fps, config: { damping: 100, stiffness: 200 } });
-    const bounceY = spring({ frame: frame - 15, fps, config: { damping: 80 } });`,
+    // PREFERRED: Spring-based animations for natural, organic motion
+    import { Animated, Move, Scale, Fade } from 'remotion-animated';
+    // bouncy preset: damping: 8, stiffness: 150
+    <Animated animations={[
+      Scale({ by: 1, initial: 0, start: 0, damping: 8, stiffness: 150 }),
+      Move({ y: 0, initialY: 40, start: 0, damping: 8, stiffness: 150 })
+    ]}>`,
   brutalist: `
-    // Use hard cuts and bold transforms
+    // Hard cuts and bold transforms - use interpolate for instant changes
     const show = frame > 0.5 * fps ? 1 : 0;
     const glitchX = Math.sin(frame * 0.5) * (frame < 1 * fps ? 5 : 0);`,
   cinematic: `
-    // Use slow, dramatic reveals
-    const fadeIn = interpolate(frame, [0, 2 * fps], [0, 1], { extrapolateRight: 'clamp' });
-    const zoomIn = interpolate(frame, [0, 3 * fps], [1.1, 1], { extrapolateRight: 'clamp' });`
+    // Slow, dramatic reveals with smooth spring preset
+    import { Animated, Fade, Scale } from 'remotion-animated';
+    // smooth preset: damping: 100, stiffness: 100 (no bounce)
+    <Animated animations={[
+      Fade({ to: 1, initial: 0, start: 0, duration: 60 }),
+      Scale({ by: 1, initial: 1.1, start: 0, damping: 100, stiffness: 100 })
+    ]}>`
 };
 
 // Cache for skills context to avoid re-computing

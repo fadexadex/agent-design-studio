@@ -10,6 +10,7 @@ import type {
   PositionAnimation,
   RotateAnimation,
 } from "./types";
+import { SPRING_CONFIGS } from "../Animation/springs";
 
 // ===========================================
 // DEVICE SPECIFICATIONS
@@ -44,6 +45,7 @@ export const deviceSpecs: Record<string, DeviceSpec> = {
 
 // ===========================================
 // ENTRANCE ANIMATION PRESETS
+// Uses SPRING_CONFIGS from Animation module
 // ===========================================
 
 export const entrancePresets: Record<
@@ -59,7 +61,7 @@ export const entrancePresets: Record<
     scale: {
       from: 0.5,
       to: 1,
-      easing: { type: "spring", damping: 15, stiffness: 100 },
+      easing: { type: "spring", ...SPRING_CONFIGS.bouncy },
     },
     opacity: { from: 0, to: 1, duration: 15 },
   },
@@ -68,7 +70,7 @@ export const entrancePresets: Record<
     position: {
       fromY: 60,
       toY: 0,
-      easing: { type: "spring", damping: 18, stiffness: 180 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
@@ -77,7 +79,7 @@ export const entrancePresets: Record<
     position: {
       fromY: -60,
       toY: 0,
-      easing: { type: "spring", damping: 18, stiffness: 180 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
@@ -86,7 +88,7 @@ export const entrancePresets: Record<
     position: {
       fromX: -80,
       toX: 0,
-      easing: { type: "spring", damping: 18, stiffness: 180 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
@@ -95,7 +97,7 @@ export const entrancePresets: Record<
     position: {
       fromX: 80,
       toX: 0,
-      easing: { type: "spring", damping: 18, stiffness: 180 },
+      easing: { type: "spring", ...SPRING_CONFIGS.kinetic },
     },
     opacity: { from: 0, to: 1, duration: 12 },
   },
@@ -105,7 +107,7 @@ export const entrancePresets: Record<
       fromY: -30,
       toY: 0,
       perspective: 1200,
-      easing: { type: "spring", damping: 20, stiffness: 120 },
+      easing: { type: "spring", ...SPRING_CONFIGS.snappy },
     },
     opacity: { from: 0, to: 1, duration: 15 },
     blur: { from: 5, to: 0, duration: 15 },
@@ -116,6 +118,7 @@ export const entrancePresets: Record<
 
 // ===========================================
 // EXIT ANIMATION PRESETS
+// Uses smooth spring for clean exits
 // ===========================================
 
 export const exitPresets: Record<ExitPresetType, ExitPresetDefinition> = {
@@ -128,7 +131,7 @@ export const exitPresets: Record<ExitPresetType, ExitPresetDefinition> = {
     position: {
       fromX: 0,
       toX: -100,
-      easing: { type: "spring", damping: 200, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.smooth },
     },
     opacity: { from: 1, to: 0, duration: 15 },
   },
@@ -137,7 +140,7 @@ export const exitPresets: Record<ExitPresetType, ExitPresetDefinition> = {
     position: {
       fromX: 0,
       toX: 100,
-      easing: { type: "spring", damping: 200, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.smooth },
     },
     opacity: { from: 1, to: 0, duration: 15 },
   },
@@ -146,7 +149,7 @@ export const exitPresets: Record<ExitPresetType, ExitPresetDefinition> = {
     position: {
       fromY: 0,
       toY: 60,
-      easing: { type: "spring", damping: 200, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.smooth },
     },
     opacity: { from: 1, to: 0, duration: 15 },
   },
@@ -155,7 +158,7 @@ export const exitPresets: Record<ExitPresetType, ExitPresetDefinition> = {
     position: {
       fromY: 0,
       toY: -60,
-      easing: { type: "spring", damping: 200, stiffness: 200 },
+      easing: { type: "spring", ...SPRING_CONFIGS.smooth },
     },
     opacity: { from: 1, to: 0, duration: 15 },
   },

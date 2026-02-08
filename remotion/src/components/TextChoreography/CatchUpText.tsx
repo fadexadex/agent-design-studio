@@ -1,5 +1,6 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
+import { Animated, Move, Fade } from "remotion-animated";
+import { SPRING_CONFIGS } from "../Animation/springs";
 
 /**
  * CatchUpText - Words animate sequentially, with later words moving faster to "catch up"
@@ -7,11 +8,7 @@ import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
  * Creates the effect where the first word starts slow, and each subsequent word
  * animates faster, creating a rhythmic acceleration that lands all words together.
  *
- * Example:
- * - Word 1 starts at frame 0, animates over 20 frames
- * - Word 2 starts at frame 5, animates over 15 frames
- * - Word 3 starts at frame 10, animates over 10 frames
- * - All words settle around frame 20
+ * Now uses remotion-animated for declarative spring animations.
  */
 export interface CatchUpTextProps {
   // Text content - will be split by spaces
@@ -24,10 +21,9 @@ export interface CatchUpTextProps {
   // Animation style
   direction?: "up" | "down" | "left" | "right"; // Direction words come from
   distance?: number; // How far words travel (pixels, default: 40)
-  springConfig?: {
-    damping?: number; // default: 15
-    stiffness?: number; // default: 150
-  };
+
+  // Spring preset
+  springPreset?: "kinetic" | "snappy" | "smooth";
 
   // Typography
   fontSize?: number | string;
@@ -47,7 +43,7 @@ export const CatchUpText: React.FC<CatchUpTextProps> = ({
   convergenceFrame,
   direction = "up",
   distance = 40,
-  springConfig = {},
+  springPreset = "kinetic",
   fontSize = 48,
   fontWeight = 600,
   fontFamily = "system-ui, sans-serif",
@@ -56,9 +52,6 @@ export const CatchUpText: React.FC<CatchUpTextProps> = ({
   lineHeight,
   style,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-
   const words = text.split(" ").filter(Boolean);
   const wordCount = words.length;
 
@@ -66,40 +59,32 @@ export const CatchUpText: React.FC<CatchUpTextProps> = ({
   const targetConvergence = convergenceFrame ?? startFrame + 30;
   const totalDuration = targetConvergence - startFrame;
 
-  // Calculate staggered start times and durations
-  // First word gets the most time, last word gets the least
-  const getWordTiming = (wordIndex: number) => {
-    // Stagger: each word starts a bit later
+  // Get spring config
+  const springConfig = SPRING_CONFIGS[springPreset];
+
+  // Calculate staggered start times
+  const getWordStart = (wordIndex: number) => {
     const staggerOffset = (wordIndex / wordCount) * (totalDuration * 0.4);
-    const wordStart = startFrame + staggerOffset;
-
-    // Duration: first word is longest, last is shortest (catch-up effect)
-    const baseDuration = totalDuration - staggerOffset;
-    const minDuration = Math.max(10, totalDuration * 0.3);
-    const wordDuration = Math.max(minDuration, baseDuration);
-
-    return { wordStart, wordDuration };
+    return startFrame + staggerOffset;
   };
 
-  // Get transform based on direction
-  const getTransform = (progress: number) => {
-    const offset = (1 - progress) * distance;
+  // Get initial offset based on direction
+  const getInitialOffset = () => {
     switch (direction) {
       case "up":
-        return `translateY(${offset}px)`;
+        return { initialY: distance, initialX: undefined };
       case "down":
-        return `translateY(${-offset}px)`;
+        return { initialY: -distance, initialX: undefined };
       case "left":
-        return `translateX(${offset}px)`;
+        return { initialX: distance, initialY: undefined };
       case "right":
-        return `translateX(${-offset}px)`;
+        return { initialX: -distance, initialY: undefined };
       default:
-        return `translateY(${offset}px)`;
+        return { initialY: distance, initialX: undefined };
     }
   };
 
-  const damping = springConfig.damping ?? 15;
-  const stiffness = springConfig.stiffness ?? 150;
+  const offset = getInitialOffset();
 
   return (
     <span
@@ -117,40 +102,32 @@ export const CatchUpText: React.FC<CatchUpTextProps> = ({
       }}
     >
       {words.map((word, index) => {
-        const { wordStart, wordDuration } = getWordTiming(index);
-
-        // Use spring for natural motion
-        const springProgress = spring({
-          frame: frame - wordStart,
-          fps,
-          config: {
-            damping,
-            stiffness,
-          },
-        });
-
-        // Opacity fades in with the spring
-        const opacity = interpolate(
-          frame,
-          [wordStart, wordStart + wordDuration * 0.3],
-          [0, 1],
-          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-        );
-
-        const transform = getTransform(springProgress);
+        const wordStart = getWordStart(index);
 
         return (
-          <span
+          <Animated
             key={`${word}-${index}`}
-            style={{
-              display: "inline-block",
-              opacity,
-              transform,
-              willChange: "transform, opacity",
-            }}
+            animations={[
+              // Move animation with spring physics
+              Move({
+                x: offset.initialX !== undefined ? 0 : undefined,
+                y: offset.initialY !== undefined ? 0 : undefined,
+                initialX: offset.initialX,
+                initialY: offset.initialY,
+                start: wordStart,
+                ...springConfig,
+              }),
+              // Fade in
+              Fade({
+                to: 1,
+                initial: 0,
+                start: wordStart,
+                duration: 12,
+              }),
+            ]}
           >
-            {word}
-          </span>
+            <span style={{ display: "inline-block" }}>{word}</span>
+          </Animated>
         );
       })}
     </span>

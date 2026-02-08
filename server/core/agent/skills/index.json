@@ -1,17 +1,22 @@
 {
   "coreRules": [
     "common-pitfalls",
+    "remotion-animated",
     "animations",
     "timing"
   ],
   "availablePackages": [
     "remotion",
     "react",
+    "remotion-animated",
+    "remotion-time",
+    "remotion-animate-text",
     "@remotion/transitions",
     "@remotion/shapes",
     "@remotion/media",
     "@remotion/google-fonts",
     "@/components",
+    "@/components/Animation",
     "@/components/AnimatedText",
     "@/components/TextChoreography",
     "@/components/MockupFrame",
@@ -24,6 +29,28 @@
   ],
   "maxFeatureRules": 5,
   "featureRules": [
+    {
+      "id": "remotion-animated",
+      "file": "rules/remotion-animated.md",
+      "keywords": [
+        "animated", "spring", "bounce", "smooth", "kinetic", "snappy",
+        "slide", "fade", "scale", "rotate", "move", "entrance", "exit",
+        "declarative", "physics", "overshoot", "damping", "stiffness"
+      ],
+      "requires": ["remotion-animated"],
+      "priority": 10,
+      "description": "Declarative spring-based animations with <Animated> wrapper"
+    },
+    {
+      "id": "remotion-time",
+      "file": "rules/remotion-time.md",
+      "keywords": [
+        "time", "seconds", "duration", "timing", "useTime"
+      ],
+      "requires": ["remotion-time"],
+      "priority": 7,
+      "description": "Work with seconds instead of frames"
+    },
     {
       "id": "sequencing",
       "file": "rules/sequencing.md",
