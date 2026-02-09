@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { BrandContext, VideoConfig, MotionStyle, VideoScript, StoryScript } from '../types';
 import { Check, ChevronRight, Upload, Palette, Rocket, Zap, Sliders, FileText, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import ScriptPreview from './ScriptPreview';
+import { buildApiUrl } from '../lib/api';
 
 interface BrandWizardProps {
   onComplete: (brand: BrandContext, config: VideoConfig, script: VideoScript) => void;
@@ -58,7 +59,7 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
       
       try {
         // Upload to server to save in remotion/public/uploads
-        const response = await fetch('/api/upload/logo', {
+        const response = await fetch(buildApiUrl('/api/upload/logo'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -109,7 +110,7 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
     setScriptError(null);
 
     try {
-      const response = await fetch('/api/script/transform', {
+      const response = await fetch(buildApiUrl('/api/script/transform'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -141,7 +142,7 @@ export const BrandWizard: React.FC<BrandWizardProps> = ({ onComplete }) => {
     setStoryScript(null);
 
     try {
-      const response = await fetch('/api/script/generate', {
+      const response = await fetch(buildApiUrl('/api/script/generate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

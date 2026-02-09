@@ -10,6 +10,7 @@ import { FeedbackControls } from './FeedbackControls';
 import { SceneNodeData } from './SceneNode';
 import { OrchestrationView } from '../orchestration';
 import { Check, ChevronRight, AlertCircle, Loader2, LayoutGrid, Video } from 'lucide-react';
+import { buildApiUrl } from '../../lib/api';
 
 interface WorkflowDashboardProps {
     jobId: string;
@@ -86,7 +87,13 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
     const videoUrl = state?.outputVideoPath || undefined;
 
     // Auto-navigate to video viewer when video is ready
-    const [hasNavigatedToVideo, setHasNavigatedToVideo] = useState(false);
+    // Use sessionStorage to persist navigation state across component remounts
+    const [hasNavigatedToVideo, setHasNavigatedToVideo] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return sessionStorage.getItem(`navigated-video-${jobId}`) === 'true';
+        }
+        return false;
+    });
     useEffect(() => {
         if (
             videoUrl &&
@@ -97,6 +104,10 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
             // Small delay so the user sees the "Complete" state briefly
             const timer = setTimeout(() => {
                 setHasNavigatedToVideo(true);
+                // Persist to sessionStorage to survive remounts
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem(`navigated-video-${jobId}`, 'true');
+                }
                 onNavigateToVideo(jobId);
             }, 1500);
             return () => clearTimeout(timer);
@@ -174,7 +185,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                 ? WorkflowPhase.AWAITING_FEEDBACK
                 : undefined;
 
-            await fetch(`/api/workflow/${jobId}/feedback`, {
+            await fetch(buildApiUrl(`/api/workflow/${jobId}/feedback`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -215,7 +226,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                 }
             } : undefined;
 
-            await fetch(`/api/workflow/${jobId}/feedback`, {
+            await fetch(buildApiUrl(`/api/workflow/${jobId}/feedback`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -233,7 +244,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
     // Job control handlers for OrchestrationView
     const handleKillJob = async () => {
         try {
-            await fetch(`/api/workflow/${jobId}/control`, {
+            await fetch(buildApiUrl(`/api/workflow/${jobId}/control`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'kill' })
@@ -245,7 +256,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
 
     const handlePauseJob = async () => {
         try {
-            await fetch(`/api/workflow/${jobId}/control`, {
+            await fetch(buildApiUrl(`/api/workflow/${jobId}/control`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'pause' })
@@ -257,7 +268,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
 
     const handleResumeJob = async () => {
         try {
-            await fetch(`/api/workflow/${jobId}/control`, {
+            await fetch(buildApiUrl(`/api/workflow/${jobId}/control`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'resume' })
@@ -269,7 +280,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
 
     const handleApproveAllScenes = async () => {
         try {
-            await fetch(`/api/workflow/${jobId}/control`, {
+            await fetch(buildApiUrl(`/api/workflow/${jobId}/control`), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'approve-all' })

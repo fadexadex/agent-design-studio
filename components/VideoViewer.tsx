@@ -64,8 +64,13 @@ export const VideoViewer: React.FC = () => {
   // Build video URL
   const videoUrl = session?.outputVideoPath || `/api/video/${jobId}`;
 
-  // Scene previews from session
-  const scenes = session?.scenes || [];
+  // Scene previews from session with fallback URL construction
+  const scenes = (session?.scenes || []).map((scene, idx) => ({
+    ...scene,
+    // Construct fallback preview URL if not present
+    // Format: /api/preview/{jobId}/scene-{index}_v1.mp4
+    previewUrl: scene.previewUrl || `/api/preview/${jobId}/scene-${idx}_v1.mp4`
+  }));
 
   // Auto-hide controls
   useEffect(() => {

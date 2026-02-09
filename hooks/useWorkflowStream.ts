@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { WorkflowState, AgentThought, SceneRenderStatus } from '../types';
+import { buildSseUrl } from '../lib/api';
 
 export function useWorkflowStream(jobId: string | null) {
     const [state, setState] = useState<WorkflowState | null>(null);
@@ -16,7 +17,7 @@ export function useWorkflowStream(jobId: string | null) {
         }
 
         // Connect to SSE endpoint
-        const eventSource = new EventSource(`/api/workflow/${jobId}/stream`);
+        const eventSource = new EventSource(buildSseUrl(`/api/workflow/${jobId}/stream`));
 
         eventSource.onopen = () => {
             console.log(`[SSE] Connected to workflow ${jobId}`);

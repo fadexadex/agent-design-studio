@@ -260,7 +260,15 @@ export const finalProducerNode = async (state: typeof DirectorStateAnnotation.St
     // Use absolute paths for ffmpeg
     const absVideoPaths = videoPaths.map(p => path.isAbsolute(p) ? p : path.join(process.cwd(), p));
 
-    await ConcatenationService.concatenateVideos(state.projectId, absVideoPaths, absOutputPath);
+    // Get visual style from brand context if available
+    const visualStyle = state.brandContext?.style || 'default';
+
+    await ConcatenationService.concatenateVideos(state.projectId, absVideoPaths, absOutputPath, {
+      visualStyle,
+      musicVolume: 0.25, // Subtle background music
+      fadeInSeconds: 1.5,
+      fadeOutSeconds: 2.5,
+    });
 
     const totalDurationMs = Date.now() - startTime;
 
@@ -288,8 +296,8 @@ export const finalProducerNode = async (state: typeof DirectorStateAnnotation.St
       videoPath: toVideoUrl(s.videoPath!, state.projectId),
     }));
     
-    // Convert final output to URL as well
-    const finalVideoUrl = `/api/video/${state.projectId}`;
+    // Convert final output to URL as well - use correct director API endpoint
+    const finalVideoUrl = `/api/director/${state.projectId}/video`;
     
     await EventBridge.previewAllComplete(
       state.projectId,

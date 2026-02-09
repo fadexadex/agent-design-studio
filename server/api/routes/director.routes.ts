@@ -267,34 +267,41 @@ router.get('/:projectId/video', async (req: Request, res: Response) => {
     const key = getStateRedisKey(projectId);
     const data = await redis.hgetall(key);
 
-    if (!data || Object.keys(data).length === 0) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
+    // Try to get video path from Redis state first
+    let videoPath: string | null = null;
+
+    if (data && Object.keys(data).length > 0) {
+      const state = deserializeState(data);
+
+      if (state.phase !== 'completed') {
+        res.status(404).json({ 
+          error: 'Video not ready',
+          phase: state.phase,
+          message: state.phase === 'failed' 
+            ? 'Project failed: ' + (state.error?.message || 'Unknown error')
+            : 'Project is still in progress',
+        });
+        return;
+      }
+
+      videoPath = state.outputPath || null;
     }
 
-    const state = deserializeState(data);
+    // Fallback: check if video file exists on disk (for when Redis state expires)
+    if (!videoPath) {
+      const fallbackPath = path.join(process.cwd(), 'output', 'final', projectId, 'video.mp4');
+      if (fs.existsSync(fallbackPath)) {
+        videoPath = fallbackPath;
+      }
+    }
 
-    if (state.phase !== 'completed') {
+    if (!videoPath) {
       res.status(404).json({ 
-        error: 'Video not ready',
-        phase: state.phase,
-        message: state.phase === 'failed' 
-          ? 'Project failed: ' + (state.error?.message || 'Unknown error')
-          : 'Project is still in progress',
+        error: 'Video not found',
+        message: 'Video file does not exist for this project',
       });
       return;
     }
-
-    if (!state.outputPath) {
-      res.status(404).json({ 
-        error: 'Video path not found',
-        message: 'Project completed but video path is missing',
-      });
-      return;
-    }
-
-    // Check if file exists
-    const videoPath = state.outputPath;
     
     if (!fs.existsSync(videoPath)) {
       res.status(404).json({ 

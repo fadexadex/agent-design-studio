@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NodeProps, Node as FlowNode } from '@xyflow/react';
-import { Clock, ChevronDown, ChevronUp, Sparkles, Zap, Camera, Type } from 'lucide-react';
+import { Clock, ChevronDown, ChevronUp, Type, Trash2 } from 'lucide-react';
 import {
     Node,
     NodeHeader,
@@ -17,29 +17,33 @@ export type SceneNodeData = {
     duration: number; // in seconds
     index: number;
     onChange?: (id: string, data: Partial<SceneNodeData>) => void;
+    onDelete?: (id: string) => void;
     // Preserve backend SceneDescription fields for sync
     sceneNumber?: number;
     frameRange?: { start: number; end: number };
     keyElements?: string[];
     // Additional scene details
     visualStyle?: string;
-    energyLevel?: 'high' | 'medium' | 'low';
+    energyLevel?: string;
     textOverlay?: string[];
     cameraMovement?: string;
 };
 
 export const SceneNode: React.FC<NodeProps<FlowNode<SceneNodeData>>> = ({ data, selected }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    // Energy level color mapping
-    const energyColor = {
-        high: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
-        medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
-        low: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (showDeleteConfirm) {
+            data.onDelete?.(data.id);
+            setShowDeleteConfirm(false);
+        } else {
+            setShowDeleteConfirm(true);
+            // Auto-hide confirmation after 3 seconds
+            setTimeout(() => setShowDeleteConfirm(false), 3000);
+        }
     };
-
-    // Visual style display name
-    const styleDisplayName = data.visualStyle?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
     return (
         <Node
@@ -60,77 +64,50 @@ export const SceneNode: React.FC<NodeProps<FlowNode<SceneNodeData>>> = ({ data, 
                             />
                         </NodeTitle>
                         <NodeDescription>
-                            <span className="flex items-center gap-2 flex-wrap">
-                                <span className="flex items-center gap-1">
-                                    <Clock size={10} className="text-zinc-600" />
-                                    Scene {data.index + 1} &middot; {data.duration}s
-                                </span>
-                                {data.energyLevel && (
-                                    <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] border ${energyColor[data.energyLevel]}`}>
-                                        <Zap size={8} />
-                                        {data.energyLevel}
-                                    </span>
-                                )}
+                            <span className="flex items-center gap-1.5">
+                                <Clock size={10} className="text-zinc-600" />
+                                Scene {data.index + 1} &middot; {data.duration}s
                             </span>
                         </NodeDescription>
                     </div>
-                    <button
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        className="text-zinc-600 hover:text-zinc-300 transition-colors p-1 rounded hover:bg-zinc-800/50"
-                    >
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {/* Delete button */}
+                        {data.onDelete && (
+                            <button
+                                onClick={handleDelete}
+                                className={`p-1 rounded transition-colors ${
+                                    showDeleteConfirm 
+                                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                                        : 'text-zinc-600 hover:text-red-400 hover:bg-zinc-800/50'
+                                }`}
+                                title={showDeleteConfirm ? 'Click again to confirm delete' : 'Delete scene'}
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="text-zinc-600 hover:text-zinc-300 transition-colors p-1 rounded hover:bg-zinc-800/50"
+                        >
+                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+                    </div>
                 </div>
+                {showDeleteConfirm && (
+                    <div className="mt-1 text-[10px] text-red-400">
+                        Click trash again to delete
+                    </div>
+                )}
             </NodeHeader>
 
             <NodeContent>
                 {isExpanded ? (
-                    <div className="space-y-2">
-                        <textarea
-                            className="w-full bg-transparent text-xs text-zinc-400 leading-relaxed resize-none focus:outline-none focus:text-zinc-300 focus:bg-white/5 rounded p-1 -m-1 min-h-[48px]"
-                            defaultValue={data.description}
-                            rows={3}
-                            onBlur={(e) => data.onChange?.(data.id, { description: e.target.value })}
-                        />
-                        
-                        {/* Visual style and camera movement */}
-                        {(data.visualStyle || data.cameraMovement) && (
-                            <div className="flex items-center gap-2 flex-wrap pt-1">
-                                {data.visualStyle && (
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-500/10 text-[9px] text-purple-400 border border-purple-500/20">
-                                        <Sparkles size={8} />
-                                        {styleDisplayName}
-                                    </span>
-                                )}
-                                {data.cameraMovement && (
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-500/10 text-[9px] text-cyan-400 border border-cyan-500/20">
-                                        <Camera size={8} />
-                                        {data.cameraMovement}
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                        
-                        {/* Text overlays */}
-                        {data.textOverlay && data.textOverlay.length > 0 && (
-                            <div className="pt-1">
-                                <div className="flex items-center gap-1 text-[9px] text-zinc-500 mb-1">
-                                    <Type size={8} />
-                                    <span>Text Overlays</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                    {data.textOverlay.map((text, i) => (
-                                        <span
-                                            key={i}
-                                            className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-[9px] text-emerald-400 border border-emerald-500/20"
-                                        >
-                                            "{text}"
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <textarea
+                        className="w-full bg-transparent text-xs text-zinc-400 leading-relaxed resize-none focus:outline-none focus:text-zinc-300 focus:bg-white/5 rounded p-1 -m-1 min-h-[48px]"
+                        defaultValue={data.description}
+                        rows={3}
+                        onBlur={(e) => data.onChange?.(data.id, { description: e.target.value })}
+                    />
                 ) : (
                     <p className="text-xs text-zinc-500 truncate">{data.description}</p>
                 )}
@@ -147,6 +124,28 @@ export const SceneNode: React.FC<NodeProps<FlowNode<SceneNodeData>>> = ({ data, 
                                 {el}
                             </span>
                         ))}
+                    </div>
+                </NodeFooter>
+            )}
+
+            {/* Text Overlay Preview */}
+            {isExpanded && data.textOverlay && data.textOverlay.length > 0 && (
+                <NodeFooter>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-[10px] text-zinc-500 uppercase tracking-wide">
+                            <Type size={10} />
+                            Text Overlay
+                        </div>
+                        <div className="space-y-0.5">
+                            {data.textOverlay.map((text, i) => (
+                                <p
+                                    key={i}
+                                    className="text-[11px] text-zinc-300 italic bg-zinc-800/50 rounded px-2 py-1 border-l-2 border-purple-500/50"
+                                >
+                                    "{text}"
+                                </p>
+                            ))}
+                        </div>
                     </div>
                 </NodeFooter>
             )}

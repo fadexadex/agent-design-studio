@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
     useNodesState,
     useEdgesState,
@@ -26,13 +26,14 @@ const edgeTypes = {
     temporary: CustomEdge.Temporary,
 };
 
-const dagreGraph = new dagre.graphlib.Graph();
-dagreGraph.setDefaultEdgeLabel(() => ({}));
-
 const nodeWidth = 320;
 const nodeHeight = 180;
 
 const getLayoutedElements = (nodes: FlowNode<SceneNodeData>[], edges: FlowEdge[], direction = 'LR') => {
+    // Create a fresh graph for each layout calculation
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+    
     const isHorizontal = direction === 'LR';
     dagreGraph.setGraph({ rankdir: direction, nodesep: 60, ranksep: 120 });
 
@@ -71,6 +72,7 @@ interface ScriptEditorProps {
 
 const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesChange, onAddScene, onSceneSelect }) => {
     const { fitView } = useReactFlow();
+    const prevScenesLengthRef = useRef(scenes.length);
 
     // Add new scene handler
     const handleAddScene = () => {
@@ -93,11 +95,23 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
 
         const updatedScenes = [...scenes, newScene];
         onScenesChange(updatedScenes);
-
-        window.requestAnimationFrame(() => {
-            fitView();
-        });
     };
+
+    // Delete scene handler
+    const handleDeleteScene = useCallback((id: string) => {
+        if (!onScenesChange) return;
+        if (scenes.length <= 1) return; // Keep at least one scene
+        
+        const filteredScenes = scenes.filter(s => s.id !== id);
+        // Re-index scenes after deletion
+        const reindexedScenes = filteredScenes.map((s, idx) => ({
+            ...s,
+            index: idx,
+            sceneNumber: idx + 1,
+            title: s.title.startsWith('Scene ') ? `Scene ${idx + 1}` : s.title,
+        }));
+        onScenesChange(reindexedScenes);
+    }, [scenes, onScenesChange]);
 
     // Handler for node updates
     const onNodeDataChange = useCallback((id: string, data: Partial<SceneNodeData>) => {
@@ -111,15 +125,16 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
     }, [scenes, onScenesChange]);
 
     // Transform scenes to Nodes
-    const createNodes = (currentScenes: SceneNodeData[]): FlowNode<SceneNodeData>[] => currentScenes.map((scene) => ({
+    const createNodes = useCallback((currentScenes: SceneNodeData[]): FlowNode<SceneNodeData>[] => currentScenes.map((scene) => ({
         id: scene.id,
         type: 'scene',
         data: {
             ...scene,
-            onChange: onNodeDataChange
+            onChange: onNodeDataChange,
+            onDelete: handleDeleteScene,
         },
         position: { x: 0, y: 0 } // Layouted by dagre
-    }));
+    })), [onNodeDataChange, handleDeleteScene]);
 
     // Transform scenes to Edges with animated type
     const createEdges = (currentScenes: SceneNodeData[]): FlowEdge[] => currentScenes.slice(0, -1).map((scene, idx) => ({
@@ -129,28 +144,42 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         type: 'animated',
     }));
 
-    const [nodes, setNodes, onNodesChangeState] = useNodesState([]);
+    const [nodes, setNodes, onNodesChangeState] = useNodesState<FlowNode<SceneNodeData>>([]);
     const [edges, setEdges, onEdgesChangeState] = useEdgesState([]);
 
-    // Sync props to state
+    // Sync props to state and auto-layout when scenes change
     useEffect(() => {
-        setNodes((nds) => {
-            const newNodes = createNodes(scenes);
+        const newNodes = createNodes(scenes);
+        const newEdges = createEdges(scenes);
+        
+        // Check if the number of scenes changed (add/delete)
+        const scenesChanged = scenes.length !== prevScenesLengthRef.current;
+        prevScenesLengthRef.current = scenes.length;
 
-            if (nds.length === 0) return newNodes;
-
-            // Merge positions from existing nodes
-            return newNodes.map(n => {
-                const existing = nds.find(fn => fn.id === n.id);
-                if (existing) {
-                    return { ...n, position: existing.position };
-                }
-                return n;
+        if (scenesChanged || nodes.length === 0) {
+            // Full re-layout when scenes are added or deleted
+            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(newNodes, newEdges, 'LR');
+            setNodes(layoutedNodes);
+            setEdges(layoutedEdges);
+            
+            // Fit view after layout
+            window.requestAnimationFrame(() => {
+                fitView({ padding: 0.1 });
             });
-        });
-
-        setEdges(createEdges(scenes));
-    }, [scenes, onNodeDataChange]);
+        } else {
+            // Just update data without changing positions
+            setNodes((nds) => {
+                return newNodes.map(n => {
+                    const existing = nds.find(fn => fn.id === n.id);
+                    if (existing) {
+                        return { ...n, position: existing.position };
+                    }
+                    return n;
+                });
+            });
+            setEdges(newEdges);
+        }
+    }, [scenes, createNodes, fitView]);
 
     const onConnect = useCallback(
         (params: Connection) => setEdges((eds) => addEdge({ ...params, type: 'animated' }, eds)),
@@ -175,15 +204,8 @@ const ScriptEditorInternal: React.FC<ScriptEditorProps> = ({ scenes, onScenesCha
         [nodes, edges, fitView, setNodes, setEdges]
     );
 
-    // Auto-layout on initial load
-    useEffect(() => {
-        if (nodes.length > 0 && nodes[0].position.x === 0 && nodes[0].position.y === 0) {
-            onLayout();
-        }
-    }, [nodes.length]);
-
     // Handle node selection to notify parent
-    const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: FlowNode<SceneNodeData>[] }) => {
+    const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: FlowNode[]; edges: FlowEdge[] }) => {
         if (onSceneSelect) {
             if (selectedNodes.length > 0) {
                 onSceneSelect(selectedNodes[0].id);

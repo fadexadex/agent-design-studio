@@ -5,6 +5,8 @@
  * Handles project creation, status polling, and video retrieval.
  */
 
+import { buildApiUrl, buildSseUrl } from '../lib/api';
+
 const API_BASE = '/api/director';
 const EVENTS_BASE = '/api/events';
 
@@ -117,7 +119,7 @@ class DirectorService {
     brand: DirectorBrandContext,
     config?: DirectorConfig
   ): Promise<StartProjectResponse> {
-    const response = await fetch(`${API_BASE}/start`, {
+    const response = await fetch(buildApiUrl(`${API_BASE}/start`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -137,7 +139,7 @@ class DirectorService {
    * Get project status
    */
   async getStatus(projectId: string): Promise<ProjectStatus> {
-    const response = await fetch(`${API_BASE}/${projectId}/status`);
+    const response = await fetch(buildApiUrl(`${API_BASE}/${projectId}/status`));
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -151,14 +153,14 @@ class DirectorService {
    * Get video URL for a completed project
    */
   getVideoUrl(projectId: string): string {
-    return `${API_BASE}/${projectId}/video`;
+    return buildApiUrl(`${API_BASE}/${projectId}/video`);
   }
 
   /**
    * Delete/cancel a project
    */
   async deleteProject(projectId: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/${projectId}`, {
+    const response = await fetch(buildApiUrl(`${API_BASE}/${projectId}`), {
       method: 'DELETE',
     });
 
@@ -172,7 +174,7 @@ class DirectorService {
    * Check system health
    */
   async getHealth(): Promise<HealthStatus> {
-    const response = await fetch(`${API_BASE}/health`);
+    const response = await fetch(buildApiUrl(`${API_BASE}/health`));
     return response.json();
   }
 
@@ -181,7 +183,7 @@ class DirectorService {
    */
   getEventsUrl(projectId: string, includeHistory = false): string {
     const params = includeHistory ? '?includeHistory=true' : '';
-    return `${EVENTS_BASE}/${projectId}${params}`;
+    return buildSseUrl(`${EVENTS_BASE}/${projectId}${params}`);
   }
 
   /**
@@ -199,7 +201,7 @@ class DirectorService {
     hasMore: boolean;
   }> {
     const response = await fetch(
-      `${EVENTS_BASE}/${projectId}/history?from=${from}&count=${count}`
+      buildApiUrl(`${EVENTS_BASE}/${projectId}/history?from=${from}&count=${count}`)
     );
 
     if (!response.ok) {

@@ -661,7 +661,8 @@ export function useDirectorStream(options: UseDirectorStreamOptions): UseDirecto
     }
 
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const url = `${baseUrl}/api/events/${projectId}`;
+    // Include history to catch any events that happened before connection
+    const url = `${baseUrl}/api/events/${projectId}?includeHistory=true`;
 
     try {
       const eventSource = new EventSource(url);

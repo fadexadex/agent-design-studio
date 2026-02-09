@@ -223,6 +223,30 @@ export default function Scene${sceneIndex}() {
    - Use \`textAlign: 'center'\` for text elements
    - Wrap content in a centered flex container within AbsoluteFill
 
+## CRITICAL TEXT POSITIONING RULES (PREVENT OVERLAPPING TEXT)
+1. **NEVER animate multiple text elements simultaneously without staggered delays**
+   - First text: delay={0}
+   - Second text: delay={15} (minimum 15 frames between texts)
+   - Third text: delay={30}, etc.
+2. **Each text element MUST have unique vertical position**
+   - Use flex column layout with gap: \`gap: 24\` or higher
+   - OR use explicit y-positions at least 60px apart
+3. **Use LayoutGrid for multiple texts** (REQUIRED for 2+ text elements):
+   \`\`\`tsx
+   <LayoutGrid anchor="center" direction="column" gap={32}>
+     <AnimatedText text="Title" preset="fadeBlurIn" delay={0} fontSize={64} />
+     <AnimatedText text="Subtitle" preset="slideInUp" delay={15} fontSize={32} />
+   </LayoutGrid>
+   \`\`\`
+4. **NEVER use the same animation start frame for multiple texts**
+5. **For raw Remotion code, wrap texts in a flex column**:
+   \`\`\`tsx
+   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+     <div style={{ opacity: interpolate(frame, [0, 20], [0, 1], clamp) }}>Title</div>
+     <div style={{ opacity: interpolate(frame, [15, 35], [0, 1], clamp) }}>Subtitle</div>
+   </div>
+   \`\`\`
+
 ## ⚠️ CRITICAL API WARNING - READ CAREFULLY ⚠️
 The @remotion/animated package uses OBJECT SYNTAX, NOT method chaining.
 

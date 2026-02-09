@@ -300,7 +300,9 @@ ${fixed}`;
     return fixed;
   }
 
-  private static validateGeneratedCode(code: string): { valid: boolean; error?: string } {
+  private static validateGeneratedCode(code: string): { valid: boolean; error?: string; warnings?: string[] } {
+    const warnings: string[] = [];
+    
     const hasRemotionImport = /import\s+.*from\s+['"]remotion['"]/.test(code) ||
       /from\s+['"]remotion['"]/.test(code);
     const hasComponentImport = /from\s+['"]@\/components/.test(code);
@@ -316,11 +318,72 @@ ${fixed}`;
       return { valid: false, error: `Unbalanced braces: ${openBraces} open, ${closeBraces} close` };
     }
 
+    // Check parentheses balance
+    const openParens = (code.match(/\(/g) || []).length;
+    const closeParens = (code.match(/\)/g) || []).length;
+    if (openParens !== closeParens) {
+      return { valid: false, error: `Unbalanced parentheses: ${openParens} open, ${closeParens} close` };
+    }
+
+    // Check bracket balance
+    const openBrackets = (code.match(/\[/g) || []).length;
+    const closeBrackets = (code.match(/\]/g) || []).length;
+    if (openBrackets !== closeBrackets) {
+      return { valid: false, error: `Unbalanced brackets: ${openBrackets} open, ${closeBrackets} close` };
+    }
+
+    // Check for unterminated strings (basic check)
+    const singleQuotes = (code.match(/'/g) || []).length;
+    const doubleQuotes = (code.match(/"/g) || []).length;
+    const backticks = (code.match(/`/g) || []).length;
+    if (singleQuotes % 2 !== 0) {
+      return { valid: false, error: 'Unterminated single-quote string' };
+    }
+    if (doubleQuotes % 2 !== 0) {
+      return { valid: false, error: 'Unterminated double-quote string' };
+    }
+    if (backticks % 2 !== 0) {
+      return { valid: false, error: 'Unterminated template literal' };
+    }
+
     if (!code.includes('return')) {
       return { valid: false, error: 'No return statement found' };
     }
 
-    return { valid: true };
+    // Check for common API misuse patterns
+    if (code.includes('Move.y(') || code.includes('Move.x(') || code.includes('Scale.in(') || code.includes('Fade.in(')) {
+      return { valid: false, error: 'Invalid @remotion/animated API: Use Move({y: ...}) not Move.y(), Scale({by: ...}) not Scale.in()' };
+    }
+
+    // Check for invalid CSS kebab-case in style objects (common error)
+    const kebabCaseInStyle = code.match(/style\s*=\s*\{\{[^}]*[a-z]+-[a-z]+\s*:/);
+    if (kebabCaseInStyle) {
+      return { valid: false, error: 'CSS kebab-case in style object (use camelCase: backgroundColor not background-color)' };
+    }
+
+    // Check for spring delay parameter misuse
+    if (code.match(/spring\s*\(\s*\{[^}]*delay\s*:/)) {
+      return { valid: false, error: 'spring() does not have a delay parameter - use spring({ frame: frame - delay, fps })' };
+    }
+
+    // Warn about potential text overlap issues
+    const animatedTextMatches = code.match(/<AnimatedText[^>]*>/g) || [];
+    if (animatedTextMatches.length > 1) {
+      // Check if they use LayoutGrid or have different delays
+      const hasLayoutGrid = code.includes('LayoutGrid');
+      const hasFlexColumn = code.includes("flexDirection: 'column'") || code.includes('flexDirection: "column"');
+      const delays = animatedTextMatches.map(m => {
+        const delayMatch = m.match(/delay\s*=\s*\{?\s*(\d+)/);
+        return delayMatch ? parseInt(delayMatch[1], 10) : 0;
+      });
+      
+      const uniqueDelays = new Set(delays);
+      if (!hasLayoutGrid && !hasFlexColumn && uniqueDelays.size < animatedTextMatches.length) {
+        warnings.push('Multiple AnimatedText without LayoutGrid or flex column - may cause overlapping text');
+      }
+    }
+
+    return { valid: true, warnings: warnings.length > 0 ? warnings : undefined };
   }
 
   private static async saveSceneCode(

@@ -779,6 +779,29 @@ If TEXT CHOREOGRAPHY section is provided above, you MUST:
 DO NOT improvise or change the script content - implement it faithfully!
 ` : ''}
 
+## CRITICAL TEXT POSITIONING RULES (PREVENT OVERLAPPING TEXT)
+1. **NEVER animate multiple text elements simultaneously without staggered delays**
+   - First text: delay={0} or startFrame={5}
+   - Second text: delay={15} or startFrame={20} (minimum 15 frames between)
+   - Third text: delay={30} or startFrame={35}, etc.
+2. **Each text element MUST have unique vertical position**
+   - Use LayoutGrid with gap: \`<LayoutGrid direction="column" gap={32}>\`
+   - OR explicit positions at least 60px apart vertically
+3. **REQUIRED for 2+ text elements - Use LayoutGrid**:
+   \`\`\`tsx
+   <LayoutGrid anchor="center" direction="column" gap={32}>
+     <AnimatedText text="Title" preset="fadeBlurIn" delay={0} fontSize={64} />
+     <AnimatedText text="Subtitle" preset="slideInUp" delay={15} fontSize={32} />
+   </LayoutGrid>
+   \`\`\`
+4. **For raw Remotion code, use flex column with gap**:
+   \`\`\`tsx
+   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+     <div style={{ opacity: opacity1 }}>Title</div>
+     <div style={{ opacity: opacity2 }}>Subtitle</div>
+   </div>
+   \`\`\`
+
 ## CRITICAL MISTAKES TO AVOID (WILL CAUSE ERRORS)
 
 1. **CSS must use camelCase** - NEVER use kebab-case in style objects:
