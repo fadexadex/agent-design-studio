@@ -212,37 +212,71 @@ export default function BrandVideo() {
 ## DESIGN REQUIREMENTS (for ${VIDEO_CONFIG.DURATION_SECONDS}-second / ${VIDEO_CONFIG.TOTAL_FRAMES}-frame video)
 
 **STORY-DRIVEN STRUCTURE (5-Act Narrative)**:
-The video follows a story arc where the brand name "${brand.name}" appears ONLY in the final Brand Reveal phase.
+The video follows a story arc where the brand name "${brand.name}" and logo appear ONLY in the final Brand Reveal phase.
 
-1. **Problem Phase (frames 0-150, 0-5s)**: Establish user need
-   - Show a relatable situation or challenge
-   - Text animation: Question or context-setting statement
-   - Visual: Simple shapes or scene representing the problem
-   - NO BRAND NAME YET
+## CRITICAL: LOGO AND BRAND NAME PLACEMENT RULES
 
-2. **Solution Phase (frames 150-300, 5-10s)**: Show ease of use
-   - Demonstrate how simple the action is
-   - Text animation: "Just [action]" or instruction text
-   - Visual: Phone, upload, simple interaction
-   - STILL NO BRAND NAME
+**ABSOLUTELY FORBIDDEN before the final ~30% of the video (frame ~630):**
+- NO brand name "${brand.name}" in text
+- NO logo image (${brand.logoPath ? 'the uploaded logo' : 'any logo'})
+- NO brand identity elements that reveal the company
 
-3. **Magic Phase (frames 300-480, 10-16s)**: Reveal capability
-   - Show what makes this special/powerful
-   - Text animation: Reveal the capability
-   - Visual: Network effect, transformation, multiplication
-   - BRAND STILL HIDDEN
+**WHY**: The 5-act structure builds curiosity. Early brand reveal ruins the narrative tension.
+The viewer should be asking "What is this?" until the final reveal.
 
-4. **Result Phase (frames 480-630, 16-21s)**: Success outcome
-   - Show the successful result
-   - Text animation: Value summary (3 verbs)
-   - Visual: Connection, transaction, satisfaction
-   - WAITING FOR BRAND...
+---
 
-5. **Brand Reveal Phase (frames 630-900, 21-30s)**: 
-   - Bouncing/rhythmic text summary
-   - Brand name "${brand.name}" appears FOR THE FIRST TIME
-   - Tagline "${brand.tagline}" appears below
-   - Visual: Logo reveal, brand colors dominate
+## DYNAMIC PACING (Avoid Robotic Equal-Duration Scenes)
+
+Use these APPROXIMATE percentages - vary them for natural rhythm:
+
+| Act | Purpose | ~% of Video | Approx Frames | Pacing Feel |
+|-----|---------|-------------|---------------|-------------|
+| 1. Problem | Hook viewer | 15-18% | 0-150 | Quick, punchy |
+| 2. Solution | Show simplicity | 15-18% | 150-300 | Calm, clear |
+| 3. Magic | Build excitement | 18-22% | 300-480 | Crescendo |
+| 4. Result | Payoff | 15-18% | 480-630 | Satisfying |
+| 5. Brand | Reveal + linger | 28-35% | 630-900 | Triumphant, breathing room |
+
+**CRITICAL PACING RULES**:
+- Opening hook should be QUICK (grab attention in 2-3 seconds)
+- Brand reveal needs the MOST time - it's the climax
+- Vary transition speeds - not every cut should be the same
+- Within scenes, DON'T use uniform delays (e.g., delay: 0, 15, 30, 45)
+- Use DYNAMIC delays: e.g., delay: 0, 12, 35, 42 for natural rhythm
+
+---
+
+### Act 1: Problem Phase (~15-18% of video)
+- Establish user need with a question or challenge
+- Text: Question or context-setting statement
+- Visual: Simple shapes representing the problem
+- **NO BRAND NAME. NO LOGO.**
+
+### Act 2: Solution Phase (~15-18% of video)
+- Demonstrate how simple the action is
+- Text: "Just [action]" or instruction text
+- Visual: Phone, upload, simple interaction
+- **STILL NO BRAND NAME. NO LOGO.**
+
+### Act 3: Magic Phase (~18-22% of video)
+- Reveal what makes this special/powerful
+- Text: Reveal the capability
+- Visual: Network effect, transformation, multiplication
+- **BRAND STILL HIDDEN. NO LOGO.**
+
+### Act 4: Result Phase (~15-18% of video)
+- Show the successful result
+- Text: Value summary (e.g., 3 action verbs)
+- Visual: Connection, transaction, satisfaction
+- **WAITING FOR BRAND... NO LOGO YET.**
+
+### Act 5: Brand Reveal Phase (~28-35% of video, longest!)
+- **NOW the brand name "${brand.name}" appears FOR THE FIRST TIME**
+- **NOW the logo can appear** ${brand.logoPath ? `(use staticFile("${brand.logoPath}") with <Img />)` : '(if provided)'}
+- Tagline "${brand.tagline}" appears below
+- Visual: Logo reveal, brand colors dominate, triumphant ending
+- **Give it room to breathe** - don't rush the finale
 
 ## AVAILABLE FONTS (Pre-loaded - use by name)
 Use these fonts directly in fontFamily props - they are globally pre-loaded:

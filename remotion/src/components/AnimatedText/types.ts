@@ -172,6 +172,8 @@ export interface GradientConfig {
 export type PresetType =
   | "fadeBlurIn"
   | "fadeBlurOut"
+  | "softFadeIn"
+  | "softFadeOut"
   | "scaleIn"
   | "springIn"
   | "slideInLeft"

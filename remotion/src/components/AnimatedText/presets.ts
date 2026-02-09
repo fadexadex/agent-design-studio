@@ -14,14 +14,26 @@ import { SPRING_CONFIGS } from "../Animation/springs";
  * - pop: Quick scale with slight bounce for icons/badges
  */
 export const presets: Record<PresetType, PresetDefinition> = {
+  // Less aggressive blur for cleaner entrance (reduced from 20px to 10px)
   fadeBlurIn: {
-    blur: { from: 20, to: 0, duration: 15 },
-    opacity: { from: 0, to: 1, duration: 15 },
+    blur: { from: 10, to: 0, duration: 20 },
+    opacity: { from: 0, to: 1, duration: 18 },
   },
 
   fadeBlurOut: {
-    blur: { from: 0, to: 20, duration: 15 },
-    opacity: { from: 1, to: 0, duration: 15 },
+    blur: { from: 0, to: 10, duration: 20 },
+    opacity: { from: 1, to: 0, duration: 18 },
+  },
+
+  // Gentle fade for professional content - minimal blur artifact
+  softFadeIn: {
+    blur: { from: 4, to: 0, duration: 25 },
+    opacity: { from: 0, to: 1, duration: 22 },
+  },
+
+  softFadeOut: {
+    blur: { from: 0, to: 4, duration: 25 },
+    opacity: { from: 1, to: 0, duration: 22 },
   },
 
   scaleIn: {

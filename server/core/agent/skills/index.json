@@ -1,6 +1,9 @@
 {
   "coreRules": [
     "common-pitfalls",
+    "text-content",
+    "brand-guidelines",
+    "scene-pacing",
     "remotion-animated",
     "animations",
     "timing"

@@ -110,18 +110,25 @@ interface PositioningProps {
 
 ## Animation Presets
 
-| Preset         | Description                   | Default Unit |
-| -------------- | ----------------------------- | ------------ |
-| `fadeBlurIn`   | Fade in with blur             | full         |
-| `fadeBlurOut`  | Fade out with blur            | full         |
-| `scaleIn`      | Scale up from small           | full         |
-| `springIn`     | Bouncy scale entrance         | full         |
-| `slideInLeft`  | Slide from left               | full         |
-| `slideInRight` | Slide from right              | full         |
-| `slideInUp`    | Slide from bottom             | full         |
-| `slideInDown`  | Slide from top                | full         |
-| `typewriter`   | Character-by-character typing | character    |
-| `none`         | No animation                  | full         |
+| Preset         | Description                                    | Default Unit |
+| -------------- | ---------------------------------------------- | ------------ |
+| `fadeBlurIn`   | Fade in with blur (10px blur)                  | full         |
+| `fadeBlurOut`  | Fade out with blur (10px blur)                 | full         |
+| `softFadeIn`   | Gentle fade in with minimal blur (4px) - professional/clean look | full |
+| `softFadeOut`  | Gentle fade out with minimal blur (4px)        | full         |
+| `scaleIn`      | Scale up from small                            | full         |
+| `springIn`     | Bouncy scale entrance                          | full         |
+| `slideInLeft`  | Slide from left                                | full         |
+| `slideInRight` | Slide from right                               | full         |
+| `slideInUp`    | Slide from bottom                              | full         |
+| `slideInDown`  | Slide from top                                 | full         |
+| `typewriter`   | Character-by-character typing                  | character    |
+| `none`         | No animation                                   | full         |
+
+### Choosing Between fadeBlurIn and softFadeIn
+
+- **`fadeBlurIn`** (10px blur, 20 frames): Standard entrance with noticeable blur effect. Good for dramatic reveals.
+- **`softFadeIn`** (4px blur, 25 frames): Subtle, professional entrance. Recommended for corporate content or when blur artifacts are distracting.
 
 ## Animation Types
 

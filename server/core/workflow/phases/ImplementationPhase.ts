@@ -1632,7 +1632,36 @@ registerRoot(RemotionRoot);
       };
     }
     
-    // Check 6: Minimum code length (a valid Remotion scene is at least ~200 chars)
+    // Check 6: Detect malformed/empty return statements (common AI truncation pattern)
+    // These patterns indicate the AI stopped mid-generation of the return JSX
+    const malformedReturnPatterns = [
+      { pattern: /return\s*\(\s*;\s*\)/, reason: 'Malformed return statement: return (;)' },
+      { pattern: /return\s*\(\s*\)/, reason: 'Empty return statement: return ()' },
+      { pattern: /return\s*\(\s*\n\s*\)/, reason: 'Empty return statement with newline' },
+      { pattern: /return\s*;?\s*}[^}]*$/, reason: 'Return without JSX body' },
+      { pattern: /return\s*\(\s*[^<\s]?\s*\)/, reason: 'Return with no JSX content' },
+    ];
+    
+    for (const { pattern, reason } of malformedReturnPatterns) {
+      if (pattern.test(code)) {
+        return { truncated: true, reason };
+      }
+    }
+    
+    // Check 7: Return statement must contain actual JSX (at least one < character inside)
+    const returnMatch = code.match(/return\s*\(([\s\S]*?)\);?\s*}/);
+    if (returnMatch) {
+      const returnBody = returnMatch[1];
+      // Must have at least one JSX element (starts with <)
+      if (!returnBody.includes('<')) {
+        return { 
+          truncated: true, 
+          reason: 'Return statement contains no JSX elements' 
+        };
+      }
+    }
+    
+    // Check 8: Minimum code length (a valid Remotion scene is at least ~200 chars)
     if (code.length < 200) {
       return { 
         truncated: true, 
