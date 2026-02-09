@@ -10,6 +10,22 @@ metadata:
 **PREFERRED APPROACH**: Use `remotion-animated` for cleaner, more declarative animation code.
 Instead of manual `interpolate()` calls, wrap elements in `<Animated>` with animation builders.
 
+## ⚠️ COMMON MISTAKE - AVOID THIS ERROR
+
+The animation builders (`Move`, `Scale`, `Fade`, `Rotate`) are **functions**, NOT objects with methods.
+
+```tsx
+// ❌ WRONG - Will crash with "Move.y is not a function"
+Move.y(50)
+Scale.in(1) 
+Fade.in()
+
+// ✅ CORRECT - Pass options object to the function
+Move({ y: 0, initialY: 50, start: 0 })
+Scale({ by: 1, initial: 0, start: 0 })
+Fade({ to: 1, initial: 0, start: 0, duration: 15 })
+```
+
 ## Basic Usage
 
 ```tsx
@@ -133,12 +149,64 @@ return (
 </Animated>
 ```
 
+## CRITICAL - Correct API Usage
+
+`Move`, `Scale`, `Fade`, and `Rotate` are **functions that take an options object**. They are NOT objects with methods.
+
+```tsx
+// ✅ CORRECT - Functions with options object
+Move({ y: 0, initialY: 50, start: 0 })
+Scale({ by: 1, initial: 0.8, start: 0 })
+Fade({ to: 1, initial: 0, start: 0, duration: 15 })
+Rotate({ degrees: 360, initial: 0, start: 0 })
+
+// ❌ WRONG - These do NOT exist!
+Move.y(50)           // ERROR: Move.y is not a function
+Move.x(100)          // ERROR: Move.x is not a function  
+Scale.in(1)          // ERROR: Scale.in is not a function
+Scale.out(0)         // ERROR: Scale.out is not a function
+Fade.in()            // ERROR: Fade.in is not a function
+Fade.out()           // ERROR: Fade.out is not a function
+Rotate.in(90)        // ERROR: Rotate.in is not a function
+```
+
+**NEVER** use dot notation like `Move.y()`, `Scale.in()`, etc. These methods do not exist and will cause runtime errors.
+
 ## DO NOT
 
+- **NEVER** use `Move.y()`, `Move.x()`, `Scale.in()`, `Scale.out()`, `Fade.in()`, `Fade.out()`, `Rotate.in()` - these are INVALID
+- Do NOT pass `interpolate()` results directly to animation builders - they handle interpolation internally
 - Do NOT use CSS transitions or animation keyframes
 - Do NOT use Tailwind animation classes
 - Do NOT use `transform` styles directly - let `<Animated>` handle transforms
 - Do NOT mix manual `interpolate()` with `<Animated>` on the same element
+
+## Correct Patterns
+
+```tsx
+// Moving an element from bottom to center
+Move({ y: 0, initialY: 100, start: 0, damping: 18, stiffness: 220 })
+
+// Scaling from small to full size
+Scale({ by: 1, initial: 0.5, start: 0, damping: 12, stiffness: 200 })
+
+// Fading in
+Fade({ to: 1, initial: 0, start: 0, duration: 15 })
+
+// Rotating 360 degrees
+Rotate({ degrees: 360, initial: 0, start: 0, damping: 12 })
+
+// Combined entrance animation
+<Animated
+  animations={[
+    Move({ y: 0, initialY: 50, start: 0, damping: 18 }),
+    Scale({ by: 1, initial: 0.8, start: 0, damping: 12 }),
+    Fade({ to: 1, initial: 0, start: 0, duration: 15 })
+  ]}
+>
+  <div>Content</div>
+</Animated>
+```
 
 ## Import Statement
 

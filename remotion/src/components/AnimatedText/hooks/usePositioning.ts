@@ -157,17 +157,20 @@ export function usePositioning(props: PositioningProps): PositioningResult {
       easing,
     } = props.anchorAnimation;
 
+    const fromAnchor = anchorToPercent[from] || anchorToPercent.center;
+    const toAnchor = anchorToPercent[to] || anchorToPercent.center;
+
     const fromX =
-      (anchorToPercent[from].x / 100) * width +
+      (fromAnchor.x / 100) * width +
       parseOffset(props.anchorAnimation.fromOffsetX, width);
     const fromY =
-      (anchorToPercent[from].y / 100) * height +
+      (fromAnchor.y / 100) * height +
       parseOffset(props.anchorAnimation.fromOffsetY, height);
     const toX =
-      (anchorToPercent[to].x / 100) * width +
+      (toAnchor.x / 100) * width +
       parseOffset(props.anchorAnimation.toOffsetX, width);
     const toY =
-      (anchorToPercent[to].y / 100) * height +
+      (toAnchor.y / 100) * height +
       parseOffset(props.anchorAnimation.toOffsetY, height);
 
     if (isSpringConfig(easing)) {
@@ -202,8 +205,9 @@ export function usePositioning(props: PositioningProps): PositioningResult {
   } else {
     // Using anchor-based positioning
     const anchor = props.anchor ?? "center";
-    const baseX = (anchorToPercent[anchor].x / 100) * width;
-    const baseY = (anchorToPercent[anchor].y / 100) * height;
+    const anchorData = anchorToPercent[anchor] || anchorToPercent.center;
+    const baseX = (anchorData.x / 100) * width;
+    const baseY = (anchorData.y / 100) * height;
 
     // Apply offsets
     const offsetX = parseOffset(props.offsetX, width);

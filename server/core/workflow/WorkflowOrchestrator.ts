@@ -20,6 +20,7 @@ import { BrandContext, VideoConfig } from '../agent/types';
 import { AgentThought } from '../agent/orchestrator';
 import { RemotionRenderer } from '../renderer/remotionRenderer';
 import { StoryScript, Scene as StoryScene } from '../types/script.types';
+import { LangGraphExecutor } from '../../agents/graph/services/LangGraphExecutor.js';
 
 /**
  * Script data provided from the script generation endpoint.
@@ -370,8 +371,128 @@ export class WorkflowOrchestrator extends EventEmitter {
       return this.handleRenderingPhase(context);
     }
 
+    if (currentPhase === WorkflowPhase.IMPLEMENTATION) {
+      // Implementation phase - use LangGraph Director-Agent system
+      return this.handleImplementationPhase(context);
+    }
+
     // Execute via PhaseManager for standard phases
     return await this.phaseManager.executePhase(currentPhase, this.state, context);
+  }
+
+  /**
+   * Handle the implementation phase using LangGraph Director-Agent system.
+   * This replaces the old scene-by-scene generation with the full LangGraph workflow.
+   */
+  private async handleImplementationPhase(context: PhaseContext): Promise<PhaseResult> {
+    if (!this.state) {
+      return { state: this.state!, success: false, error: 'No state available' };
+    }
+
+    if (!this.state.plan) {
+      return { state: this.state, success: false, error: 'No plan available for implementation' };
+    }
+
+    context.onProgress('Starting LangGraph implementation...', 'Director-Agent system initializing');
+    this.emitThought('act', 'Handing off to LangGraph Director-Agent system for scene generation.');
+
+    try {
+      // Convert brand colors from array to object format for agent
+      const colorsArray = this.state.brand.colors;
+      const colorsObject = {
+        primary: colorsArray[0] || '#000000',
+        secondary: colorsArray[1],
+        accent: colorsArray[2],
+        background: colorsArray[3],
+      };
+
+      // Convert brand context from workflow format to agent format
+      const agentBrandContext = {
+        name: this.state.brand.name,
+        industry: this.state.brand.industry,
+        tagline: this.state.brand.tagline,
+        colors: colorsObject,
+        logo: this.state.brand.logoPath || this.state.brand.logoBase64,
+        style: this.state.config.style as 'minimal' | 'bold' | 'elegant' | 'playful' | 'corporate' | 'dynamic' | undefined,
+        aspectRatio: this.state.config.aspectRatio,
+        prompt: this.state.config.prompt || '',
+      };
+
+      // Execute LangGraph workflow
+      const result = await LangGraphExecutor.execute({
+        projectId: this.state.jobId,
+        brandContext: agentBrandContext,
+        existingPlan: {
+          scenes: this.state.plan.sceneBreakdown.map(scene => ({
+            id: scene.id,
+            sceneNumber: scene.sceneNumber,
+            description: scene.description,
+            frameRange: scene.frameRange,
+            keyElements: scene.keyElements,
+          })),
+          approach: this.state.plan.approach,
+        },
+      });
+
+      if (!result.success) {
+        this.emitThought('observe', `LangGraph execution failed: ${result.error}`);
+        context.onProgress('Implementation failed', result.error || 'Unknown error');
+        
+        const errorState = transitionPhase(
+          this.state,
+          WorkflowPhase.ERROR,
+          `LangGraph execution failed: ${result.error}`
+        );
+        
+        return { state: errorState, success: false, error: result.error };
+      }
+
+      // Update state with results
+      this.emitThought('observe', `LangGraph completed: ${result.stats.passedScenes}/${result.scenes.length} scenes passed with avg score ${result.stats.averageScore}`);
+      context.onProgress('Implementation complete', `Generated ${result.scenes.length} scenes`);
+
+      // Store scene results in state
+      const sceneStatuses: SceneRenderStatus[] = result.scenes.map(scene => ({
+        sceneNumber: scene.sceneIndex + 1,
+        sceneId: scene.sceneId,
+        status: scene.passed ? 'complete' as const : 'error' as const,
+        progress: 100,
+        message: scene.passed ? 'Scene completed' : (scene.error || 'Scene failed'),
+        error: scene.error,
+      }));
+
+      // If we have a final video, skip RENDERING and go straight to COMPLETE
+      let nextPhase = WorkflowPhase.RENDERING;
+      let updatedState = updateState(this.state, {
+        sceneStatuses,
+        outputVideoPath: result.finalVideoPath,
+      });
+
+      if (result.finalVideoPath) {
+        // LangGraph produced the final video, skip to COMPLETE
+        nextPhase = WorkflowPhase.COMPLETE;
+        updatedState = transitionPhase(updatedState, nextPhase, 'Video generation complete via LangGraph');
+        this.emitThought('observe', `Final video ready at: ${result.finalVideoPath}`);
+      } else {
+        // Need to render the final video
+        updatedState = transitionPhase(updatedState, nextPhase, 'Proceeding to rendering phase');
+      }
+
+      return { state: updatedState, success: true };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.emitThought('observe', `Implementation error: ${errorMessage}`);
+      context.onProgress('Implementation error', errorMessage);
+
+      const errorState = transitionPhase(
+        this.state,
+        WorkflowPhase.ERROR,
+        `Implementation failed: ${errorMessage}`
+      );
+
+      return { state: errorState, success: false, error: errorMessage };
+    }
   }
 
   /**

@@ -168,6 +168,13 @@ const value1 = interpolate(frame, [0, 100], [0, 1], {
 });
 ```
 
+Common easing combinations:
+- `Easing.out(Easing.exp)` - Starts fast, slows down very smoothly
+- `Easing.inOut(Easing.quad)` - Smooth start and end
+- `Easing.out(Easing.circle)` - Fast start, very abrupt slow down
+
+**IMPORTANT:** Always use `Easing.exp`, NOT `Easing.expo`. Always wrap the curve in a convexity like `Easing.out(...)` or `Easing.inOut(...)`.
+
 Cubic bezier curves are also supported:
 
 ```ts

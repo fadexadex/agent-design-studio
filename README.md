@@ -10,9 +10,73 @@ AI-powered motion design video generator using Remotion and Gemini.
 
 This app uses an AI agent (powered by Gemini 2.5 Pro) to generate Remotion compositions based on your brand context and creative brief. The generated code is then rendered server-side to produce MP4 videos.
 
+
+```mermaid
+graph TD
+    %% Node Styling
+    classDef client fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1;
+    classDef server fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c;
+    classDef ai fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#e65100;
+    classDef file fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20;
+    classDef render fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#b71c1c;
+
+    subgraph Client [Frontend (Vite/React)]
+        Wizard[Brand Wizard]:::client
+        Dashboard[Workflow Dashboard]:::client
+        Player[Video Player]:::client
+    end
+
+    subgraph Backend [Backend Server (Express)]
+        API[API Layer]:::server
+        Orch[Workflow Orchestrator]:::server
+        LangGraph[LangGraph Executor]:::server
+        Renderer[Remotion Renderer]:::server
+    end
+
+    subgraph AI [AI & Generation]
+        Gemini[Gemini 2.5 Pro]:::ai
+        Director[Director Agent]:::ai
+        SceneGen[Scene Generator]:::ai
+    end
+
+    subgraph CodeGen [Generated Remotion Code]
+        SceneFiles[Scene1.tsx, Scene2.tsx...]:::file
+        MainComp[MainComposition.tsx]:::file
+    end
+
+    subgraph Engine [Rendering Engine]
+        Bundle[Webpack Bundle]:::render
+        Chrome[Headless Chrome]:::render
+        FFmpeg[FFmpeg Encoding]:::render
+        Video[MP4 Output]:::file
+    end
+
+    %% Data Flow
+    Wizard -- "1. Brand Context & Brief" --> API
+    API --> Orch
+    
+    Orch -- "2. Start Workflow" --> LangGraph
+    LangGraph -- "Orchestrates" --> Director
+    
+    Director -- "Plan & Critique" --> Gemini
+    Director -- "Task Assignment" --> SceneGen
+    
+    SceneGen -- "Generate Code" --> Gemini
+    Gemini -- "React Components" --> SceneFiles
+    SceneFiles -. "Imported by" .-> MainComp
+    
+    Orch -- "3. Trigger Render" --> Renderer
+    Renderer --> Bundle
+    MainComp --> Bundle
+    
+    Bundle --> Chrome
+    Chrome -- "Frames" --> FFmpeg
+    FFmpeg --> Video
+    
+    Video -- "4. Stream URL" --> Player
+    Orch -- "SSE Updates" --> Dashboard
 ```
-Frontend (Vite/React) → Backend (Express) → AI Agent (Gemini) → Remotion Renderer → Video
-```
+
 
 ## Run Locally
 

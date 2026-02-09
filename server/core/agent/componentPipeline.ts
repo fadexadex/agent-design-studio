@@ -179,11 +179,16 @@ export class ComponentPipeline {
     try {
       const response = await rateLimitedCall(() =>
         this.ai.models.generateContent({
-          model: 'gemini-3-flash',
+          model: 'gemini-3-flash-preview',
           contents: prompt,
           config: {
-            temperature: 0.2,
+            // Gemini 3 best practice: use default temperature of 1.0
+            temperature: 1.0,
             maxOutputTokens: 1024,
+            // Use minimal thinking for fast detection
+            thinkingConfig: {
+              thinkingLevel: 'minimal',
+            },
           },
         })
       );
@@ -214,11 +219,16 @@ export class ComponentPipeline {
     try {
       const response = await rateLimitedCall(() =>
         this.ai.models.generateContent({
-          model: 'gemini-3-flash',
+          model: 'gemini-3-flash-preview',
           contents: prompt,
           config: {
-            temperature: 0.4,
+            // Gemini 3 best practice: use default temperature of 1.0
+            temperature: 1.0,
             maxOutputTokens: 8192,
+            // Use high thinking for code generation
+            thinkingConfig: {
+              thinkingLevel: 'high',
+            },
           },
         })
       );
@@ -376,11 +386,16 @@ export class ComponentPipeline {
 
       const response = await rateLimitedCall(() =>
         this.ai.models.generateContent({
-          model: 'gemini-3-flash',
+          model: 'gemini-3-flash-preview',
           contents: prompt,
           config: {
-            temperature: 0.2,
+            // Gemini 3 best practice: use default temperature of 1.0
+            temperature: 1.0,
             maxOutputTokens: 4096,
+            // Use low thinking for documentation generation
+            thinkingConfig: {
+              thinkingLevel: 'low',
+            },
           },
         })
       );

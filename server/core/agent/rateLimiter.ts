@@ -28,9 +28,13 @@ class RateLimiter {
         if (this.callCount >= RATE_LIMITS.RPM) {
             const waitTime = 60000 - (now - this.windowStart);
             if (waitTime > 0) {
-                console.log(`[RateLimiter] RPM limit reached, waiting ${waitTime}ms`);
+                console.log(`[RateLimiter] RPM limit reached (${this.callCount}/${RATE_LIMITS.RPM}), waiting ${waitTime}ms`);
                 await this.delay(waitTime);
                 this.windowStart = Date.now();
+                this.callCount = 0;
+            } else {
+                // Window expired
+                this.windowStart = now;
                 this.callCount = 0;
             }
         }
@@ -39,7 +43,10 @@ class RateLimiter {
         const elapsed = now - this.lastCallTime;
         if (elapsed < RATE_LIMITS.MIN_DELAY_MS) {
             const waitTime = RATE_LIMITS.MIN_DELAY_MS - elapsed;
-            console.log(`[RateLimiter] Throttling, waiting ${waitTime}ms`);
+            // Only log if wait time is significant (>1s)
+            if (waitTime > 1000) {
+                console.log(`[RateLimiter] Throttling, waiting ${waitTime}ms`);
+            }
             await this.delay(waitTime);
         }
 
@@ -76,9 +83,9 @@ export async function withRetry<T>(
     config: RetryConfig = {}
 ): Promise<T> {
     const {
-        maxRetries = 3,
-        baseDelayMs = 5000,
-        maxDelayMs = 60000
+        maxRetries = 5,      // Increased from 3
+        baseDelayMs = 2000,  // Reduced from 5000 for faster retry start
+        maxDelayMs = 30000   // Reduced from 60000
     } = config;
 
     let lastError: Error | undefined;
@@ -91,14 +98,18 @@ export async function withRetry<T>(
         } catch (error: unknown) {
             lastError = error instanceof Error ? error : new Error(String(error));
 
-            // Check if it's a rate limit error
+            // Check if it's a rate limit error or temporary server error
             const errorMessage = lastError.message || '';
             const isRateLimitError =
                 errorMessage.includes('429') ||
+                errorMessage.includes('503') ||
                 errorMessage.includes('RESOURCE_EXHAUSTED') ||
+                errorMessage.includes('UNAVAILABLE') ||
                 errorMessage.includes('quota') ||
                 errorMessage.includes('rate') ||
-                (error as { status?: number })?.status === 429;
+                errorMessage.includes('high demand') ||
+                (error as { status?: number })?.status === 429 ||
+                (error as { status?: number })?.status === 503;
 
             if (!isRateLimitError) {
                 // Not a rate limit error, don't retry
@@ -133,8 +144,8 @@ export async function withRetry<T>(
  */
 export async function rateLimitedCall<T>(fn: () => Promise<T>): Promise<T> {
     return withRetry(fn, {
-        maxRetries: 3,
-        baseDelayMs: 5000,
-        maxDelayMs: 60000
+        maxRetries: 5,
+        baseDelayMs: 2000,
+        maxDelayMs: 30000
     });
 }

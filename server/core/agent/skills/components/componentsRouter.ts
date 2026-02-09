@@ -10,7 +10,6 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
 import {
   CHARS_PER_TOKEN,
   tokenize,
@@ -18,10 +17,6 @@ import {
   stripFrontmatter,
   estimateTokens,
 } from "../routerUtils";
-
-// ESM compatibility for __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // ============================================
 // Type Definitions
@@ -93,8 +88,8 @@ export class ComponentsRouter {
   private initialized: boolean = false;
 
   constructor(skillsDir?: string) {
-    // Use __dirname to get the correct path relative to this file
-    this.skillsDir = skillsDir || path.resolve(__dirname, "..");
+    // Use process.cwd() to get the correct path (compatible with both ESM and CJS)
+    this.skillsDir = skillsDir || path.join(process.cwd(), 'server', 'core', 'agent', 'skills');
     this.index = {
       coreRule: "",
       coreRuleFile: "",

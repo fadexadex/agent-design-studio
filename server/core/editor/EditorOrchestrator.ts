@@ -1007,13 +1007,54 @@ export class EditorOrchestrator {
       })
       .join('\n');
 
+    // Calculate total duration for audio
+    const totalDuration = scenes.reduce((sum, s) => {
+      const range = s.trimmedRange || s.frameRange;
+      return sum + (range.end - range.start + 1);
+    }, 0);
+
+    // Default background music
+    const musicFile = 'tunetank-inspiring-cinematic-music-409347.mp3';
+
     const mainComposition = `import React from 'react';
-import { AbsoluteFill, Series } from 'remotion';
+import { AbsoluteFill, Series, staticFile, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import { Audio } from '@remotion/media';
 ${imports}
 
+/**
+ * MainComposition sequences all generated scenes with background music.
+ * Total duration: ${totalDuration} frames (${(totalDuration / 30).toFixed(1)} seconds at 30fps)
+ */
 export const MainComposition: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+
+  // Audio fade in/out for smooth transitions
+  const fadeInDuration = 0.5 * fps; // 0.5 second fade in
+  const fadeOutDuration = 1 * fps; // 1 second fade out
+  const fadeOutStart = durationInFrames - fadeOutDuration;
+
   return (
     <AbsoluteFill>
+      {/* Background Music */}
+      <Audio
+        src={staticFile('audio/${musicFile}')}
+        volume={(f) => {
+          // Fade in
+          if (f < fadeInDuration) {
+            return interpolate(f, [0, fadeInDuration], [0, 0.3], { extrapolateRight: 'clamp' });
+          }
+          // Fade out
+          if (f >= fadeOutStart) {
+            return interpolate(f, [fadeOutStart, durationInFrames], [0.3, 0], { extrapolateRight: 'clamp' });
+          }
+          // Normal volume
+          return 0.3;
+        }}
+        loop
+      />
+      
+      {/* Scene Sequence */}
       <Series>
 ${seriesItems}
       </Series>

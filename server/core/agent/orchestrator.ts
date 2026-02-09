@@ -227,11 +227,16 @@ export class AgentOrchestrator {
                 // Use rate-limited call to respect API quotas
                 const response = await rateLimitedCall(() =>
                     this.ai.models.generateContent({
-                        model: 'gemini-3-flash',
+                        model: 'gemini-3-flash-preview',
                         contents: currentPrompt,
                         config: {
-                            temperature: attempt === 1 ? 0.7 : 0.3,
+                            // Gemini 3 best practice: use default temperature of 1.0
+                            temperature: 1.0,
                             maxOutputTokens: 16384,
+                            // Use high thinking for complex code generation
+                            thinkingConfig: {
+                                thinkingLevel: 'high',
+                            },
                         }
                     })
                 );

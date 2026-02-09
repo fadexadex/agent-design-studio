@@ -1129,19 +1129,64 @@ export const Scene${scene.sceneNumber}: React.FC = () => {
       })
       .join('\n');
 
+    // Calculate total duration for audio
+    const totalDuration = scenes.reduce((sum, s) => sum + (s.frameRange.end - s.frameRange.start + 1), 0);
+
+    // Select background music based on video style
+    const musicMap: Record<string, string> = {
+      'modern': 'tunetank-inspiring-cinematic-music-409347.mp3',
+      'cinematic': 'tunetank-inspiring-cinematic-music-409347.mp3',
+      'epic': 'kornevmusic-epic-478847.mp3',
+      'bold': 'kornevmusic-epic-478847.mp3',
+      'calm': 'sonican-lo-fi-music-loop-sentimental-jazzy-love-473154.mp3',
+      'chill': 'sonican-lo-fi-music-loop-sentimental-jazzy-love-473154.mp3',
+      'lofi': 'sonican-lo-fi-music-loop-sentimental-jazzy-love-473154.mp3',
+    };
+    const defaultMusic = 'tunetank-inspiring-cinematic-music-409347.mp3';
+    const styleKey = (state.config.style || '').toLowerCase();
+    const musicFile = musicMap[styleKey] || defaultMusic;
+
     const code = `import React from 'react';
-import { AbsoluteFill, Series } from 'remotion';
+import { AbsoluteFill, Series, staticFile, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import { Audio } from '@remotion/media';
 ${imports}
 
 /**
- * MainComposition sequences all generated scenes.
- * Total duration: 150 frames (5 seconds at 30fps)
+ * MainComposition sequences all generated scenes with background music.
+ * Total duration: ${totalDuration} frames (${(totalDuration / 30).toFixed(1)} seconds at 30fps)
  * Brand: ${state.brand.name}
  * Style: ${state.config.style}
  */
 export const MainComposition: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+
+  // Audio fade in/out for smooth transitions
+  const fadeInDuration = 0.5 * fps; // 0.5 second fade in
+  const fadeOutDuration = 1 * fps; // 1 second fade out
+  const fadeOutStart = durationInFrames - fadeOutDuration;
+
   return (
     <AbsoluteFill style={{ backgroundColor: '${state.brand.colors[0] || '#000000'}' }}>
+      {/* Background Music */}
+      <Audio
+        src={staticFile('audio/${musicFile}')}
+        volume={(f) => {
+          // Fade in
+          if (f < fadeInDuration) {
+            return interpolate(f, [0, fadeInDuration], [0, 0.3], { extrapolateRight: 'clamp' });
+          }
+          // Fade out
+          if (f >= fadeOutStart) {
+            return interpolate(f, [fadeOutStart, durationInFrames], [0.3, 0], { extrapolateRight: 'clamp' });
+          }
+          // Normal volume
+          return 0.3;
+        }}
+        loop
+      />
+      
+      {/* Scene Sequence */}
       <Series>
 ${seriesItems}
       </Series>

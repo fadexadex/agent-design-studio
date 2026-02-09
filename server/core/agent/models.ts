@@ -1,16 +1,16 @@
 /**
  * AI Model Configurations
  *
- * Rate Limits for gemini-3-flash (our primary model):
+ * Rate Limits for gemini-3-flash-preview (our primary model):
  * - RPM: 5 requests per minute (12 seconds between calls minimum)
  * - TPM: 250K tokens per minute
  * - RPD: 20 requests per day
  *
- * We use gemini-3-flash for all operations to maximize quota efficiency.
+ * We use gemini-3-flash-preview for all operations.
  */
 
 export const AI_MODELS = {
-    // Primary model for all operations - best available quota
+    // Primary model for all operations
     SMART: 'gemini-3-flash-preview',
 
     // Same model for speed - keeps us within single model quota
@@ -25,13 +25,13 @@ export const AI_MODELS = {
  */
 export const RATE_LIMITS = {
     // Requests per minute
-    RPM: 5,
-    // Minimum delay between requests in ms (60000 / 5 = 12000, add buffer)
-    MIN_DELAY_MS: 13000,
+    RPM: 60,
+    // Minimum delay between requests in ms
+    MIN_DELAY_MS: 500,
     // Tokens per minute
-    TPM: 250000,
+    TPM: 1000000,
     // Requests per day
-    RPD: 20,
+    RPD: 2000,
 } as const;
 
 export type AIModelType = typeof AI_MODELS[keyof typeof AI_MODELS];

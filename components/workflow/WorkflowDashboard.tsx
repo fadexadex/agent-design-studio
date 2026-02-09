@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useWorkflowStream } from '../../hooks/useWorkflowStream';
+import { useDirectorStream } from '../../hooks/useDirectorStream';
 import { useHistorySync } from '../../hooks/useHistorySync';
 import { WorkflowPhase, AgentThought } from '../../types';
 import { ScriptEditor } from './ScriptEditor';
@@ -7,7 +8,8 @@ import { LivePreview } from './LivePreview';
 import { ThoughtStream } from './ThoughtStream';
 import { FeedbackControls } from './FeedbackControls';
 import { SceneNodeData } from './SceneNode';
-import { Check, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { OrchestrationView } from '../orchestration';
+import { Check, ChevronRight, AlertCircle, Loader2, LayoutGrid, Video } from 'lucide-react';
 
 interface WorkflowDashboardProps {
     jobId: string;
@@ -25,6 +27,9 @@ const PHASES = [
 export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onNavigateToEditor, onNavigateToVideo }) => {
     const { state, isConnected, isError, renderProgress } = useWorkflowStream(jobId);
     
+    // Director stream - lifted up to preserve state across view toggles
+    const directorStream = useDirectorStream({ projectId: jobId });
+    
     // Sync workflow state to history localStorage
     useHistorySync(jobId, state, { debounceMs: 2000 });
     
@@ -32,6 +37,11 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     // Track if user is actively editing a scene (clicked on a scene node)
     const [isEditingScene, setIsEditingScene] = useState(false);
+    // Toggle between orchestration view and classic preview during refining
+    const [showOrchestrationView, setShowOrchestrationView] = useState(true);
+    
+    // Loading state for the Continue to Implementation button
+    const [isApproving, setIsApproving] = useState(false);
 
     // State for local edits to the plan
     const [editedScenes, setEditedScenes] = useState<SceneNodeData[] | null>(null);
@@ -49,7 +59,12 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
         // Preserve original backend data for sync
         sceneNumber: s.sceneNumber,
         frameRange: s.frameRange,
-        keyElements: s.keyElements
+        keyElements: s.keyElements,
+        // Additional scene details
+        visualStyle: s.visualStyle,
+        energyLevel: s.energyLevel,
+        textOverlay: s.textOverlay,
+        cameraMovement: s.cameraMovement,
     })) || [], [state?.plan]);
 
     useEffect(() => {
@@ -175,6 +190,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
     };
 
     const handleApprove = async () => {
+        setIsApproving(true);
         try {
             // Include edits if we are in planning mode
             // IMPORTANT: Properly reconstruct SceneDescription with all required fields
@@ -209,6 +225,57 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
             });
         } catch (e) {
             console.error('Failed to submit approval:', e);
+            setIsApproving(false);
+        }
+        // Note: Don't reset isApproving on success - the phase will change and the button will unmount
+    };
+
+    // Job control handlers for OrchestrationView
+    const handleKillJob = async () => {
+        try {
+            await fetch(`/api/workflow/${jobId}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'kill' })
+            });
+        } catch (e) {
+            console.error('Failed to kill job:', e);
+        }
+    };
+
+    const handlePauseJob = async () => {
+        try {
+            await fetch(`/api/workflow/${jobId}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'pause' })
+            });
+        } catch (e) {
+            console.error('Failed to pause job:', e);
+        }
+    };
+
+    const handleResumeJob = async () => {
+        try {
+            await fetch(`/api/workflow/${jobId}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'resume' })
+            });
+        } catch (e) {
+            console.error('Failed to resume job:', e);
+        }
+    };
+
+    const handleApproveAllScenes = async () => {
+        try {
+            await fetch(`/api/workflow/${jobId}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'approve-all' })
+            });
+        } catch (e) {
+            console.error('Failed to approve all scenes:', e);
         }
     };
 
@@ -261,6 +328,34 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                                 </React.Fragment>
                             );
                         })}
+                        
+                        {/* View Toggle - only show during refining phase */}
+                        {isRefining && (
+                            <div className="ml-4 pl-4 border-l border-zinc-700 flex items-center gap-1">
+                                <button
+                                    onClick={() => setShowOrchestrationView(true)}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                        showOrchestrationView 
+                                            ? 'bg-purple-500/20 text-purple-400' 
+                                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                                    }`}
+                                    title="Orchestration View"
+                                >
+                                    <LayoutGrid size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setShowOrchestrationView(false)}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                        !showOrchestrationView 
+                                            ? 'bg-purple-500/20 text-purple-400' 
+                                            : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                                    }`}
+                                    title="Preview View"
+                                >
+                                    <Video size={16} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -279,15 +374,42 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                                 }}
                             />
                         ) : isPlanning && activeScenes.length === 0 ? (
-                            // Planning phase but scenes haven't loaded yet
+                            // Planning phase but scenes haven't loaded yet - show progressive states
                             <div className="flex items-center justify-center h-full">
-                                <div className="text-center space-y-4 animate-pulse">
+                                <div className="text-center space-y-4">
                                     <Loader2 size={48} className="mx-auto text-purple-500 animate-spin mb-4" />
-                                    <p className="text-zinc-400 font-mono text-sm uppercase">Loading Scenes...</p>
-                                    <p className="text-zinc-600 text-xs">Preparing your script for review</p>
+                                    <p className="text-zinc-400 font-mono text-sm uppercase">
+                                        {state?.progress?.currentMessage || 'Analyzing your prompt...'}
+                                    </p>
+                                    <p className="text-zinc-600 text-xs">
+                                        {state?.progress?.subStep || 'Preparing your script for review'}
+                                    </p>
+                                    {/* Progress indicator */}
+                                    {state?.progress?.phaseProgress !== undefined && state.progress.phaseProgress > 0 && (
+                                        <div className="w-48 mx-auto mt-4">
+                                            <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                                <div 
+                                                    className="h-full bg-purple-500 transition-all duration-500"
+                                                    style={{ width: `${Math.min(state.progress.phaseProgress, 100)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+                        ) : isRefining && showOrchestrationView ? (
+                            // Orchestration View - real-time agent dashboard
+                            <OrchestrationView
+                                projectId={jobId}
+                                directorStream={directorStream}
+                                onKillJob={handleKillJob}
+                                onPauseJob={handlePauseJob}
+                                onResumeJob={handleResumeJob}
+                                onApproveAll={handleApproveAllScenes}
+                                className="h-full rounded-xl overflow-hidden"
+                            />
                         ) : isRefining ? (
+                            // Classic Preview View
                             <LivePreview
                                 videoUrl={videoUrl}
                                 scenes={activeScenes}
@@ -323,10 +445,20 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                             <div className="absolute bottom-6 right-6 z-50">
                                 <button
                                     onClick={handleApprove}
-                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-green-900/30 transition-all duration-300 hover:scale-105"
+                                    disabled={isApproving}
+                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-green-600/50 disabled:to-emerald-600/50 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-lg shadow-green-900/30 transition-all duration-300 hover:scale-105 disabled:hover:scale-100"
                                 >
-                                    <Check size={20} />
-                                    Continue to Implementation
+                                    {isApproving ? (
+                                        <>
+                                            <Loader2 size={20} className="animate-spin" />
+                                            Starting Implementation...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check size={20} />
+                                            Continue to Implementation
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         )}

@@ -7,6 +7,26 @@ metadata:
 
 ## FORBIDDEN PATTERNS (Will Break Your Video)
 
+### 0. remotion-animated API - Functions, NOT Methods
+`Move`, `Scale`, `Fade`, `Rotate` from `remotion-animated` are **functions** that take options objects.
+They do NOT have `.y()`, `.x()`, `.in()`, `.out()` methods!
+
+```tsx
+// ❌ FATAL ERROR - These methods don't exist!
+Move.y(50)           // TypeError: Move.y is not a function
+Move.x(100)          // TypeError: Move.x is not a function
+Scale.in(1)          // TypeError: Scale.in is not a function
+Scale.out(0)         // TypeError: Scale.out is not a function
+Fade.in()            // TypeError: Fade.in is not a function
+Rotate.in(90)        // TypeError: Rotate.in is not a function
+
+// ✅ CORRECT - Pass options object
+Move({ y: 0, initialY: 50, start: 0 })
+Scale({ by: 1, initial: 0.5, start: 0 })
+Fade({ to: 1, initial: 0, start: 0, duration: 15 })
+Rotate({ degrees: 360, initial: 0, start: 0 })
+```
+
 ### 1. NO CSS Animations
 CSS transitions, animations, and keyframes do NOT work in Remotion.
 They will appear frozen or skip to the end state.
