@@ -802,6 +802,22 @@ DO NOT improvise or change the script content - implement it faithfully!
    </div>
    \`\`\`
 
+## VIEWPORT SAFE ZONE RULES (PREVENT ELEMENTS FROM BEING CUT OFF)
+1. **Keep all important content within 90% safe zone**:
+   - Leave 5% margin on all sides (horizontal: ~96px, vertical: ~54px on 1080p)
+   - NEVER place text or critical elements at the absolute edges
+2. **CameraRig constraints** (when using CameraRig):
+   - Keep zoom between 0.9 and 1.5 (max 150% zoom)
+   - Keep x/y pan within ±15% of dimensions
+   - Higher zoom + pan = content WILL be cut off
+3. **Animation safe zones**:
+   - Slide-in animations: start 100-150px off-screen, end within safe zone
+   - NEVER animate elements to rest at extreme edges
+4. **MockupFrame and scaling**:
+   - Center mockups with at least 10% padding
+   - Rotated elements need extra space (rotation increases bounding box)
+   - Scaling above 1.0 requires proportionally more margin
+
 ## CRITICAL MISTAKES TO AVOID (WILL CAUSE ERRORS)
 
 1. **CSS must use camelCase** - NEVER use kebab-case in style objects:

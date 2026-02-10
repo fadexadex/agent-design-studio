@@ -16,12 +16,12 @@ export function getApiBaseUrl(): string {
   if (envUrl) {
     return envUrl;
   }
-  
+
   // In development mode, use relative URLs (Vite proxy handles it)
   if (import.meta.env.DEV) {
     return '';
   }
-  
+
   // Default fallback for production
   return 'http://localhost:3001';
 }

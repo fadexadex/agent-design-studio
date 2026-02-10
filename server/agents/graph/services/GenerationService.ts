@@ -383,6 +383,59 @@ ${fixed}`;
       }
     }
 
+    // Warn about potential viewport/clipping issues with CameraRig
+    const cameraRigMatch = code.match(/<CameraRig[^>]*>/g);
+    if (cameraRigMatch) {
+      cameraRigMatch.forEach(match => {
+        // Check for extreme zoom values
+        const zoomMatch = match.match(/zoom\s*=\s*\{([^}]+)\}/);
+        if (zoomMatch) {
+          const zoomExpr = zoomMatch[1];
+          // Look for literal numbers > 1.5 or < 0.8 in the expression
+          const literalZoom = zoomExpr.match(/[\d.]+/g);
+          if (literalZoom) {
+            const maxZoom = Math.max(...literalZoom.map(Number).filter(n => !isNaN(n)));
+            if (maxZoom > 1.5) {
+              warnings.push(`CameraRig zoom ${maxZoom} exceeds safe limit (1.5) - content may be cut off`);
+            }
+          }
+        }
+        
+        // Check for extreme pan values
+        const xMatch = match.match(/\bx\s*=\s*\{([^}]+)\}/);
+        const yMatch = match.match(/\by\s*=\s*\{([^}]+)\}/);
+        if (xMatch || yMatch) {
+          const checkPan = (expr: string, axis: string) => {
+            const literalPan = expr.match(/-?[\d.]+/g);
+            if (literalPan) {
+              const maxPan = Math.max(...literalPan.map(n => Math.abs(Number(n))).filter(n => !isNaN(n)));
+              // Warn if pan exceeds 300px (roughly 15% of 1920)
+              if (maxPan > 300) {
+                warnings.push(`CameraRig ${axis} pan ${maxPan}px is large - content may be cut off`);
+              }
+            }
+          };
+          if (xMatch) checkPan(xMatch[1], 'x');
+          if (yMatch) checkPan(yMatch[1], 'y');
+        }
+      });
+    }
+
+    // Warn about elements positioned at extreme edges
+    const absolutePositionMatches = code.match(/(?:top|left|right|bottom)\s*:\s*['"]?(-?\d+)/g);
+    if (absolutePositionMatches) {
+      absolutePositionMatches.forEach(match => {
+        const valueMatch = match.match(/(-?\d+)/);
+        if (valueMatch) {
+          const value = parseInt(valueMatch[1], 10);
+          // Warn about negative values or very small margins
+          if (value < 0) {
+            warnings.push(`Negative position value (${match}) - element may be off-screen`);
+          }
+        }
+      });
+    }
+
     return { valid: true, warnings: warnings.length > 0 ? warnings : undefined };
   }
 

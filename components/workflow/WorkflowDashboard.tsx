@@ -47,6 +47,31 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
     // State for local edits to the plan
     const [editedScenes, setEditedScenes] = useState<SceneNodeData[] | null>(null);
 
+    // Merge preview URLs from director stream into scene statuses
+    // Director stream tracks preview:ready events with video URLs, but workflow stream's
+    // sceneStatuses doesn't get these URLs. This merge ensures LivePreview can show previews.
+    const enrichedSceneStatuses = useMemo(() => {
+        const baseStatuses = state?.sceneStatuses || [];
+        const readyPreviews = directorStream.state.preview.readyScenes || [];
+        
+        if (readyPreviews.length === 0) return baseStatuses;
+        
+        return baseStatuses.map(status => {
+            // Find matching preview by sceneIndex or sceneId
+            const preview = readyPreviews.find(
+                p => p.sceneId === status.sceneId || p.sceneIndex === (status.sceneNumber - 1)
+            );
+            
+            if (preview && preview.videoPath && !status.previewUrl) {
+                return {
+                    ...status,
+                    previewUrl: preview.videoPath, // videoPath from director is actually the URL path
+                };
+            }
+            return status;
+        });
+    }, [state?.sceneStatuses, directorStream.state.preview.readyScenes]);
+
     // Sync state plan to local scenes if we haven't edited them yet, or if a new plan arrives (e.g. re-plan)
     // We need to be careful not to overwrite user edits if the stream just sends a keep-alive.
     // So we track the plan generation timestamp or just check if we have scenes.
@@ -424,7 +449,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({ jobId, onN
                             <LivePreview
                                 videoUrl={videoUrl}
                                 scenes={activeScenes}
-                                sceneStatuses={state?.sceneStatuses}
+                                sceneStatuses={enrichedSceneStatuses}
                                 activeSceneId={activeSceneId}
                                 onSceneSelect={setActiveSceneId}
                                 renderProgress={renderProgress}

@@ -16,6 +16,8 @@ This app uses an AI agent (powered by Gemini 3 Pro) to generate Remotion composi
 
 ## Run Locally
 
+> ** Deploying?** Check out [DEPLOYMENT.md](./DEPLOYMENT.md) for a guide on deploying the frontend to Vercel and the backend to Railway/Render.
+
 **Prerequisites:**
 - **Node.js** (v18+)
 - **FFmpeg** - Required by Remotion for video encoding

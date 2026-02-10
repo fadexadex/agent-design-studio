@@ -247,6 +247,32 @@ export default function Scene${sceneIndex}() {
    </div>
    \`\`\`
 
+## VIEWPORT SAFE ZONE RULES (PREVENT ELEMENTS FROM BEING CUT OFF)
+1. **Keep all important content within 90% safe zone**:
+   - Horizontal safe area: 5% margin on left and right (96px on 1920px width)
+   - Vertical safe area: 5% margin on top and bottom (54px on 1080px height)
+   - NEVER place text or critical elements at the absolute edge
+2. **CameraRig zoom limits** (when using CameraRig):
+   - Maximum zoom: 1.5 (150%) - anything higher risks cutting off content
+   - Keep zoom between 0.9 and 1.5 for safe viewing
+   - When zooming in, ensure the focus area has padding around it
+3. **CameraRig pan limits** (when using CameraRig):
+   - Maximum x pan: ±15% of width (±288px on 1920px)
+   - Maximum y pan: ±15% of height (±162px on 1080px)
+   - Larger pans WILL cut off content on the opposite side
+4. **Animation entry/exit safe zones**:
+   - Slide animations should START from just outside viewport (100-150px off-screen)
+   - Slide animations should END within the 90% safe zone
+   - NEVER animate elements to rest at the extreme edges
+5. **MockupFrame positioning**:
+   - Device mockups should be centered or positioned with at least 10% padding
+   - When rotating MockupFrame, account for the expanded bounding box
+   - A rotated element takes MORE space than its original dimensions
+6. **Scaling animations**:
+   - When scaling up, start small and end at 1.0 (not larger)
+   - If you must scale above 1.0, ensure content has extra padding
+   - Example: scaling to 1.2 means content needs 20% extra margin
+
 ## ⚠️ CRITICAL API WARNING - READ CAREFULLY ⚠️
 The @remotion/animated package uses OBJECT SYNTAX, NOT method chaining.
 
